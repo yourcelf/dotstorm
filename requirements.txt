@@ -1,0 +1,17 @@
+coffee-script
+underscore
+backbone
+connect
+connect-assets
+connect-redis
+snockets
+express
+jade
+socket.io
+socket.io-client
+stylus
+winston
+redis
+jasmine-node
+mongodb
+https://github.com/yourcelf/backbone-mongodb/tarball/master
