@@ -26,8 +26,8 @@ Backbone.sync = (method, model, options) ->
   cb = options.success or (->)
   cberr = (err) ->
     logger.error(err)
-    options.error if options.error
-  unless _connection
+    options.error() if options.error
+  unless _connection?
     cberr "Not connected to the database."
     return
 
@@ -43,7 +43,7 @@ Backbone.sync = (method, model, options) ->
       if err
         cberr(err)
       else
-        cb(result)
+        cb(result[0])
 
     switch method
       when "create"
@@ -55,10 +55,11 @@ Backbone.sync = (method, model, options) ->
       when "read"
         coll.find(model.toJSON()).toArray (err, items) ->
           if err
-            return cberr(err)
-          cb(items, 200, null)
-
-Backbone.Collection.parse = (resp, xhr) ->
-  return (new this.model(obj) for obj in resp)
+            cberr(err)
+          else
+            if model instanceof Backbone.Model
+              cb(items[0])
+            else
+              cb (items)
 
 module.exports = { open }

@@ -9,7 +9,7 @@ start = (options) ->
   sessionStore = new RedisStore
 
   db = null
-  Database.open options, success: (database) -> db = database
+  Database.open options,success: (database) -> db = database
 
   app = express.createServer()
   

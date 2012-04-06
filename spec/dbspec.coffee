@@ -1,13 +1,7 @@
+Backbone = require 'backbone'
+_        = require 'underscore'
 models   = require '../assets/js/models'
 h        = require './helper'
-_        = require 'underscore'
-Backbone = require 'backbone'
-
-isDone = false
-done = -> isDone = true
-waitForDone = ->
-  isDone = false
-  waitsFor -> isDone
 
 describe "Vanilla MongoDB test", ->
   it "persists and retrieves data", ->
@@ -26,48 +20,66 @@ describe "Vanilla MongoDB test", ->
     client.open (err, p_client) ->
       client.collection 'test_insert', test
 
-
 describe "MongoDB backbone connector", ->
-  beforeEach -> @server = h.startServer()
-  afterEach  -> @server.app.close()
+  server = global.server
+  cberr = (done) ->
+    return (err) ->
+      console.log err
+      expect(true).toBe(false)
+      done()
+  mahId = undefined
 
-  cberr = (err) ->
-    console.log err
-    expect(true).toBe(false)
-    done()
-
-  it "persists and retrieves data", ->
-    server = @server
+  it "initializes the server", ->
     waitsFor (-> server.getDb()? ), "db connection", 1000
-    for [Coll, Model] in [[models.DotstormList, models.Dotstorm], [models.IdeaList, models.Idea]]
-      runs ->
-        d = new Model
-          name: "my happy storm"
-        d.save {},
-          success: -> done()
-          error: cberr
-        waitForDone()
-      runs ->
-        d = new Coll
-        d.fetch
-          success: (items) ->
-            expect(items.length).toBe(1)
-            done()
-          error: cberr
-        waitForDone()
-      runs ->
-        d = new Coll
-        d.fetch
-          success: (items) ->
-            length = items.length
-            _.each items.models, (model, i) ->
-              model.destroy success: done, error: cberr
-        waitForDone()
-      runs ->
-        d = new Coll
-        d.fetch
-          success: (items) ->
-            expect(items.models.length).toBe(0)
-            done()
-          error: cberr
-        waitForDone()
+
+  for [Coll, Model] in [[models.DotstormList, models.Dotstorm], [models.IdeaList, models.Idea]]
+    it "saves a model", (done) ->
+      # Save a model
+      d = new Model
+        name: "my happy storm"
+      d.save {},
+        success: (m) ->
+          mahId = m.id
+          done()
+        error: cberr(done)
+
+    it "retrieves the model", (done) ->
+      # Retrieve the just-saved model.
+      expect(mahId).toBeDefined()
+      d = new Model _id: mahId
+      d.fetch
+        success: (model) ->
+          expect(model.get("name")).toEqual("my happy storm")
+          done()
+        error: cberr(done)
+
+    it "fetches from collection", (done) ->
+      # Fetch from collection.
+      d = new Coll
+      d.fetch
+        success: (items) ->
+          expect(items.length).toBe(1)
+          done()
+        error: cberr(done)
+
+    it "deletes everything in the collection", (done) ->
+      d = new Coll
+      d.fetch
+        success: (items) ->
+          count = items.length
+          for model in (m for m in items.models)
+            model.destroy
+              success: ->
+                count -= 1
+                if count == 0
+                  done()
+              error: cberr(done)
+
+    it "Ensures there's nothing left", (done) ->
+      # Ensure there's none left.
+      d = new Coll
+      d.fetch
+        success: (items) ->
+          expect(items.models.length).toBe(0)
+          done()
+        error: cberr(done)

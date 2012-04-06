@@ -18,6 +18,7 @@ task 'runserver', 'Run the server, watching for changes.', (options) ->
     dbname: config.dbname
 
 task 'test', 'Run tests', (options) ->
+  global.server = require('./spec/helper').startServer()
   jasmine.executeSpecsInFolder(
     specFolder=__dirname + '/spec',
     onComplete= ((runner, log) ->

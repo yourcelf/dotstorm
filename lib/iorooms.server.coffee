@@ -17,31 +17,24 @@ attach = (route, io, store) ->
 
   io.of(route).on 'connection', (socket) ->
     socket.on 'identify', (data) ->
-      logger.debug "identify #{data.sid}"
       unless data.sid
         socket.emit "error", error: "sid missing."
-        logger.debug "identify sid missing", data
         return
       store.get data.sid, (err, session) ->
         if err or not session
-          logger.debug "identify " + (err?.message or "no session found")
           socket.emit "error", error: "Session not found."
         else
           socket.session = session
           socket.sessionID = data.sid
           socket.join data.sid
-          logger.debug "identify session loaded successfully"
           socket.emit "identified", {sid: data.sid}
 
     socket.on 'join', (data) ->
-      logger.debug "join #{data.room} #{socket.sessionID}"
       unless data.room
         socket.emit "error", error: "Room not specified or session ID not found"
-        logger.debug 'Room not specified', data.room
         return
       unless socket.sessionID
         socket.emit "error", error: "Session ID not found."
-        logger.debug 'Session ID not found.'
         return
 
       # Set up sessionRooms and roomSessions
@@ -58,7 +51,8 @@ attach = (route, io, store) ->
         io.roomSessions[data.room].sessions[socket.sessionID] = 0
       io.roomSessions[data.room].sessions[socket.sessionID] += 1
       socket.join(data.room)
-      socket.emit "joined", room: data.room
+      socket.emit "joined",
+        room: data.room
 
     leave_room = (name) ->
       io.sessionRooms[socket.sessionID].rooms[name] -= 1
@@ -70,7 +64,6 @@ attach = (route, io, store) ->
       socket.leave(name)
 
     socket.on 'leave', (data) ->
-      logger.debug "leave", data
       unless data.room and socket.sessionID
         socket.emit "error", error: "Room or sessionID not found"
         return

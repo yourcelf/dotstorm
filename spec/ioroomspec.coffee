@@ -1,27 +1,20 @@
 h = require './helper'
 
+
 describe "Client room connections", ->
-  beforeEach -> @server = h.startServer()
-  afterEach  -> @server.app.close()
+  server = global.server
+  clients = [{ c: h.newClient(), id: 'id1' },
+             { c: h.newClient(), id: 'id2' },
+             { c: h.newClient(), id: 'id1' }]
 
-  it "increments room counts on join", ->
-    # Connect client to socket.io
+  it "starts the server", ->
+    waitsFor (-> server.getDb()? )
 
-    clients = [{
-      c: h.newClient()
-      id: 'id1'
-    }, {
-      c: h.newClient()
-      id: 'id2'
-    }, {
-      c: h.newClient()
-      id: 'id1'
-    }]
-
+  it "connects client to socket.io", ->
     for client_data in clients
       c = client_data.c
       sid = client_data.id
-      do (c, sid) =>
+      do (c, sid) ->
         # Connect
         runs ->
           waitsFor ->
@@ -36,9 +29,9 @@ describe "Client room connections", ->
           c.socket.on "error", -> expect(true).toBe(false)
 
         # Create a fake session, since we aren't going through a browser.
-        runs =>
+        runs ->
           h.waitsForDone "create dummy session", =>
-            @server.sessionStore.set sid, {cookie: maxAge: 100000}, h.done
+            server.sessionStore.set sid, {cookie: maxAge: 100000}, h.done
 
         runs ->
           h.waitsForDone "identify", -> c.identify sid
@@ -48,44 +41,47 @@ describe "Client room connections", ->
       expect(clients[0].c.socket.socket.sessionid).toNotEqual(
              clients[1].c.socket.socket.sessionid)
 
-    # Join the room, and ensure that room and session counts match.
-    runs -> h.waitsForDone "join room", -> clients[0].c.join "test"
-    runs =>
-      expect(@server.io.roomSessions).toEqual(test: sessions: { id1: 1})
-      expect(@server.io.sessionRooms).toEqual(id1: rooms: { test: 1})
+  it "joins a room", ->
+    clients[0].c.join "test"
+    h.waitsForDone()
+    runs ->
+      expect(server.io.roomSessions).toEqual(test: sessions: { id1: 1})
+      expect(server.io.sessionRooms).toEqual(id1: rooms: { test: 1})
+      
 
-    # Leave the room, and ensure that room and session counts match.
-    runs -> h.waitsForDone "leave room", -> clients[0].c.leave "test"
-    runs =>
-      expect(@server.io.roomSessions).toEqual(test: sessions: {})
-      expect(@server.io.sessionRooms).toEqual(id1: rooms: {})
+  it "leaves a room", ->
+    clients[0].c.leave "test"
+    h.waitsForDone()
+    runs ->
+      expect(server.io.roomSessions).toEqual(test: sessions: {})
+      expect(server.io.sessionRooms).toEqual(id1: rooms: {})
     
-    # Join with multiple sessions and rooms, and ensure counts match.
+  it "joins with multiple sessions and rooms", ->
     runs -> h.waitsForDone "join room", -> clients[0].c.join "test"
     runs -> h.waitsForDone "join room", -> clients[1].c.join "test"
     runs -> h.waitsForDone "join room", -> clients[1].c.join "test2"
     runs -> h.waitsForDone "join room", -> clients[2].c.join "test"
-    runs =>
-      expect(@server.io.roomSessions).toEqual
+    runs ->
+      expect(server.io.roomSessions).toEqual
         test: sessions: {id1: 2, id2: 1}
         test2: sessions: {id2: 1}
-      expect(@server.io.sessionRooms).toEqual
+      expect(server.io.sessionRooms).toEqual
         id1: rooms: {test: 2}
         id2: rooms: {test: 1, test2: 1}
     runs -> h.waitsForDone "leave room", -> clients[0].c.leave "test"
-    runs =>
-      expect(@server.io.roomSessions).toEqual
+    runs ->
+      expect(server.io.roomSessions).toEqual
         test: sessions: {id1: 1, id2: 1}
         test2: sessions: {id2: 1}
-      expect(@server.io.sessionRooms).toEqual
+      expect(server.io.sessionRooms).toEqual
         id1: rooms: {test: 1}
         id2: rooms: {test: 1, test2: 1}
     runs -> h.waitsForDone "leave room", -> clients[1].c.leave "test"
     runs -> h.waitsForDone "leave room",-> clients[2].c.leave "test"
-    runs =>
-      expect(@server.io.roomSessions).toEqual
+    runs ->
+      expect(server.io.roomSessions).toEqual
         test: sessions: {}
         test2: sessions: {id2: 1}
-      expect(@server.io.sessionRooms).toEqual
+      expect(server.io.sessionRooms).toEqual
         id1: rooms: {}
         id2: rooms: {test2: 1}
