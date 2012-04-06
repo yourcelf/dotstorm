@@ -1,22 +1,34 @@
-# Since this is used in the client only, we don't use `require`, and assume
-# Backbone is already present.
-
+# adapted from
 # http://developer.teradata.com/blog/jasonstrimpel/2011/11/backbone-js-and-socket-io
   
-Backbone.setSocket = (socket) ->
-  Backbone._socket = socket
+Backbone.setSocket = (socket) -> Backbone._socket = socket
+Backbone.getSocket = -> Backbone._socket
 
-Backbone.clearSocket = ->
-  Backbone._socket = null
 
 Backbone.sync = (method, model, options) ->
-  cberr = (err) ->
-    options.error() if options.error
   unless Backbone._socket?
-    cberr "No socket connection"
-  
-    Backbone._socket.emit "backbone",
-      method: method
-      collectionName: model.collectionName
-      model: model.toJSON()
+    options.error "No socket connection" if options.error
+    return
+  socket = Backbone._socket
 
+  # Create a signature identifying to the server what we intend to do
+  signature =
+    collectionName: model.collectionName
+    method: method
+    isCollection: model instanceof Backbone.Collection
+  
+  # Create a response event name to use once, if we have a success callback to
+  # respond with.
+  if options.success? or options.error?
+    event = [model.collectionName, model.method, Math.random()].join(":")
+    socket.once event, (data) ->
+      if data.error
+        options.error(data) if options.error
+      else
+        options.success(data) if options.success
+    signature.event = event
+
+  # Send our stuff.
+  socket.emit 'backbone',
+    signature: signature
+    model: model.toJSON()

@@ -1,11 +1,13 @@
 h = require './helper'
 
-
 describe "Client room connections", ->
   server = global.server
   clients = [{ c: h.newClient(), id: 'id1' },
              { c: h.newClient(), id: 'id2' },
              { c: h.newClient(), id: 'id1' }]
+
+  it "runs synchronously", ->
+    h.executeSync("ioroomspec")
 
   it "starts the server", ->
     waitsFor (-> server.getDb()? )
@@ -85,3 +87,6 @@ describe "Client room connections", ->
       expect(server.io.sessionRooms).toEqual
         id1: rooms: {}
         id2: rooms: {test2: 1}
+
+  it "is done running synchronously", ->
+    h.doneExecutingSync()

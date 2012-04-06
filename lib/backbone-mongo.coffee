@@ -45,21 +45,32 @@ Backbone.sync = (method, model, options) ->
       else
         cb(result[0])
 
+    if model.id
+      _id = mongo.ObjectID.createFromHexString("" + model.id)
+    else
+      _id = undefined
+
     switch method
       when "create"
         coll.insert model.toJSON(), {safe: true}, done
       when "update"
-        coll.update {_id: model.get('_id')}, model.toJSON(), {safe: true}, done
+        data = model.toJSON()
+        data._id = _id
+        coll.update {_id: _id}, data, {safe: true}, done
       when "delete"
-        coll.remove {_id: model.get('_id')}, {safe: true}, done
+        coll.remove {_id: _id}, {safe: true}, done
       when "read"
-        coll.find(model.toJSON()).toArray (err, items) ->
+        query = model.toJSON()
+        if query._id
+          query._id = _id
+
+        coll.find(query).toArray (err, items) ->
           if err
             cberr(err)
           else
             if model instanceof Backbone.Model
               cb(items[0])
             else
-              cb (items)
+              cb(items)
 
 module.exports = { open }

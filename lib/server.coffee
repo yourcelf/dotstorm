@@ -30,6 +30,8 @@ start = (options) ->
   app.configure 'development', ->
     app.use express.static __dirname + '/../static'
     app.use express.errorHandler { dumpExceptions: true, showStack: true }
+    app.get '/test', (req, res) ->
+      res.render 'test', layout: false
 
   app.configure 'production', ->
     app.use express.static __dirname + '/../static', { maxAge: 1000*60*60*24 }
@@ -49,7 +51,9 @@ start = (options) ->
   io.set 'log level', 0
 
   # binds to '/iorooms'
-  require('./iorooms.server').attach('/iorooms', io, sessionStore)
+  channel = '/io'
+  require('./iorooms.server').attach(channel, io, sessionStore)
+  require('./backbone-socket.server').attach(channel, io)
 
   return { app, io, sessionStore, getDb: (-> db) }
 

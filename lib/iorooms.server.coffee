@@ -16,6 +16,7 @@ attach = (route, io, store) ->
   io.sessionRooms = {}
 
   io.of(route).on 'connection', (socket) ->
+
     socket.on 'identify', (data) ->
       unless data.sid
         socket.emit "error", error: "sid missing."
@@ -29,32 +30,27 @@ attach = (route, io, store) ->
           socket.join data.sid
           socket.emit "identified", {sid: data.sid}
 
-    socket.on 'join', (data) ->
-      unless data.room
-        socket.emit "error", error: "Room not specified or session ID not found"
-        return
-      unless socket.sessionID
-        socket.emit "error", error: "Session ID not found."
-        return
-
-      # Set up sessionRooms and roomSessions
+    # Set up sessionRooms and roomSessions.  This is similar to socket's
+    # built-in properties for room management, but rather than identifying by
+    # socket, we identify by session, so that we can track users rather than
+    # tabs/windows.
+    join_room = (name) ->
       unless io.sessionRooms[socket.sessionID]?
         io.sessionRooms[socket.sessionID] = rooms: {}
-      unless io.roomSessions[data.room]
-        io.roomSessions[data.room] = sessions: {}
+      unless io.roomSessions[name]
+        io.roomSessions[name] = sessions: {}
       
       # Increment counts
-      unless io.sessionRooms[socket.sessionID].rooms[data.room]?
-        io.sessionRooms[socket.sessionID].rooms[data.room] = 0
-      io.sessionRooms[socket.sessionID].rooms[data.room] += 1
-      unless io.roomSessions[data.room].sessions[socket.sessionID]?
-        io.roomSessions[data.room].sessions[socket.sessionID] = 0
-      io.roomSessions[data.room].sessions[socket.sessionID] += 1
-      socket.join(data.room)
-      socket.emit "joined",
-        room: data.room
+      unless io.sessionRooms[socket.sessionID].rooms[name]?
+        io.sessionRooms[socket.sessionID].rooms[name] = 0
+      io.sessionRooms[socket.sessionID].rooms[name] += 1
+      unless io.roomSessions[name].sessions[socket.sessionID]?
+        io.roomSessions[name].sessions[socket.sessionID] = 0
+      io.roomSessions[name].sessions[socket.sessionID] += 1
+      socket.join(name)
 
     leave_room = (name) ->
+      # Decrement counts
       io.sessionRooms[socket.sessionID].rooms[name] -= 1
       if io.sessionRooms[socket.sessionID].rooms[name] == 0
         delete io.sessionRooms[socket.sessionID].rooms[name]
@@ -62,6 +58,13 @@ attach = (route, io, store) ->
       if io.roomSessions[name].sessions[socket.sessionID] == 0
         delete io.roomSessions[name].sessions[socket.sessionID]
       socket.leave(name)
+
+    socket.on 'join', (data) ->
+      unless data.room? and socket.sessionID?
+        socket.emit "error", error: "Room not specified or session ID not found"
+        return
+      join_room(data.room)
+      socket.emit "joined", room: data.room
 
     socket.on 'leave', (data) ->
       unless data.room and socket.sessionID

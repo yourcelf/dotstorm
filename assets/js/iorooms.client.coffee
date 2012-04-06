@@ -12,3 +12,5 @@ class Client
 
 if typeof exports != "undefined"
   exports.Client = Client
+else
+  this.Client = Client

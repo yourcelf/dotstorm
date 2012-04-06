@@ -29,12 +29,14 @@ describe "MongoDB backbone connector", ->
       done()
   mahId = undefined
 
+  it "executes synchronously", ->
+    h.executeSync("db")
+
   it "initializes the server", ->
     waitsFor (-> server.getDb()? ), "db connection", 1000
 
   for [Coll, Model] in [[models.DotstormList, models.Dotstorm], [models.IdeaList, models.Idea]]
     it "saves a model", (done) ->
-      # Save a model
       d = new Model
         name: "my happy storm"
       d.save {},
@@ -44,7 +46,6 @@ describe "MongoDB backbone connector", ->
         error: cberr(done)
 
     it "retrieves the model", (done) ->
-      # Retrieve the just-saved model.
       expect(mahId).toBeDefined()
       d = new Model _id: mahId
       d.fetch
@@ -54,7 +55,6 @@ describe "MongoDB backbone connector", ->
         error: cberr(done)
 
     it "fetches from collection", (done) ->
-      # Fetch from collection.
       d = new Coll
       d.fetch
         success: (items) ->
@@ -76,10 +76,12 @@ describe "MongoDB backbone connector", ->
               error: cberr(done)
 
     it "Ensures there's nothing left", (done) ->
-      # Ensure there's none left.
       d = new Coll
       d.fetch
         success: (items) ->
           expect(items.models.length).toBe(0)
           done()
         error: cberr(done)
+
+  it "done executing synchronously", ->
+    h.doneExecutingSync()

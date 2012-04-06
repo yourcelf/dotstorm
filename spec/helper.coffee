@@ -7,6 +7,7 @@ io     = require 'socket.io-client'
 # running dev server.
 config.port = 8127
 isDone = false
+syncLocked = false
 
 module.exports =
   done: (data) -> isDone = true
@@ -23,8 +24,17 @@ module.exports =
   newClient: ->
     return new client.Client(
       io.connect(
-        "http://#{config.host}:#{config.port}/iorooms", {
+        "http://#{config.host}:#{config.port}/io", {
           'force new connection': true
         })
     )
+
+  executeSync: (name) ->
+    waitsFor -> not syncLocked
+    runs -> syncLocked = true
+
+  doneExecutingSync: -> syncLocked = false
+
+
+
 
