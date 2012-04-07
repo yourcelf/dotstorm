@@ -8,10 +8,27 @@ div#app
 script#dotstormTopic(type='text/template')
   h1 <%= name %>
   div#dotstorm
-    div.topic <%= topic.replace("\n", "\n<br />") %>
+    div.topic <%| _.escapeHTML(topic).replace(/\n/g, "\n<br />") %>
+
 script#dotstormTopicEditor(type='text/template')
   form
     textarea <%= topic %>
     br
     input(type='submit', value='save')
     a.cancel(href='#') cancel
+
+script#dotstormAddIdea(type='text/template')
+  div#addIdea
+    h2 Add an idea
+    canvas
+    form
+      p
+        label(for='id_description') Description
+        br
+        textarea#id_description <%= description %>
+      p
+        label(for='id_tags') Tags
+        input#id_tags.tags(name='tags', type='text') <%= tags %>
+      p
+        input.cta.cta-blue(type='submit', value='Share')
+    div#debug

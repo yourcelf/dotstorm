@@ -45,10 +45,10 @@ class dotstorm.DotstormTopic extends Backbone.View
   events:
     'click .topic': 'editTopic'
     'submit form': 'saveTopic'
-    'click .cancel': 'render'
+    'click .cancel': 'cancel'
 
   initialize: (options) ->
-    @model = dotstorm.model
+    @model = options.model
     @model.on "change", @render
 
   render: =>
@@ -69,48 +69,123 @@ class dotstorm.DotstormTopic extends Backbone.View
       @model.save topic: val
     return false
 
+  cancel: (event) =>
+    @render()
+    return false
+
 
 class dotstorm.DotstormShowIdeas extends Backbone.View
+  initialize: (options) ->
+    @model = options.model
+
   render: =>
     @$el.html "todo show ideas"
     this
-class dotstorm.DotstormAddIdea extends Backbone.View
+
+class dotstorm.DotstormEditIdea extends Backbone.View
+  template: _.template $("#dotstormAddIdea").html() or ""
+  events:
+    'mousedown canvas':  'handleStart'
+    'mouseup canvas':    'handleEnd'
+    'mousemove canvas':  'handleDrag'
+
+    'touchstart canvas': 'handleStart'
+    'touchend canvas':   'handleEnd'
+    'touchmove canvas':  'handleDrag'
+
+    'submit form':       'saveIdea'
+
+  initialize: (options) ->
+    @idea = options.model
+
   render: =>
-    @$el.html "todo add idea"
+    @$el.html @template
+      description: @idea.get "description"
+      tags: (@idea.get("tags") or []).join(",")
+    @canvas = @$("canvas")
+    @ctx = @canvas[0].getContext('2d')
+    @ctx.lineCap = 'round'
+    @ctx.lineWidth = 4
+    $(window).on 'mouseup', @handleEnd
     this
+
+  saveIdea: =>
+    return false
+
+  # Draw!
+  getPointer: (event) =>
+    if event.originalEvent.touches?
+      touch = event.originalEvent.touches?[0] or event.originalEvent.changedTouches?[0]
+      @pointer = x: touch.pageX - @offset.left, y: touch.pageY - @offset.top
+    else
+      @pointer = x: event.pageX - @offset.left, y: event.pageY - @offset.top
+
+  handleStart: (event) =>
+    @offset = @canvas.offset()
+    event.preventDefault()
+    @mouseIsDown = true
+    @getPointer(event)
+    return false
+  handleEnd: (event) =>
+    event.preventDefault()
+    @mouseIsDown = false
+    @pointer = null
+    return false
+  handleDrag: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+    if @mouseIsDown
+      old = @pointer
+      @getPointer(event)
+      @ctx.beginPath()
+      if old?
+        @ctx.moveTo old.x, old.y
+      else
+        @ctx.moveTo @pointer.x, @pointer.y
+      @ctx.lineTo @pointer.x, @pointer.y
+      @ctx.stroke()
+    return false
 
 class dotstorm.Router extends Backbone.Router
   routes:
-    '':             'intro'
-    'd/:slug/add':  'dotstormAddIdea'
-    'd/:slug/show': 'dotstormShowIdeas'
-    'd/:slug':      'dotstormTopic'
+    'd/:slug/add':        'dotstormAddIdea'
+    'd/:slug/show':       'dotstormShowIdeas'
+    'd/:slug/edit/:id':   'dotstormEditIdea'
+    'd/:slug':            'dotstormTopic'
+    '':                   'intro'
 
   intro: ->
     $("#app").html new dotstorm.Intro().render().el
 
   dotstormTopic: (slug) =>
     @open slug, ->
-      $("#app").html new dotstorm.DotstormTopic().render().el
+      $("#app").html new dotstorm.DotstormTopic(model: dotstorm.model).render().el
+    return false
 
   dotstormShowIdeas: (slug) =>
     @open slug, ->
-      $("#app").html new dotstorm.DotstormShowIdeas().render().el
+      $("#app").html new dotstorm.DotstormShowIdeas(model: dotstorm.model).render().el
+    return false
 
   dotstormAddIdea: (slug) =>
     @open slug, ->
-      $("#app").html new dotstorm.DotstormAddIdea().render().el
+      $("#app").html new dotstorm.DotstormEditIdea(model: new Idea).render().el
+    return false
 
-  openFirst: (slug) =>
-    unless dotstorm.model?.get("slug") == slug
-      @open(slug)
-      return false
-    return true
+  dotstormEditIdea: (slug, id) =>
+    @open slug, ->
+      model = new Idea _id: id
+      $("#app").html new dotstorm.DotstormEditIdea(model: model).render().el
+    return false
 
   open: (name, callback) =>
     # Open (if it exists) or create a new dotstorm with the name `name`, and
     # navigate to its view.
     slug = Dotstorm.prototype.slugify(name)
+    unless callback?
+      # force refresh to get new template.
+      callback = -> window.location.href = "/d/#{slug}"
+
     if dotstorm.model?.get("slug") == slug
       return callback()
 
