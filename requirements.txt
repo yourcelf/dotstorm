@@ -14,4 +14,4 @@ winston
 redis
 jasmine-node
 mongodb
-https://github.com/yourcelf/backbone-mongodb/tarball/master
+markdown

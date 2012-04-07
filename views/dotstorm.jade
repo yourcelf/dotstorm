@@ -1,0 +1,17 @@
+nav.tabs
+  a(href='/d/#{slug}') Topic
+  a(href='/d/#{slug}/add') Add idea
+  a(href='/d/#{slug}/show') Show ideas
+
+div#app
+
+script#dotstormTopic(type='text/template')
+  h1 <%= name %>
+  div#dotstorm
+    div.topic <%= topic.replace("\n", "\n<br />") %>
+script#dotstormTopicEditor(type='text/template')
+  form
+    textarea <%= topic %>
+    br
+    input(type='submit', value='save')
+    a.cancel(href='#') cancel

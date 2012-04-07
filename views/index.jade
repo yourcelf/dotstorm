@@ -1,12 +1,15 @@
-h1= title
+div#app
 
-div#intro(style='display: none;')
-  p Welcome to DotStorm!
-  p Enter your room name here:
-  form#joiner
-    input(type='text')
-    input(type='submit', value='Join room')
-  form#random
-    input.cta.cta-green(type='submit', value='Or generate a random one')
-
-div#rights
+script#intro(type='text/template')
+  div#intro
+    h1= title
+    p Welcome to DotStorm!
+    form#random
+      input.cta.cta-blue(type='submit', value='New dotstorm')
+    form#named
+      p
+        label(for='id_join')
+          | Or choose a name:
+        br
+        input(type='text', name='room', id='id_join', placeholder='name')
+        input.cta.cta-green(type='submit', value='OK')

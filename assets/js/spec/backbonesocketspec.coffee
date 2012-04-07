@@ -47,12 +47,52 @@ describe "Persist and recall models", ->
     runs ->
       ideas.fetch
         success: (coll) ->
-          console.log coll
           match = undefined
           for model in coll.models
             if model.id == mahId
               match = model
           expect(match).toBeDefined()
+          done()
+        error: (err) -> expect().fail()
+    waitsForDone()
+
+  it "fetches a collection with a query", ->
+    ideas = new IdeaList
+    runs ->
+      ideas.fetch
+        query: { name: "not found" }
+        success: (coll) ->
+          expect(coll.length).toEqual(0)
+          done()
+        error: (err) -> expect().fail()
+    waitsForDone()
+    runs ->
+      ideas.fetch
+        query: { name: "hooha" }
+        success: (coll) ->
+          expect(coll.length).toEqual(1)
+          expect(coll.models[0].get("name")).toEqual("hooha")
+          done()
+        error: (err) -> expect().fail()
+    waitsForDone()
+
+  it "fetches a collection with a query by id", ->
+    ideas = new IdeaList
+    runs ->
+      ideas.fetch
+        # not found
+        query: { _id: "aaaaaaaaaaaaaaaaaaaaaaaa" }
+        success: (coll) ->
+          expect(coll.length).toEqual(0)
+          done()
+        error: (err) -> expect().fail()
+    waitsForDone()
+    runs ->
+      ideas.fetch
+        query: { _id: mahId }
+        success: (coll) ->
+          expect(coll.length).toEqual(1)
+          expect(coll.models[0].get("name")).toEqual("hooha")
           done()
         error: (err) -> expect().fail()
     waitsForDone()

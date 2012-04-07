@@ -1,4 +1,6 @@
 // Mixins
+@import "normalize.css"
+@import "buttons.css"
 
 background-rgba(r, g, b, a)
   // rgba with fallback to rgb
@@ -16,11 +18,32 @@ body,textarea
 a:link, a:visited
   color: #00e
 
-
-#page
-  padding: 1em
+input[type=text]
+  border: 1px solid gray
+  padding: 0.2em
 
 #auth
+
+#foot
+  font-size: 14px
+  text-align: center
+  ul
+    padding: 0
+    margin: 0
+  li
+    display: inline-block
+    list-style-type: none
+    margin-right: 0.5em
+    margin-left: 0.5em
+  a
+    text-decoration: none
+
+#size
+  position: fixed
+  bottom: 0
+  left: 0
+  background: rgba(255, 255, 255, 0.8)
+  padding: 0.5em
 
 #flash
   font-size: 20px
@@ -49,34 +72,21 @@ a:link, a:visited
       &.error
         background-rgba(255, 51, 0, 0.9)
 
-#rights
-  font-size: 16px
-  .right
-    position: relative
-    padding: 1em
-    .finished
-      font-size: 20px
-      padding: 1em
-      background-color: #ffe
-      display: inline-block
-      border-radius: 2px
-      max-width: 33em
-    .number
-      display: inline-block
-      float: left
-      font-size: 40px
-      height: 100%
-    textarea
-      border: 1px solid #eee
-      width: 500px
-    .editor
-      display: inline-block
-    .editlink
-      float: left
-      margin-right: 1em
-    .voting
-      font-size: 16px
-      img
-        max-height: 1em
+#intro
+  text-align: center
+  margin-left: auto
+  margin-right: auto
 
-
+#dotstorm
+  .topic:hover
+    background-color: #ffe
+    border: 1px inset black
+    &:before
+      content: "✎"
+  textarea
+    width: 40em
+    max-width: 80%
+    height: 10em
+    max-height: 30%
+    
+    

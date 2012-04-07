@@ -7,12 +7,31 @@ html(lang="en")
     <link href='http://fonts.googleapis.com/css?family=Vollkorn:400,400italic' rel='stylesheet' type='text/css'>
   body
     div#page
+      noscript
+        :markdown
+          This site depends on javascript and cookies, thoroughly and completely.
+          Please enable and allow scripts from this site in order to use it.  If your
+          device does not support javascript, our apologies -- feel free to contact us
+          at cfd@media.mit.edu and we will consider adding support for your device.
+        
+          For the security conscious, the full javascript source code for this site
+          is freely available at https://github.com/yourcelf/dotstorm if you'd like
+          to examine it.
       div#auth
         div.you
         div.online
       div#flash
-      div#branding
       div#main!= body
+      div#foot
+        ul
+          li
+            a(href='/about') About
+          li
+            a(href='/contact') Contact
+          li
+            a(href='http://github.com/yourcelf/dotstorm') Source (Free!)
+      // debug
+      div#size
 
     script(src="/socket.io/socket.io.js", type="text/javascript")
     script#flashView(type="text/template")

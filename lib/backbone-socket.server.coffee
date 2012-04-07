@@ -14,6 +14,8 @@ attach = (route, io) ->
             socket.emit data.signature.event, model.toJSON()
           error: (nmodel, response) ->
             socket.emit data.signature.event, error: response.toJSON()
+        if data.signature.query?
+          callbacks.query = data.signature.query
       else
         callbacks = {}
 

@@ -39,8 +39,12 @@ start = (options) ->
   app.set 'view engine', 'jade'
 
   app.get '/', (req, res) ->
-    res.render 'index',
-      title: "DotStorm"
+    res.render 'index', title: "DotStorm", initial: {}
+
+  # /d/:slug/:action
+  app.get /\/d\/([^/]+)(\/.*)?/, (req, res) ->
+    #XXX load initial data when a slug is given....
+    res.render 'dotstorm', title: "DotStorm", slug: req.params[0], initial: {}
 
   require('./auth').route(app, options.host)
 

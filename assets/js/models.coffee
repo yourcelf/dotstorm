@@ -1,3 +1,5 @@
+# Be sure to import this first.
+
 if typeof require != "undefined"
   root = module.exports
   Backbone = require 'backbone'
@@ -21,6 +23,16 @@ class IdeaList extends Backbone.Collection
 
 class Dotstorm extends Backbone.Model
   collectionName: 'Dotstorm'
+
+  slugify: (name) ->
+    return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
+
+  validate: (attrs) ->
+    if not attrs.name
+      return "Missing a name."
+    if attrs.name?.length < 4
+      return "Name must be 4 or more characters."
+
 class DotstormList extends Backbone.Collection
   model: Dotstorm
   collectionName: Dotstorm.prototype.collectionName

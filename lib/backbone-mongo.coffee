@@ -45,8 +45,8 @@ Backbone.sync = (method, model, options) ->
       else
         cb(result[0])
 
-    if model.id
-      _id = mongo.ObjectID.createFromHexString("" + model.id)
+    if model.id? or options.query?._id?
+      _id = mongo.ObjectID.createFromHexString("" + (model.id or options.query._id))
     else
       _id = undefined
 
@@ -60,8 +60,8 @@ Backbone.sync = (method, model, options) ->
       when "delete"
         coll.remove {_id: _id}, {safe: true}, done
       when "read"
-        query = model.toJSON()
-        if query._id
+        query = options.query or model.toJSON()
+        if query._id?
           query._id = _id
 
         coll.find(query).toArray (err, items) ->
