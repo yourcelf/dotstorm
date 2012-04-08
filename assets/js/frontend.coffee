@@ -335,11 +335,9 @@ class dotstorm.DotstormShowIdeaBig extends Backbone.View
     @model = options.model
 
   render: =>
-    console.log @model
     args = @model.toJSON()
     args.hasNext = @model.showNext?
     args.hasPrev = @model.showPrev?
-    console.log args
     @$el.html @template args
     @$el.addClass("bigIdea")
     @$el.css backgroundColor: @model.get("background")
@@ -448,7 +446,7 @@ class dotstorm.Router extends Backbone.Router
               dotstorm.app.navigate "/d/#{model.get("slug")}"
               callback()
             error: (model, err) ->
-              flash "error", err.error
+              flash "error", err
         else if coll.length == 1
           dotstorm.model = model = coll.models[0]
           callback()

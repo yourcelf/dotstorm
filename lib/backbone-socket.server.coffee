@@ -1,8 +1,10 @@
 models = require '../assets/js/models'
+logger = require './logging'
 
 attach = (route, io) ->
   io.of(route).on 'connection', (socket) ->
     socket.on 'backbone', (data) ->
+      logger.info "request: #{data.signature.method} #{data.signature.collectionName}", data.signature.query     
       Model = models.modelFromCollectionName(
         data.signature.collectionName, data.signature.isCollection
       )
@@ -12,8 +14,11 @@ attach = (route, io) ->
         callbacks =
           success: (model, response) ->
             socket.emit data.signature.event, model.toJSON()
+            logger.info "success: #{data.signature.method} #{data.signature.collectionName} #{model.length}"
           error: (nmodel, response) ->
             socket.emit data.signature.event, error: response.toJSON()
+            logger.error nmodel
+            logger.error response
         if data.signature.query?
           callbacks.query = data.signature.query
       else
