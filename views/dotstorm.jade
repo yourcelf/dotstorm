@@ -19,16 +19,46 @@ script#dotstormTopicEditor(type='text/template')
 
 script#dotstormAddIdea(type='text/template')
   div#addIdea
-    h2 Add an idea
-    canvas
-    form
-      p
-        label(for='id_description') Description
-        br
-        textarea#id_description <%= description %>
-      p
-        label(for='id_tags') Tags
-        input#id_tags.tags(name='tags', type='text') <%= tags %>
-      p
-        input.cta.cta-blue(type='submit', value='Share')
+    div.tabgroup
+      ul.tabs
+        li.active#draw.tab
+          h2 Draw
+          div.toolbar
+            a.tool.active(data-tool='pencil')
+              img(src='/img/pencil.png', alt='Pencil')
+            a.tool(data-tool='eraser')
+              img(src='/img/erase.png', alt='Eraser')
+            span(style='float: right')
+              a.note-color.yellow
+              a.note-color.pink
+              a.note-color.aqua
+              a.note-color.green
+
+
+          canvas
+        <% if (camera) { %>
+        li#camera.tab
+          | TODO camera!
+        <% } %>
+        li#share.tab
+          h2 Share
+          form
+            p
+              label(for='id_description') Description
+              br
+              textarea#id_description <%= description %>
+            p
+              label(for='id_tags') Tags
+              input#id_tags.tags(name='tags', type='text') <%= tags %>
+            p
+              input.cta.cta-blue(type='submit', value='Share')
+      ul.tablinks
+        li
+          a.active(href='#draw') Draw
+        <% if (camera) { %>
+        li
+          a(href='#camera') Camera
+        <% } %>
+        li
+          a(href='#share') Share -&gt;
     div#debug

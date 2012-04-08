@@ -9,11 +9,15 @@ background-rgba(r, g, b, a)
 
 // Main
 
+
+bodybackground = url("../img/frenchstucco.png") repeat
+tabbackground = url("../img/dark_dotted.png") repeat
+
 body
   position: relative
-  background: url("../img/frenchstucco.png") repeat
+  background: bodybackground
 body,textarea
-  font-family: Vollkorn,serif
+  font-family: "Droid Sans",Helvetica,sans-serif
 
 a:link, a:visited
   color: #00e
@@ -22,21 +26,61 @@ input[type=text]
   border: 1px solid gray
   padding: 0.2em
 
+nav.tabs, ul.tablinks
+  background: tabbackground
+  a
+    color: white
+    text-decoration: none
+    padding-left: 0.5em
+    padding-right: 0.5em
+    &.active
+      background: bodybackground
+      color: black
+
+ul.tablinks, ul.tabs
+  margin: 0
+  padding: 0
+  li
+    display: inline-block
+    padding-left: 0.5
+    padding-right: 0.5
+    margin: 0
+    
+ul.tabs
+  li
+    display: none
+    h2
+      display: none
+  li.active
+    display: block
+  
+@media only screen and (min-width: 640px)
+  ul.tablinks
+    display: none
+  ul.tabs li
+    display: block
+    h2
+      display: block
+
 #auth
 
 #foot
-  font-size: 14px
-  text-align: center
-  ul
-    padding: 0
-    margin: 0
-  li
-    display: inline-block
-    list-style-type: none
-    margin-right: 0.5em
-    margin-left: 0.5em
-  a
-    text-decoration: none
+  display: none
+@media only screen and (min-width: 640px)
+  #foot
+    display: block
+    font-size: 14px
+    text-align: center
+    ul
+      padding: 0
+      margin: 0
+    li
+      display: inline-block
+      list-style-type: none
+      margin-right: 0.5em
+      margin-left: 0.5em
+    a
+      text-decoration: none
 
 #size
   position: fixed
@@ -91,6 +135,30 @@ input[type=text]
 
 #addIdea
   position: relative
+  div.toolbar
+    a
+      display: inline-block
+      width: 32px
+      height: 32px
+      border: 1px solid #eee
+    a.tool
+      &:active, &.active
+        background: #f90
+    a.note-color
+      &.yellow
+        background-color: #ffd
+      &.pink
+        background-color: #fdd
+      &.aqua
+        background-color: #ddf
+      &.green
+        background-color: #dfd
+    
   canvas
     position: relative
-    border: 1px solid black
+    border-top: 1px solid black
+    border-bottom: 1px solid black
+    width: 100%
+  textarea
+    width: 100%
+    max-width: 40em
