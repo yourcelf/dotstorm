@@ -33,9 +33,7 @@ script#dotstormAddIdea(type='text/template')
               a.note-color.pink
               a.note-color.aqua
               a.note-color.green
-
-
-          canvas
+          div.canvas
         <% if (camera) { %>
         li#camera.tab
           | TODO camera!
@@ -49,7 +47,7 @@ script#dotstormAddIdea(type='text/template')
               textarea#id_description <%= description %>
             p
               label(for='id_tags') Tags
-              input#id_tags.tags(name='tags', type='text') <%= tags %>
+              <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
             p
               input.cta.cta-blue(type='submit', value='Share')
       ul.tablinks
@@ -62,3 +60,42 @@ script#dotstormAddIdea(type='text/template')
         li
           a(href='#share') Share -&gt;
     div#debug
+
+script#dotstormShowIdeas(type='text/template')
+  div.idea-browser
+    div.sizes
+      | size:
+      a.small(data-size='small') &nbsp;
+      a.medium(data-size='medium') &nbsp;
+      a.large(data-size='large') &nbsp;
+    div#showIdeas
+    div(style='clear: both;')
+
+script#dotstormSmallIdea(type='text/template')
+  div.border
+    div.canvas
+    div.text
+      div.tags
+        <%= tags %>
+
+script#dotstormBigIdea(type='text/template')
+  div.shadow
+    div.note
+      a.close(href="#", title='close') &#10006;
+      div.canvas
+      div.nav
+        <% if (hasPrev) { %>
+        a.cta.cta-yellow.prev(href='#') &laquo; Prev
+        <% } %>
+        a.edit(href='#', title='edit')
+          img(src="/img/pencil.png", alt='edit')
+        <% if (hasNext) { %>
+        a.cta.cta-yellow.next(href='#') Next &raquo;
+        <% } %>
+        div(style='clear: both;')
+      div.text
+        div.description
+          <%= description %>
+        div.tags
+          b tags:&nbsp;
+          <%= tags %>

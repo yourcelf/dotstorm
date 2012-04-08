@@ -73,80 +73,45 @@ class dotstorm.DotstormTopic extends Backbone.View
     @render()
     return false
 
-
-class dotstorm.DotstormShowIdeas extends Backbone.View
-  initialize: (options) ->
-    @model = options.model
-
-  render: =>
-    @$el.html "todo show ideas"
-    this
-
-class dotstorm.DotstormEditIdea extends Backbone.View
-  template: _.template $("#dotstormAddIdea").html() or ""
+class dotstorm.IdeaCanvas extends Backbone.View
+  tagName: 'canvas'
   events:
-    'mousedown canvas':  'handleStart'
-    'mouseup canvas':    'handleEnd'
-    'mousemove canvas':  'handleDrag'
+    'mousedown':  'handleStart'
+    'mouseup':    'handleEnd'
+    'mousemove':  'handleDrag'
 
-    'touchstart canvas': 'handleStart'
-    'touchend canvas':   'handleEnd'
-    'touchmove canvas':  'handleDrag'
-
-    'submit form':       'saveIdea'
-
-    'click .tablinks a': 'tabnav'
-    'click .tool': 'changeTool'
-    'touchstart .tool': 'changeTool'
-    'click .note-color': 'changeBackgroundColor'
-    'touchstart .note-color': 'changeBackgroundColor'
+    'touchstart': 'handleStart'
+    'touchend':   'handleEnd'
+    'touchmove':  'handleDrag'
 
   initialize: (options) ->
-    @idea = options.model
-    @actions = []
+    @idea = options.idea
+    @canvas = @$el
+    @tool = "pencil"
+    if options.readOnly == true
+      @events = undefined
 
   render: =>
-    @$el.html @template
-      description: @idea.get "description"
-      tags: (@idea.get("tags") or []).join(",")
-      camera: navigator?.camera?
-    @canvas = @$("canvas")
-    @ctxDims =
-      x: @canvas.width() * 2
+    @ctxDims = @idea.get("dims") or {
+      x: @$el.width() * 2
       y: @canvas.height() * 2
+    }
     @canvas.attr
       width: @ctxDims.x
       height: @ctxDims.y
 
     @ctx = @canvas[0].getContext('2d')
-    @$("a.note-color:first").click()
-    @tool = 'pencil'
-    $(window).on 'mouseup', @handleEnd
-    this
-
-  tabnav: (event) =>
-    link = @$(event.currentTarget)
-    tabgroup = link.parent().parent().parent()
-    @$(".tab, .tablinks a", tabgroup).removeClass("active")
-    @$(link.attr("href"), tabgroup).addClass("active")
-    link.addClass("active")
-    return false
-
-  saveIdea: =>
-    return false
-
-  changeTool: (event) =>
-    event.preventDefault()
-    event.stopPropagation()
-    el = $(event.currentTarget)
-    @tool = el.attr("data-tool")
-    el.parent().find(".tool").removeClass("active")
-    el.addClass("active")
-
-  changeBackgroundColor: (event) =>
-    event.preventDefault()
-    event.stopPropagation()
-    @background = $(event.currentTarget).css("background-color")
+    if @idea.get("drawing")?
+      @actions = @idea.get("drawing")
+    else
+      @actions = []
+    if @idea.get("background")?
+      @background = @idea.get("background")
+    else
+      @$("a.note-color:first").click()
+    @redraw()
+  
+  redraw: () =>
     @ctx.fillStyle = @background
     @ctx.beginPath()
     @ctx.fillRect(0, 0, @ctxDims.x, @ctxDims.y)
@@ -216,6 +181,193 @@ class dotstorm.DotstormEditIdea extends Backbone.View
     @ctx.lineTo action[3], action[4]
     @ctx.stroke()
 
+
+class dotstorm.DotstormEditIdea extends Backbone.View
+  template: _.template $("#dotstormAddIdea").html() or ""
+  events:
+    'submit form':       'saveIdea'
+
+    'click .tablinks a': 'tabnav'
+    'click .tool': 'changeTool'
+    'touchstart .tool': 'changeTool'
+    'click .note-color': 'changeBackgroundColor'
+    'touchstart .note-color': 'changeBackgroundColor'
+
+  initialize: (options) ->
+    @idea = options.idea
+    @dotstorm = options.dotstorm
+    @canvas = new dotstorm.IdeaCanvas {idea: @idea}
+
+  render: =>
+    @$el.html @template
+      description: @idea.get "description"
+      tags: @idea.get("tags") or " "
+      camera: navigator?.camera?
+    if not @idea.get("background")?
+      @canvas.background = @$(".note-color:first").css("background-color")
+    @$(".canvas").append(@canvas.el)
+    @canvas.render()
+    @tool = 'pencil'
+    $(window).on 'mouseup', @handleEnd
+    this
+
+  tabnav: (event) =>
+    link = @$(event.currentTarget)
+    tabgroup = link.parent().parent().parent()
+    @$(".tab, .tablinks a", tabgroup).removeClass("active")
+    @$(link.attr("href"), tabgroup).addClass("active")
+    link.addClass("active")
+    return false
+
+  saveIdea: =>
+    @idea.save {
+      dotstorm_id: @dotstorm.id
+      description: $("#id_description").val()
+      tags: $("#id_tags").val()
+      background: @canvas.background
+      dims: @canvas.ctxDims
+      drawing: @canvas.actions
+    }, {
+      success: (model) ->
+        dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/show/#{model.id}", trigger: true
+      error: (model, err) ->
+        flash "error", "Error saving: #{err}"
+    }
+    return false
+
+  changeTool: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+    el = $(event.currentTarget)
+    @canvas.tool = el.attr("data-tool")
+    el.parent().find(".tool").removeClass("active")
+    el.addClass("active")
+
+  changeBackgroundColor: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+    @canvas.background = $(event.currentTarget).css("background-color")
+    @canvas.redraw()
+
+class dotstorm.DotstormShowIdeas extends Backbone.View
+  template: _.template $("#dotstormShowIdeas").html() or ""
+  events:
+    'click .sizes a': 'resize'
+  sizes:
+    small: 78
+    medium: 118
+    large: 238
+
+  initialize: (options) ->
+    @dotstorm = options.model
+    @showId = options.showId
+    @ideas = new IdeaList
+    @ideas.fetch
+      success: (ideas) =>
+        @ideas = ideas
+        @render()
+      error: ->
+        flash "error", "Error fetching ideas"
+      query: dotstorm_id: @dotstorm.id
+
+  render: =>
+    @$el.html @template()
+
+    # Build linked list.
+    models = (model for model in @ideas.models)
+    for i in [0...models.length]
+      if i > 0
+        models[i].prev = models[i - 1]
+      if i < @ideas.models.length - 1
+        models[i].next = models[i + 1]
+
+    showBig = (model) =>
+      dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/show/#{model.id}"
+      if model.prev?
+        model.showPrev = -> showBig(model.prev)
+      if model.next?
+        model.showNext = -> showBig(model.next)
+      big = new dotstorm.DotstormShowIdeaBig model: model
+      @$el.append big.el
+      big.render()
+
+    for model in models
+      do (model) =>
+        small = new dotstorm.DotstormShowIdeaSmall model: model
+        @$("#showIdeas").append small.el
+        small.render()
+        small.$el.on "click", -> showBig(model)
+        if @showId? and model.id == @showId
+          showBig(model)
+    this
+  
+  resize: (event) =>
+    size = $(event.currentTarget).attr("data-size")
+    @$(".smallIdea").css
+      width: @sizes[size] + "px"
+      height: @sizes[size] + "px"
+
+class dotstorm.DotstormShowIdeaSmall extends Backbone.View
+  template: _.template $("#dotstormSmallIdea").html() or ""
+  initialize: (options) ->
+    @model = options.model
+
+  render: =>
+    @$el.html @template @model.toJSON()
+    @$el.addClass("smallIdea")
+    @$el.css backgroundColor: @model.get("background")
+    canvas = new dotstorm.IdeaCanvas idea: @model, readOnly: true
+    @$(".canvas").html canvas.el
+    canvas.render()
+    this
+
+class dotstorm.DotstormShowIdeaBig extends Backbone.View
+  template: _.template $("#dotstormBigIdea").html() or ""
+  events:
+    'click .shadow': 'close'
+    'click .close': 'close'
+    'click .note': 'nothing'
+    'click .next': 'next'
+    'click .prev': 'prev'
+    'click .edit': 'edit'
+
+  initialize: (options) ->
+    @model = options.model
+
+  render: =>
+    console.log @model
+    args = @model.toJSON()
+    args.hasNext = @model.showNext?
+    args.hasPrev = @model.showPrev?
+    console.log args
+    @$el.html @template args
+    @$el.addClass("bigIdea")
+    @$el.css backgroundColor: @model.get("background")
+    canvas = new dotstorm.IdeaCanvas idea: @model, readOnly: true
+    @$(".canvas").html canvas.el
+    canvas.render()
+    this
+
+  close: (event) =>
+    @$el.remove()
+    dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/show"
+
+  nothing: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+
+  next: (event) =>
+    @close()
+    @model.showNext() if @model.showNext?
+
+  edit: (event) =>
+    dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/edit/#{@model.id}",
+      trigger: true
+
+  prev: (event) =>
+    @close()
+    @model.showPrev() if @model.showPrev?
+
 updateNavLinks = ->
   $("nav a").each ->
     if $(@).attr("href") == window.location.pathname
@@ -227,6 +379,7 @@ class dotstorm.Router extends Backbone.Router
   routes:
     'd/:slug/add':        'dotstormAddIdea'
     'd/:slug/show':       'dotstormShowIdeas'
+    'd/:slug/show/:id':   'dotstormShowIdeas'
     'd/:slug/edit/:id':   'dotstormEditIdea'
     'd/:slug':            'dotstormTopic'
     '':                   'intro'
@@ -241,16 +394,16 @@ class dotstorm.Router extends Backbone.Router
       $("#app").html new dotstorm.DotstormTopic(model: dotstorm.model).render().el
     return false
 
-  dotstormShowIdeas: (slug) =>
+  dotstormShowIdeas: (slug, id) =>
     updateNavLinks()
     @open slug, ->
-      $("#app").html new dotstorm.DotstormShowIdeas(model: dotstorm.model).render().el
+      $("#app").html new dotstorm.DotstormShowIdeas(model: dotstorm.model, showId: id).render().el
     return false
 
   dotstormAddIdea: (slug) =>
     updateNavLinks()
     @open slug, ->
-      view = new dotstorm.DotstormEditIdea(model: new Idea)
+      view = new dotstorm.DotstormEditIdea(idea: new Idea, dotstorm: dotstorm.model)
       $("#app").html view.el
       view.render()
     return false
@@ -259,7 +412,16 @@ class dotstorm.Router extends Backbone.Router
     updateNavLinks()
     @open slug, ->
       model = new Idea _id: id
-      $("#app").html new dotstorm.DotstormEditIdea(model: model).render().el
+      model.fetch
+        success: (model) ->
+          if not model.get("dotstorm_id")
+            flash "error", "Model with id #{id} not found."
+          else
+            view = new dotstorm.DotstormEditIdea(idea: model, dotstorm: dotstorm.model)
+            $("#app").html view.el
+            view.render()
+        error: ->
+          flash "error", "Model with id #{id} not found."
     return false
 
   open: (name, callback) =>

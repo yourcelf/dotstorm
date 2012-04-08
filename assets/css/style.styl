@@ -163,3 +163,97 @@ ul.tabs
   textarea
     width: 100%
     max-width: 40em
+
+.idea-browser
+  text-align: right
+  clear: both
+  .sizes
+    height: 2em
+    a
+      display: inline-block
+      width: 1em
+      height: 1em
+      cursor: pointer
+      border: 1px solid #333
+      background-color: rgba(100, 100, 0, 0.5)
+      margin-right: 0.2em
+      &.small
+        position: relative
+        top: 0.5em
+        width: 1em
+        height: 1em
+      &.medium
+        position: relative
+        top: 0.25em
+        width: 1.5em
+        height: 1.5em
+      &.large
+        position: relative
+        top: 0em
+        width: 2em
+        height: 2em
+
+.smallIdea
+  cursor: pointer
+  font-size: 12px
+  overflow: hidden
+  position: relative
+  width: 78px
+  height: 78px
+  margin: 1px
+  float: left
+  canvas
+    max-width: 100%
+    max-height: 100%
+  .border
+    width: 100%
+    height: 100%
+  .text
+    background: rgba(0, 0, 0, 0.2)
+    color: white
+    position: absolute
+    bottom: 0
+    left: 0
+    width: 100%
+
+.bigIdea
+  overflow: hidden
+  .shadow
+    background-color: rgba(0, 0, 0, 0.5)
+    position: fixed
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
+    overflow: auto
+    .nav
+      text-align: center
+      a:link
+        color: white
+        line-height: 1.5em
+        height: 1.5em
+        padding-left: 5px
+        padding-right: 5px
+      .prev
+        float: left
+      .next
+        float: right
+    .note
+      .close
+        position: absolute
+        right: 0
+        top: 0
+        color: #000
+        text-decoration: none
+      margin-top: 10%
+      background: rgba(255, 255, 255, 0.8)
+      padding: 1em
+      position: absolute
+      canvas
+        border: 1px solid #eee
+        width: 100%
+
+@media only screen and (min-width: 640px)
+  .bigIdea .note
+    width: 80%
+    margin-left: 10%

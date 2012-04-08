@@ -32,6 +32,9 @@ class Dotstorm extends Backbone.Model
       return "Missing a name."
     if attrs.name?.length < 4
       return "Name must be 4 or more characters."
+    if not attrs.dotstorm_id
+      return "Dotstorm ID missing."
+    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
 
 class DotstormList extends Backbone.Collection
   model: Dotstorm
