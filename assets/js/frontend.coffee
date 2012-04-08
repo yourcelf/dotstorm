@@ -97,7 +97,9 @@ class dotstorm.DotstormEditIdea extends Backbone.View
 
     'click .tablinks a': 'tabnav'
     'click .tool': 'changeTool'
+    'touchstart .tool': 'changeTool'
     'click .note-color': 'changeBackgroundColor'
+    'touchstart .note-color': 'changeBackgroundColor'
 
   initialize: (options) ->
     @idea = options.model
@@ -107,7 +109,7 @@ class dotstorm.DotstormEditIdea extends Backbone.View
     @$el.html @template
       description: @idea.get "description"
       tags: (@idea.get("tags") or []).join(",")
-      camera: true # navigator?.camera?
+      camera: navigator?.camera?
     @canvas = @$("canvas")
     @ctxDims =
       x: @canvas.width() * 2
@@ -134,18 +136,23 @@ class dotstorm.DotstormEditIdea extends Backbone.View
     return false
 
   changeTool: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
     el = $(event.currentTarget)
     @tool = el.attr("data-tool")
     el.parent().find(".tool").removeClass("active")
     el.addClass("active")
 
   changeBackgroundColor: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
     @background = $(event.currentTarget).css("background-color")
     @ctx.fillStyle = @background
     @ctx.beginPath()
     @ctx.fillRect(0, 0, @ctxDims.x, @ctxDims.y)
     @ctx.fill()
     @ctx.closePath()
+    @lastTool = null
     for action in @actions
       @drawAction(action)
 
@@ -167,6 +174,7 @@ class dotstorm.DotstormEditIdea extends Backbone.View
     event.preventDefault()
     @mouseIsDown = true
     @getPointer(event)
+    @handleDrag(event)
     return false
   handleEnd: (event) =>
     event.preventDefault()
@@ -179,6 +187,8 @@ class dotstorm.DotstormEditIdea extends Backbone.View
     if @mouseIsDown
       old = @pointer
       @getPointer(event)
+      if old?.x and old.x == @pointer.x and old.y == @pointer.y
+        old.x -= 1
       action = [@tool, old?.x, old?.y, @pointer.x, @pointer.y]
       @drawAction(action)
       @actions.push(action)
@@ -186,15 +196,17 @@ class dotstorm.DotstormEditIdea extends Backbone.View
 
   drawAction: (action) =>
     tool = action[0]
-    switch tool
-      when 'pencil'
-        @ctx.lineCap = 'round'
-        @ctx.lineWidth = 8
-        @ctx.strokeStyle = '#000000'
-      when 'eraser'
-        @ctx.lineCap = 'round'
-        @ctx.lineWidth = 32
-        @ctx.strokeStyle = @background
+    if tool != @lastTool
+      switch tool
+        when 'pencil'
+          @ctx.lineCap = 'round'
+          @ctx.lineWidth = 8
+          @ctx.strokeStyle = '#000000'
+        when 'eraser'
+          @ctx.lineCap = 'round'
+          @ctx.lineWidth = 32
+          @ctx.strokeStyle = @background
+      @lastTool = tool
 
     @ctx.beginPath()
     if action[1]?
