@@ -8,7 +8,7 @@ div#app
 script#dotstormTopic(type='text/template')
   h1 <%= name %>
   div#dotstorm
-    div.topic <%| _.escapeHTML(topic).replace(/\n/g, "\n<br />") %>
+    div.clickToEdit.topic <%| _.escapeHTML(topic).replace(/\n/g, "\n<br />") %>
 
 script#dotstormTopicEditor(type='text/template')
   form
@@ -64,7 +64,7 @@ script#dotstormAddIdea(type='text/template')
 script#dotstormShowIdeas(type='text/template')
   div.idea-browser
     div.sizes
-      <a href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Sort" %></a>
+      <a class='sort-link' href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Sort" %></a>
       | size:
       a.resize.small(data-size='small') &nbsp;
       a.resize.medium(data-size='medium') &nbsp;
@@ -78,6 +78,17 @@ script#dotstormSmallIdea(type='text/template')
     div.text
       div.tags
         <%= tags %>
+
+script#dotstormSmallIdeaGroup(type='text/template')
+  div.label.clickToEdit
+    <%= label %>
+  div.ideas
+
+script#dotstormSmallIdeaGroupEditLabel(type='text/template')
+  div
+    form
+      | <input type='text' value='<%= label %>' placeholder='label' />
+      input(type='submit', value='OK')
 
 script#dotstormBigIdea(type='text/template')
   div.shadow

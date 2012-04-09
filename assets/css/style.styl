@@ -121,12 +121,15 @@ ul.tabs
   margin-left: auto
   margin-right: auto
 
+.clickToEdit
+  border: 1px inset transparent
+.clickToEdit:hover
+  background-color: #ffe
+  border: 1px inset black
+  &:before
+    content: "✎"
+
 #dotstorm
-  .topic:hover
-    background-color: #ffe
-    border: 1px inset black
-    &:before
-      content: "✎"
   textarea
     width: 40em
     max-width: 80%
@@ -167,6 +170,8 @@ ul.tabs
 .idea-browser
   text-align: right
   clear: both
+  .sort-link
+    float: left
   .sizes
     height: 2em
     a.resize
@@ -219,21 +224,30 @@ ul.tabs
 #showIdeas
   position: relative
 
-.sorting .smallIdea
-  user-select: none
-  -webkit-transform: rotate(2deg)
-  -moz-transform: rotate(2deg)
-  -ms-transform: rotate(2deg)
-  -o-transform: rotate(2deg)
-  transform: rotate(2deg)
-  &:active
-    -webkit-transform: rotate(-2deg)
-    -moz-transform: rotate(-2deg)
-    -ms-transform: rotate(-2deg)
-    -o-transform: rotate(-2deg)
-    transform: rotate(-2deg)
-  &:hover
-    outline: 3px solid orange
+  .group
+    display: inline-block
+    text-align: center
+    float: left
+    border: 1px solid #eee
+    background: rgba(255, 255, 255, 0.5)
+    padding: 1em
+
+.sorting
+  .smallIdea
+    user-select: none
+    -webkit-transform: rotate(2deg)
+    -moz-transform: rotate(2deg)
+    -ms-transform: rotate(2deg)
+    -o-transform: rotate(2deg)
+    transform: rotate(2deg)
+    &:active
+      -webkit-transform: rotate(-2deg)
+      -moz-transform: rotate(-2deg)
+      -ms-transform: rotate(-2deg)
+      -o-transform: rotate(-2deg)
+      transform: rotate(-2deg)
+    &:hover, &.hovered
+      outline: 3px solid orange
 
 .bigIdea
   overflow: hidden
