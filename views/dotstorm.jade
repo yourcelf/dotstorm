@@ -64,10 +64,11 @@ script#dotstormAddIdea(type='text/template')
 script#dotstormShowIdeas(type='text/template')
   div.idea-browser
     div.sizes
+      <a href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Sort" %></a>
       | size:
-      a.small(data-size='small') &nbsp;
-      a.medium(data-size='medium') &nbsp;
-      a.large(data-size='large') &nbsp;
+      a.resize.small(data-size='small') &nbsp;
+      a.resize.medium(data-size='medium') &nbsp;
+      a.resize.large(data-size='large') &nbsp;
     div#showIdeas
     div(style='clear: both;')
 

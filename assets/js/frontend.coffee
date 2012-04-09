@@ -11,12 +11,13 @@
 if typeof console == 'undefined'
   @console = {log: (->), error: (->), debug: (->)}
 
-dotstorm = {}
-dotstorm.socket = io.connect("/io")
-dotstorm.client = Client(dotstorm.socket)
-Backbone.setSocket(dotstorm.socket)
+ds = {}
+ds.socket = io.connect("/io")
+ds.client = Client(ds.socket)
+Backbone.setSocket(ds.socket)
 
-class dotstorm.Intro extends Backbone.View
+
+class Intro extends Backbone.View
   chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890"
   template: _.template $("#intro").html() or ""
   events:
@@ -29,17 +30,17 @@ class dotstorm.Intro extends Backbone.View
   openNamed: (event) =>
     name = @$("#id_join").val()
     if name != ''
-      dotstorm.app.open(name)
+      ds.app.open(name)
     return false
 
   openRandom: (event) =>
     randomChar = =>
       @chars.substr parseInt(Math.random() * @chars.length), 1
     name = (randomChar() for i in [0...12]).join("")
-    dotstorm.app.open(name)
+    ds.app.open(name)
     return false
 
-class dotstorm.DotstormTopic extends Backbone.View
+class DotstormTopic extends Backbone.View
   template: _.template $("#dotstormTopic").html() or ""
   editorTemplate: _.template $("#dotstormTopicEditor").html() or ""
   events:
@@ -73,7 +74,7 @@ class dotstorm.DotstormTopic extends Backbone.View
     @render()
     return false
 
-class dotstorm.IdeaCanvas extends Backbone.View
+class IdeaCanvas extends Backbone.View
   tagName: 'canvas'
   events:
     'mousedown':  'handleStart'
@@ -182,7 +183,7 @@ class dotstorm.IdeaCanvas extends Backbone.View
     @ctx.stroke()
 
 
-class dotstorm.DotstormEditIdea extends Backbone.View
+class DotstormEditIdea extends Backbone.View
   template: _.template $("#dotstormAddIdea").html() or ""
   events:
     'submit form':       'saveIdea'
@@ -196,7 +197,7 @@ class dotstorm.DotstormEditIdea extends Backbone.View
   initialize: (options) ->
     @idea = options.idea
     @dotstorm = options.dotstorm
-    @canvas = new dotstorm.IdeaCanvas {idea: @idea}
+    @canvas = new IdeaCanvas {idea: @idea}
 
   render: =>
     @$el.html @template
@@ -229,7 +230,7 @@ class dotstorm.DotstormEditIdea extends Backbone.View
       drawing: @canvas.actions
     }, {
       success: (model) ->
-        dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/show/#{model.id}", trigger: true
+        ds.app.navigate "/d/#{ds.model.get("slug")}/show/#{model.id}", trigger: true
       error: (model, err) ->
         flash "error", "Error saving: #{err}"
     }
@@ -249,7 +250,7 @@ class dotstorm.DotstormEditIdea extends Backbone.View
     @canvas.background = $(event.currentTarget).css("background-color")
     @canvas.redraw()
 
-class dotstorm.DotstormShowIdeas extends Backbone.View
+class DotstormShowIdeas extends Backbone.View
   template: _.template $("#dotstormShowIdeas").html() or ""
   events:
     'click .sizes a': 'resize'
@@ -271,7 +272,7 @@ class dotstorm.DotstormShowIdeas extends Backbone.View
       query: dotstorm_id: @dotstorm.id
 
   render: =>
-    @$el.html @template()
+    @$el.html @template(sorting: false, slug: @model.get("slug"))
 
     # Build linked list.
     models = (model for model in @ideas.models)
@@ -282,18 +283,18 @@ class dotstorm.DotstormShowIdeas extends Backbone.View
         models[i].next = models[i + 1]
 
     showBig = (model) =>
-      dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/show/#{model.id}"
+      ds.app.navigate "/d/#{ds.model.get("slug")}/show/#{model.id}"
       if model.prev?
         model.showPrev = -> showBig(model.prev)
       if model.next?
         model.showNext = -> showBig(model.next)
-      big = new dotstorm.DotstormShowIdeaBig model: model
+      big = new DotstormShowIdeaBig model: model
       @$el.append big.el
       big.render()
 
     for model in models
       do (model) =>
-        small = new dotstorm.DotstormShowIdeaSmall model: model
+        small = new DotstormShowIdeaSmall model: model
         @$("#showIdeas").append small.el
         small.render()
         small.$el.on "click", -> showBig(model)
@@ -307,7 +308,88 @@ class dotstorm.DotstormShowIdeas extends Backbone.View
       width: @sizes[size] + "px"
       height: @sizes[size] + "px"
 
-class dotstorm.DotstormShowIdeaSmall extends Backbone.View
+class DotstormSortIdeas extends DotstormShowIdeas
+  events:
+    'click .sizes a': 'resize'
+    'mousedown  .smallIdea': 'startDrag'
+    'mousemove  .smallIdea': 'continueDrag'
+    'mouseup    .smallIdea': 'stopDrag'
+    'touchstart .smallIdea': 'startDrag'
+    'touchmove  .smallIdea': 'continueDrag'
+    'touchend   .smallIdea': 'stopDrag'
+
+  render: =>
+    @$el.html @template(sorting: true, slug: @model.get("slug"))
+    @$el.addClass "sorting"
+    for model in @ideas.models
+      do (model) =>
+        small = new DotstormShowIdeaSmall model: model
+        @$("#showIdeas").append small.el
+        small.render()
+    this
+
+  getPosition: (event) =>
+    pointerObj = event.originalEvent?.touches?[0] or event
+    return {
+      x: pointerObj.pageX
+      y: pointerObj.pageY
+    }
+  moveNote: (event) =>
+    pos = @getPosition(event)
+    @active.css
+      position: "absolute"
+      left: pos.x + @mouseOffset.x + "px"
+      top: pos.y + @mouseOffset.y + "px"
+      zIndex: 10
+      opacity: 0.8
+    for dim in @noteDims
+      if dim.left < pos.x < dim.left + dim.width and dim.top < pos.y < dim.top + dim.height
+        dim.el.css("outline", "4px solid orange")
+      else
+        dim.el.css("outline", "none")
+
+  startDrag: (event) =>
+    @mouseIsDown = true
+    @active = $(event.currentTarget)
+    @placeholder = $("<div class='smallIdea'></div>").css
+      width: @active.width() + "px",
+      height: @active.height() + "px"
+
+    pos = @getPosition(event)
+    offset = @active.position()
+    @mouseOffset =
+      x: offset.left - pos.x
+      y: offset.top - pos.y
+    @noteDims = []
+    for note in @$(".smallIdea")
+      $n = $(note)
+      dims = $n.offset()
+      dims.width = $n.width()
+      dims.height = $n.height()
+      dims.el = $n
+      @noteDims.push(dims)
+    @active.before(@placeholder)
+    @moveNote(event)
+
+  continueDrag: (event) =>
+    if @mouseIsDown
+      @moveNote(event)
+  stopDrag: (event) =>
+    # undo...
+    @active.css
+      position: "relative"
+      left: 0
+      top: 0
+      zIndex: "auto"
+      opacity: 1
+    @mouseIsDown = false
+    @noteDims = []
+    @active = null
+    @mouseOffset = null
+    @placeholder.remove()
+    @$(".smallIdea").css("outline", "none")
+
+class DotstormShowIdeaSmall extends Backbone.View
   template: _.template $("#dotstormSmallIdea").html() or ""
   initialize: (options) ->
     @model = options.model
@@ -316,12 +398,12 @@ class dotstorm.DotstormShowIdeaSmall extends Backbone.View
     @$el.html @template @model.toJSON()
     @$el.addClass("smallIdea")
     @$el.css backgroundColor: @model.get("background")
-    canvas = new dotstorm.IdeaCanvas idea: @model, readOnly: true
+    canvas = new IdeaCanvas idea: @model, readOnly: true
     @$(".canvas").html canvas.el
     canvas.render()
     this
 
-class dotstorm.DotstormShowIdeaBig extends Backbone.View
+class DotstormShowIdeaBig extends Backbone.View
   template: _.template $("#dotstormBigIdea").html() or ""
   events:
     'click .shadow': 'close'
@@ -341,14 +423,14 @@ class dotstorm.DotstormShowIdeaBig extends Backbone.View
     @$el.html @template args
     @$el.addClass("bigIdea")
     @$el.css backgroundColor: @model.get("background")
-    canvas = new dotstorm.IdeaCanvas idea: @model, readOnly: true
+    canvas = new IdeaCanvas idea: @model, readOnly: true
     @$(".canvas").html canvas.el
     canvas.render()
     this
 
   close: (event) =>
     @$el.remove()
-    dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/show"
+    ds.app.navigate "/d/#{ds.model.get("slug")}/show"
 
   nothing: (event) =>
     event.preventDefault()
@@ -359,7 +441,7 @@ class dotstorm.DotstormShowIdeaBig extends Backbone.View
     @model.showNext() if @model.showNext?
 
   edit: (event) =>
-    dotstorm.app.navigate "/d/#{dotstorm.model.get("slug")}/edit/#{@model.id}",
+    ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}",
       trigger: true
 
   prev: (event) =>
@@ -373,35 +455,40 @@ updateNavLinks = ->
     else
       $(@).removeClass("active")
 
-class dotstorm.Router extends Backbone.Router
+class Router extends Backbone.Router
   routes:
     'd/:slug/add':        'dotstormAddIdea'
     'd/:slug/show':       'dotstormShowIdeas'
     'd/:slug/show/:id':   'dotstormShowIdeas'
+    'd/:slug/sort':       'dotstormSortIdeas'
     'd/:slug/edit/:id':   'dotstormEditIdea'
     'd/:slug':            'dotstormTopic'
     '':                   'intro'
 
   intro: ->
     updateNavLinks()
-    $("#app").html new dotstorm.Intro().render().el
+    $("#app").html new Intro().render().el
 
   dotstormTopic: (slug) =>
     updateNavLinks()
     @open slug, ->
-      $("#app").html new dotstorm.DotstormTopic(model: dotstorm.model).render().el
+      $("#app").html new DotstormTopic(model: ds.model).render().el
     return false
 
   dotstormShowIdeas: (slug, id) =>
     updateNavLinks()
     @open slug, ->
-      $("#app").html new dotstorm.DotstormShowIdeas(model: dotstorm.model, showId: id).render().el
+      $("#app").html new DotstormShowIdeas(model: ds.model, showId: id).render().el
     return false
+
+  dotstormSortIdeas: (slug) =>
+    @open slug, ->
+      $("#app").html new DotstormSortIdeas(model: ds.model).render().el
 
   dotstormAddIdea: (slug) =>
     updateNavLinks()
     @open slug, ->
-      view = new dotstorm.DotstormEditIdea(idea: new Idea, dotstorm: dotstorm.model)
+      view = new DotstormEditIdea(idea: new Idea, dotstorm: ds.model)
       $("#app").html view.el
       view.render()
     return false
@@ -415,7 +502,7 @@ class dotstorm.Router extends Backbone.Router
           if not model.get("dotstorm_id")
             flash "error", "Model with id #{id} not found."
           else
-            view = new dotstorm.DotstormEditIdea(idea: model, dotstorm: dotstorm.model)
+            view = new DotstormEditIdea(idea: model, dotstorm: ds.model)
             $("#app").html view.el
             view.render()
         error: ->
@@ -430,7 +517,7 @@ class dotstorm.Router extends Backbone.Router
       # force refresh to get new template.
       callback = -> window.location.href = "/d/#{slug}"
 
-    if dotstorm.model?.get("slug") == slug
+    if ds.model?.get("slug") == slug
       return callback()
 
     coll = new DotstormList
@@ -442,24 +529,24 @@ class dotstorm.Router extends Backbone.Router
           new Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "New dotstorm \"#{name}\" created."
-              dotstorm.model = model
-              dotstorm.app.navigate "/d/#{model.get("slug")}"
+              ds.model = model
+              ds.app.navigate "/d/#{model.get("slug")}"
               callback()
             error: (model, err) ->
               flash "error", err
         else if coll.length == 1
-          dotstorm.model = model = coll.models[0]
+          ds.model = model = coll.models[0]
           callback()
         else
           flash "error", "Ouch. Something broke. Sorry."
       error: (coll, res) => flash "error", res.error
     return false
 
-dotstorm.app = new dotstorm.Router
+ds.app = new Router
 Backbone.history.start pushState: true
 
 $("nav a").on 'click', (event) ->
-  dotstorm.app.navigate $(event.currentTarget).attr('href'), trigger: true
+  ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false
 
 # Debug
