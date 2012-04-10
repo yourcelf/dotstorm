@@ -1,6 +1,8 @@
 Backbone = require 'backbone'
 mongo    = require 'mongodb'
 logger   = require './logging'
+events   = require 'events'
+_        = require 'underscore'
 
 _connection = null
 
@@ -44,6 +46,7 @@ Backbone.sync = (method, model, options) ->
         cberr(err)
       else
         cb(result[0])
+        Backbone.sync.emit "#{method}:#{model.collectionName}", model
 
     if model.id? or options.query?._id?
       _id = mongo.ObjectID.createFromHexString("" + (model.id or options.query._id))
@@ -72,5 +75,7 @@ Backbone.sync = (method, model, options) ->
               cb(items[0])
             else
               cb(items)
+
+_.extend Backbone.sync, events.EventEmitter.prototype
 
 module.exports = { open }

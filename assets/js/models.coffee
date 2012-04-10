@@ -17,13 +17,25 @@ _.extend Backbone.Model.prototype, {
 
 class Idea extends Backbone.Model
   collectionName: 'Idea'
+  initialize: ->
+    @on "change:background", @incImageVersion
+    @on "change:drawing", @incImageVersion
+
+  incImageVersion: =>
+    if @hasChanged('background') or @hasChanged('drawing')
+      @set {imageVersion: (@get("imageVersion") or 0) + 1}, silent: true
+
+  validate: (attrs) =>
+    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
+    if not attrs.dotstorm_id
+      return "Dotstorm ID missing."
+
+  getThumbnailURL: (size) =>
+    return "/static/uploads/idea/#{@get "id"}/#{size}#{@get "version"}.png"
+
 class IdeaList extends Backbone.Collection
   model: Idea
   collectionName: Idea.prototype.collectionName
-  validate: (attrs) ->
-    if not attrs.dotstorm_id
-      return "Dotstorm ID missing."
-    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
 
 class IdeaGroup extends Backbone.Model
   collectionName: 'IdeaGroup'
@@ -43,15 +55,14 @@ class IdeaGroup extends Backbone.Model
       @set ideas: ideas
       return true
     return false
-    
+  validate: (attrs) ->
+    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
+    if not attrs.dotstorm_id
+      return "Dotstorm ID missing."
 
 class IdeaGroupList extends Backbone.Collection
   model: IdeaGroup
   collectionName: IdeaGroup.prototype.collectionName
-  validate: (attrs) ->
-    if not attrs.dotstorm_id
-      return "Dotstorm ID missing."
-    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
 
 class Dotstorm extends Backbone.Model
   collectionName: 'Dotstorm'

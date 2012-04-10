@@ -3,6 +3,7 @@ socketio    = require 'socket.io'
 RedisStore  = require('connect-redis')(express)
 logger      = require './logging'
 Database    = require './backbone-mongo'
+require './ideacanvas2image'
 
 # See Cakefile for options definitions and defaults
 start = (options) ->

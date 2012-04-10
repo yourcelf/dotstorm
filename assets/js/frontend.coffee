@@ -143,8 +143,8 @@ class ds.IdeaCanvas extends Backbone.View
     else
       pointerObj = event
     @pointer =
-      x: (pointerObj.pageX - @offset.left) / @curDims.x * @ctxDims.x
-      y: (pointerObj.pageY - @offset.top) / @curDims.y * @ctxDims.y
+      x: parseInt((pointerObj.pageX - @offset.left) / @curDims.x * @ctxDims.x)
+      y: parseInt((pointerObj.pageY - @offset.top) / @curDims.y * @ctxDims.y)
 
   # Draw!
 
