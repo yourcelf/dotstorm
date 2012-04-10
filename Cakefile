@@ -31,6 +31,6 @@ task 'test', 'Run tests', (options) ->
     showColors=true,
     teamcity=false,
     useRequireJs=false,
-    regExpSpec=/^.*spec\.(js|coffee)$/i,
+    regExpSpec=/^[^_].*spec\.(js|coffee)$/i,
     junitreport=false,
   )

@@ -1,7 +1,8 @@
-Canvas = require 'canvas'
-fs     = require 'fs'
-path   = require 'path'
-logger = require './logging'
+Backbone = require 'backbone'
+Canvas   = require 'canvas'
+fs       = require 'fs'
+path     = require 'path'
+logger   = require './logging'
 
 BASE_PATH = __dirname + "/.."
 
@@ -18,7 +19,7 @@ mkdirs = (dir, mode, callback) ->
     if err?
       if err.code == "ENOENT"
         # Dir doesn't exist.  Walk up the tree.
-        mkdirs dir.split("/").slice(0, -1).join("/"), (err) ->
+        mkdirs dir.split("/").slice(0, -1).join("/"), mode, (err) ->
           if err? then return callback?(err)
           fs.mkdir dir, mode, (err) ->
             if err? then return callback?(err)
@@ -31,45 +32,60 @@ mkdirs = (dir, mode, callback) ->
       return callback?(err)
 
 clearDir = (dir, callback) ->
+  # Remove everything in the given directory.
   mkdirs dir, "0775", (err) ->
     if err then return callback?(err)
     fs.readdir dir, (err, files) ->
       if err then return callback?(err)
       numFiles = files.length
-      for file in files
-        fs.unlink file, (err) ->
-          if err then return callback?(err)
-          numFiles -= 1
-          if numFiles == 0 then callback?(null)
+      if numFiles == 0
+        callback?(null)
+      else
+        for file in files
+          fs.unlink "#{dir}/#{file}", (err) ->
+            if err then return callback?(err)
+            numFiles -= 1
+            if numFiles == 0 then callback?(null)
 
 getThumbnailDims = (origx, origy, maxx, maxy) ->
+  # Get the maximum dimensions that fit in maxx, maxy while preserving aspect
+  # ratio.
   aspect = origx / origy
   if aspect > 1
     return [maxx, maxy * aspect]
   return [maxx * aspect, maxy]
 
 canvas2thumbnails = (canvas, thumbnails, callback) ->
+  # Given a canvas and an array of thumbnail definitions in the form:
+  #   [[ <destination_path>, <maxx>, <maxy> ]]
+  # create thumbnail files on disk.
   img = canvas.toBuffer (err, buf) ->
     if err then return callback?(err)
     count = thumbnails.length
-    for dest, maxDims in thumbnails
-      dims = getThumbnailDims(canvas.width, canvas.height, maxDims[0], maxDims[1])
-      thumb = new Canvas(dims[0], dims[1])
-      img = new Canvas.Image
-      img.src = buf
-      thumb.drawImage(img, 0, 0, dims[0], dims[1])
-      out = fs.createWriteStream __dirname + dest
-      stream = thumb.createPNGStream()
-      stream.on 'data', (chunk) -> out.write chunk
-      stream.on 'end', ->
-        count -= 1
-        if count == 0 then callback?(null)
+    for data in thumbnails
+      do (data) ->
+        [dest, maxx, maxy] = data
+        dims = getThumbnailDims(canvas.width, canvas.height, maxx, maxy)
+        thumb = new Canvas(dims[0], dims[1])
+        img = new Canvas.Image
+        img.src = buf
+        ctx = thumb.getContext('2d')
+        ctx.drawImage(img, 0, 0, dims[0], dims[1])
+        logger.info "Writing file #{dest}"
+        out = fs.createWriteStream dest
+        stream = thumb.createPNGStream()
+        stream.on 'data', (chunk) ->
+          out.write chunk
+        stream.on 'end', ->
+          count -= 1
+          if count == 0 then callback?(null)
 
 draw = (idea, callback) ->
+  # Render the drawing instructions contained in the idea to a canvas.
   dims = idea.get("dims")
   canvas = new Canvas dims.x, dims.y
   ctx = canvas.getContext('2d')
-  ctx.fillStyle idea.get("background")
+  ctx.fillStyle = idea.get("background")
   ctx.beginPath()
   ctx.fillRect 0, 0, dims.x, dims.y
   ctx.fill()
@@ -105,12 +121,27 @@ draw = (idea, callback) ->
     if (err) then return callback?(err)
     return callback?(null)
 
-mkthumb = (idea, callback) ->
+mkthumbs = (idea, callback) ->
+  # Create thumbnail images for the given idea.
   clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
     if (err) then return callback?(err)
-    draw idea, (err, canvas) ->
+    draw idea, (err) ->
       if (err) then return callback?(err)
+      callback(null)
 
+checkMkThumbs = (model) ->
+  mkthumbs model, (err) ->
+    if err then logger.error(err)
+    logger.info("successfully made thumbs for #{model.id}")
 
-Backbone.sync.on "save:Idea", mkthumbs
-Backbone.sync.on "update:Idea", mkthumbs
+remove = (model) ->
+  dir = BASE_PATH + path.dirname(model.getThumbnailURL('small'))
+  logger.info "removing #{dir} and all contents"
+  clearDir dir, (err) ->
+    if (err) then logger.error(err)
+    fs.rmdir dir, (err) ->
+      if (err) then logger.error(err)
+
+Backbone.sync.on "after:create:Idea", checkMkThumbs
+Backbone.sync.on "after:update:Idea", checkMkThumbs
+Backbone.sync.on "before:delete:Idea", remove

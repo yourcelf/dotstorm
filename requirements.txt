@@ -15,3 +15,4 @@ redis
 jasmine-node
 mongodb
 markdown
+canvas

@@ -22,20 +22,20 @@ describe "Vanilla MongoDB test", ->
 
 describe "MongoDB backbone connector", ->
   server = global.server
-  cberr = (done) ->
-    return (err) ->
-      console.log err
-      expect(true).toBe(false)
-      done()
   mahId = undefined
 
-  it "executes synchronously", ->
-    h.executeSync("db")
+  beforeEach ->
+    @addMatchers
+      fail: (expected) ->
+        @message = -> expected
+        return false
+
+  it "executes synchronously", -> h.executeSync("db")
 
   it "initializes the server", ->
     waitsFor (-> server.getDb()? ), "db connection", 1000
 
-  for [Coll, Model] in [[models.DotstormList, models.Dotstorm], [models.IdeaList, models.Idea]]
+  for [Coll, Model] in [[models.DotstormList, models.Dotstorm]]
     it "saves a model", (done) ->
       d = new Model
         name: "my happy storm"
@@ -43,7 +43,9 @@ describe "MongoDB backbone connector", ->
         success: (m) ->
           mahId = m.id
           done()
-        error: cberr(done)
+        error: (model, error) ->
+          expect().fail(error)
+          done()
 
     it "retrieves the model", (done) ->
       expect(mahId).toBeDefined()
@@ -52,7 +54,9 @@ describe "MongoDB backbone connector", ->
         success: (model) ->
           expect(model.get("name")).toEqual("my happy storm")
           done()
-        error: cberr(done)
+        error: (model, error) ->
+          expect().fail(error)
+          done()
 
     it "fetches from collection", (done) ->
       d = new Coll
@@ -60,7 +64,9 @@ describe "MongoDB backbone connector", ->
         success: (items) ->
           expect(items.length).toBe(1)
           done()
-        error: cberr(done)
+        error: (model, error) ->
+          expect().fail(error)
+          done()
 
     it "deletes everything in the collection", (done) ->
       d = new Coll
@@ -73,7 +79,8 @@ describe "MongoDB backbone connector", ->
                 count -= 1
                 if count == 0
                   done()
-              error: cberr(done)
+              error: (model, error) ->
+                expect().fail(error)
 
     it "Ensures there's nothing left", (done) ->
       d = new Coll
@@ -81,7 +88,7 @@ describe "MongoDB backbone connector", ->
         success: (items) ->
           expect(items.models.length).toBe(0)
           done()
-        error: cberr(done)
+        error: (model, error) ->
+          expect().fail(error)
 
-  it "done executing synchronously", ->
-    h.doneExecutingSync()
+  it "done executing synchronously", -> h.doneExecutingSync()

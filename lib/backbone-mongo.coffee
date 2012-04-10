@@ -3,6 +3,7 @@ mongo    = require 'mongodb'
 logger   = require './logging'
 events   = require 'events'
 _        = require 'underscore'
+models   = require '../assets/js/models'
 
 _connection = null
 
@@ -28,7 +29,7 @@ Backbone.sync = (method, model, options) ->
   cb = options.success or (->)
   cberr = (err) ->
     logger.error(err)
-    options.error() if options.error
+    options.error?(err)
   unless _connection?
     cberr "Not connected to the database."
     return
@@ -45,14 +46,17 @@ Backbone.sync = (method, model, options) ->
       if err
         cberr(err)
       else
+        Model = models.modelFromCollectionName(collectionName)
+        newModel = new Model(result[0])
+        Backbone.sync.emit "after:#{method}:#{model.collectionName}", newModel
         cb(result[0])
-        Backbone.sync.emit "#{method}:#{model.collectionName}", model
 
     if model.id? or options.query?._id?
       _id = mongo.ObjectID.createFromHexString("" + (model.id or options.query._id))
     else
       _id = undefined
 
+    Backbone.sync.emit "before:#{method}:#{model.collectionName}", model
     switch method
       when "create"
         coll.insert model.toJSON(), {safe: true}, done

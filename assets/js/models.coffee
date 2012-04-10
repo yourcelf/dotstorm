@@ -29,9 +29,11 @@ class Idea extends Backbone.Model
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
     if not attrs.dotstorm_id
       return "Dotstorm ID missing."
+    if not attrs.version
+      attrs.version = 0
 
   getThumbnailURL: (size) =>
-    return "/static/uploads/idea/#{@get "id"}/#{size}#{@get "version"}.png"
+    return "/static/uploads/idea/#{@.id}/#{size}#{@get "version"}.png"
 
 class IdeaList extends Backbone.Collection
   model: Idea
