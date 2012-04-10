@@ -11,7 +11,7 @@ sizes =
   small: [78, 78]
   medium: [138, 138]
   large: [238, 238]
-  full: [400, 400]
+  full: [640, 640]
 
 mkdirs = (dir, mode, callback) ->
   # Make the directory, and any parent directories needed.
@@ -52,7 +52,7 @@ getThumbnailDims = (origx, origy, maxx, maxy) ->
   # ratio.
   aspect = origx / origy
   if aspect > 1
-    return [maxx, maxy * aspect]
+    return [maxx, maxy / aspect]
   return [maxx * aspect, maxy]
 
 canvas2thumbnails = (canvas, thumbnails, callback) ->
@@ -130,9 +130,12 @@ mkthumbs = (idea, callback) ->
       callback(null)
 
 checkMkThumbs = (model) ->
-  mkthumbs model, (err) ->
-    if err then logger.error(err)
-    logger.info("successfully made thumbs for #{model.id}")
+  if model.get("background")? and model.get("drawing")?
+    mkthumbs model, (err) ->
+      if err then logger.error(err)
+      logger.info("successfully made thumbs for #{model.id}")
+  else
+    logger.info("skipping thumbnail; empty model")
 
 remove = (model) ->
   dir = BASE_PATH + path.dirname(model.getThumbnailURL('small'))

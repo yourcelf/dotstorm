@@ -46,8 +46,11 @@ Backbone.sync = (method, model, options) ->
       if err
         cberr(err)
       else
-        Model = models.modelFromCollectionName(collectionName)
-        newModel = new Model(result[0])
+        unless isNaN result
+          newModel = model
+        else
+          Model = models.modelFromCollectionName(collectionName)
+          newModel = new Model(result[0])
         Backbone.sync.emit "after:#{method}:#{model.collectionName}", newModel
         cb(result[0])
 

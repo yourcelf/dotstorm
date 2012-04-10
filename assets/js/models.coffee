@@ -30,10 +30,10 @@ class Idea extends Backbone.Model
     if not attrs.dotstorm_id
       return "Dotstorm ID missing."
     if not attrs.version
-      attrs.version = 0
+      attrs.imageVersion = 0
 
   getThumbnailURL: (size) =>
-    return "/static/uploads/idea/#{@.id}/#{size}#{@get "version"}.png"
+    return "/static/uploads/idea/#{@.id}/#{size}#{@get "imageVersion"}.png"
 
 class IdeaList extends Backbone.Collection
   model: Idea
