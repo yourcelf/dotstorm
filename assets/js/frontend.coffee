@@ -269,7 +269,7 @@ class ds.EditIdea extends Backbone.View
       success: (model) ->
         ds.app.navigate "/d/#{ds.model.get("slug")}/show/#{model.id}", trigger: true
       error: (model, err) ->
-        console.error(err)
+        console.log(err)
         str = if err.error? then err.error else err
         flash "error", "Error saving: #{str}"
     }

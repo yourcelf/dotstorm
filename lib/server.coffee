@@ -125,33 +125,6 @@ start = (options) ->
           when "read"
             respond()
 
-#  socketListeners = {}
-#  roomserver.on 'connection', (socket) ->
-#    if socketListeners[socket.id]?
-#      for [key, listener] in socketListeners[socket.id]
-#        Backbone.sync.removeListener(key, listener)
-#    socketListeners[socket.id] = []
-#
-#    rebroadcast = (key) ->
-#      listener = (data) ->
-#        # broadcast image updates to everyone.
-#        logger.debug "#{socket.id} rebroadcast #{key}"
-#        socket.broadcast.to(data.dotstorm_id).emit key, data
-#      Backbone.sync.on key, listener
-#      socketListeners[socket.id].push([key, listener])
-#
-#    rebroadcast "after:update:Idea"
-#    rebroadcast "after:create:Idea"
-#    rebroadcast "after:delete:Idea"
-#    rebroadcast "after:update:IdeaGroup"
-#    rebroadcast "after:create:IdeaGroup"
-#    rebroadcast "after:delete:IdeaGroup"
-#    rebroadcast "after:update:Dotstorm"
-#
-#    socket.on 'disconnect', ->
-#      for [key, listener] in socketListeners[socket.id]
-#        Backbone.sync.removeListener(key, listener)
-
   return { app, io, sessionStore, getDb: (-> db) }
 
 module.exports = { start }
