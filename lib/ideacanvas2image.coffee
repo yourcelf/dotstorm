@@ -71,7 +71,7 @@ canvas2thumbnails = (canvas, thumbnails, callback) ->
         img.src = buf
         ctx = thumb.getContext('2d')
         ctx.drawImage(img, 0, 0, dims[0], dims[1])
-        logger.info "Writing file #{dest}"
+        logger.debug "Writing file #{dest}"
         out = fs.createWriteStream dest
         stream = thumb.createPNGStream()
         stream.on 'data', (chunk) ->
@@ -124,31 +124,32 @@ draw = (idea, callback) ->
 
 mkthumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
-  clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
-    if (err) then return callback?(err)
-    draw idea, (err) ->
+  if idea.get("background")? and idea.get("drawing")?
+    clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
       if (err) then return callback?(err)
-      callback(null)
-
-checkMkThumbs = (model) ->
-  if model.get("background")? and model.get("drawing")?
-    mkthumbs model, (err) ->
-      if err then logger.error(err)
-      logger.info("successfully made thumbs for #{model.id}")
-      Backbone.sync.emit "images:Idea",
-        dotstorm_id: model.get("dotstorm_id")
-        idea_id: model.id
+      draw idea, (err) ->
+        if (err) then return callback?(err)
+        callback(null)
   else
-    logger.info("skipping thumbnail; empty model")
+    logger.debug("skipping thumbnail; empty model")
+
+#checkMkThumbs = (model) ->
+#  if model.get("background")? and model.get("drawing")?
+#    mkthumbs model, (err) ->
+#      if err then logger.error(err)
+#      logger.debug("successfully made thumbs for #{model.id}")
+#      Backbone.sync.emit "images:Idea",
+#        dotstorm_id: model.get("dotstorm_id")
+#        imageVersion: model.get("imageVersion")
+#        _id: model.id
+#  else
 
 remove = (model) ->
   dir = BASE_PATH + path.dirname(model.getThumbnailURL('small'))
-  logger.info "removing #{dir} and all contents"
+  logger.debug "removing #{dir} and all contents"
   clearDir dir, (err) ->
     if (err) then logger.error(err)
     fs.rmdir dir, (err) ->
       if (err) then logger.error(err)
 
-Backbone.sync.on "after:create:Idea", checkMkThumbs
-Backbone.sync.on "after:update:Idea", checkMkThumbs
-Backbone.sync.on "before:delete:Idea", remove
+module.exports = { mkthumbs, remove }

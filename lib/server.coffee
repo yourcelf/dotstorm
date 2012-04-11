@@ -1,10 +1,10 @@
 express     = require 'express'
 socketio    = require 'socket.io'
 RedisStore  = require('connect-redis')(express)
+Backbone    = require 'backbone'
 logger      = require './logging'
 Database    = require './backbone-mongo'
-Backbone    = require 'backbone'
-require './ideacanvas2image'
+thumbnails  = require './ideacanvas2image'
 
 # See Cakefile for options definitions and defaults
 start = (options) ->
@@ -63,17 +63,94 @@ start = (options) ->
   require('./iorooms.server').attach(channel, io, sessionStore)
   require('./backbone-socket.server').attach(channel, io)
   roomserver = io.of(channel)
-  rebroadcast = (key) ->
-    Backbone.sync.on key, (data) ->
-      console.log "rebroadcast #{key}"
-      roomserver.in(data.dotstorm_id).emit key, data
-  rebroadcast("images:Idea")
-  for collectionName in ["Idea", "IdeaGroup", "Dotstorm"]
-    do (collectionName) ->
-      rebroadcast("after:update:#{collectionName}")
-      rebroadcast("after:create:#{collectionName}")
-      rebroadcast("after:delete:#{collectionName}")
+  #
+  # Events from backbone->mongo:
+  #
+  Backbone.sync.on "backbone:error", (socket, signature, model, error) ->
+    socket.emit signature.event, {error: error}
 
+  Backbone.sync.on "backbone", (socket, signature, model) ->
+    respond = -> socket.emit signature.event, model.toJSON()
+    rebroadcast = ->
+      # Only works for models, not collections.
+      socket.broadcast.to(model.dotstorm_id).emit "backbone", { signature, model: model.toJSON() }
+    errorOut = (error) -> socket.emit signature.event, error: error
+    switch signature.collectionName
+      when "Idea"
+        switch signature.method
+          when "create"
+            thumbnails.mkthumbs model, (err) ->
+              if err?
+                errorOut(err)
+              else
+                respond()
+                rebroadcast()
+          when "update"
+            thumbnails.mkthumbs model, (err) ->
+              if err?
+                errorOut(err)
+              else
+                respond()
+                rebroadcast()
+          when "delete"
+            thumbnails.remove model, (err) ->
+              if err?
+                errorOut(err)
+              else
+                respond()
+                rebroadcast()
+          when "read" then respond()
+      when "IdeaGroup"
+        switch signature.method
+          when "create"
+            respond()
+            rebroadcast()
+          when "update"
+            respond()
+            rebroadcast()
+          when "delete"
+            respond()
+            rebroadcast()
+          when "read"
+            respond()
+      when "Dotstorm"
+        switch signature.method
+          when "create"
+            respond()
+          when "update"
+            respond()
+            rebroadcast()
+          when "delete"
+            respond()
+          when "read"
+            respond()
+
+#  socketListeners = {}
+#  roomserver.on 'connection', (socket) ->
+#    if socketListeners[socket.id]?
+#      for [key, listener] in socketListeners[socket.id]
+#        Backbone.sync.removeListener(key, listener)
+#    socketListeners[socket.id] = []
+#
+#    rebroadcast = (key) ->
+#      listener = (data) ->
+#        # broadcast image updates to everyone.
+#        logger.debug "#{socket.id} rebroadcast #{key}"
+#        socket.broadcast.to(data.dotstorm_id).emit key, data
+#      Backbone.sync.on key, listener
+#      socketListeners[socket.id].push([key, listener])
+#
+#    rebroadcast "after:update:Idea"
+#    rebroadcast "after:create:Idea"
+#    rebroadcast "after:delete:Idea"
+#    rebroadcast "after:update:IdeaGroup"
+#    rebroadcast "after:create:IdeaGroup"
+#    rebroadcast "after:delete:IdeaGroup"
+#    rebroadcast "after:update:Dotstorm"
+#
+#    socket.on 'disconnect', ->
+#      for [key, listener] in socketListeners[socket.id]
+#        Backbone.sync.removeListener(key, listener)
 
   return { app, io, sessionStore, getDb: (-> db) }
 

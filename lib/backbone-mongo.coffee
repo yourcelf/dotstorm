@@ -51,15 +51,14 @@ Backbone.sync = (method, model, options) ->
         else
           Model = models.modelFromCollectionName(collectionName)
           newModel = new Model(result[0])
-        Backbone.sync.emit "after:#{method}:#{model.collectionName}", newModel
-        cb(result[0])
+        logger.debug "emit after:#{method}:#{model.collectionName}"
+        cb(newModel)
 
     if model.id? or options.query?._id?
       _id = mongo.ObjectID.createFromHexString("" + (model.id or options.query._id))
     else
       _id = undefined
 
-    Backbone.sync.emit "before:#{method}:#{model.collectionName}", model
     switch method
       when "create"
         coll.insert model.toJSON(), {safe: true}, done
@@ -82,7 +81,5 @@ Backbone.sync = (method, model, options) ->
               cb(items[0])
             else
               cb(items)
-
-_.extend Backbone.sync, events.EventEmitter.prototype
 
 module.exports = { open }

@@ -1,6 +1,10 @@
 models = require '../assets/js/models'
 logger = require './logging'
 events = require 'events'
+Backbone = require 'backbone'
+_        = require 'underscore'
+
+_.extend Backbone.sync, events.EventEmitter.prototype
 
 attach = (route, io) ->
   io.of(route).on 'connection', (socket) ->
@@ -14,11 +18,11 @@ attach = (route, io) ->
       if data.signature.event
         callbacks =
           success: (model, response) ->
-            socket.emit data.signature.event, model.toJSON()
+            Backbone.sync.emit "backbone", socket, data.signature, model
             logger.debug "success: #{data.signature.method} #{data.signature.collectionName} #{model.length or 1}"
-          error: (nmodel, response) ->
-            socket.emit data.signature.event, error: response.toJSON()
-            logger.error nmodel
+          error: (model, response) ->
+            Backbone.sync.emit "backbone:error", socket, data.signature, model, response
+            logger.error model
             logger.error response
         if data.signature.query?
           callbacks.query = data.signature.query

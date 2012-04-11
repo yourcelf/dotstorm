@@ -98,6 +98,7 @@ class ds.IdeaCanvas extends Backbone.View
 
   initialize: (options) ->
     @idea = options.idea
+    # don't listen for changes.. cuz we're busy drawing!
     @canvas = @$el
     @tool = "pencil"
     if options.readOnly == true
@@ -293,6 +294,7 @@ class ds.ShowIdeas extends Backbone.View
   template: _.template $("#dotstormShowIdeas").html() or ""
   events:
     'click .sizes a': 'resize'
+    'click .sort-link': 'softNav'
   sizes:
     small: 78
     medium: 118
@@ -302,28 +304,18 @@ class ds.ShowIdeas extends Backbone.View
     @dotstorm = options.model
     # ID of a single note to show, popped out
     @showId = options.showId
-    @ideas = new IdeaList
-    @groups = new IdeaGroupList
-    gotIdeas = gotGroups = false
-    doIt = => if gotIdeas and gotGroups then @render()
+    @ideas = options.ideas
+    @groups = options.groups
 
-    @ideas.fetch
-      success: (ideas) =>
-        @ideas = ideas
-        gotIdeas = true
-        doIt()
-      error: ->
-        flash "error", "Error fetching ideas"
-      query: dotstorm_id: @dotstorm.id
+    @dotstorm.on "change", @render
+    @ideas.on "change", =>
+      @render()
+    @groups.on "change", =>
+      @render()
 
-    @groups.fetch
-      success: (groups) =>
-        @groups = groups
-        gotGroups = true
-        doIt()
-      error: ->
-        flash "error", "Error fetching groups"
-      query: dotstorm_id: @dotstorm.id
+  softNav: (event) =>
+    ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
+    return false
 
   sortGroups: =>
     grouped = {}
@@ -444,6 +436,7 @@ class ds.SortIdeas extends ds.ShowIdeas
   events:
     # From parent class
     'click .sizes a': 'resize'
+    'click .sort-link': 'softNav'
     # From us
     'mousedown  .smallIdea': 'startDrag'
     'mousemove  .smallIdea': 'continueDrag'
@@ -729,12 +722,12 @@ class ds.Router extends Backbone.Router
   dotstormShowIdeas: (slug, id) =>
     updateNavLinks()
     @open slug, ->
-      $("#app").html new ds.ShowIdeas(model: ds.model, showId: id).render().el
+      $("#app").html new ds.ShowIdeas(model: ds.model, ideas: ds.ideas, groups: ds.groups, showId: id).render().el
     return false
 
   dotstormSortIdeas: (slug) =>
     @open slug, ->
-      $("#app").html new ds.SortIdeas(model: ds.model).render().el
+      $("#app").html new ds.SortIdeas(model: ds.model, ideas: ds.ideas, groups: ds.groups).render().el
 
   dotstormAddIdea: (slug) =>
     updateNavLinks()
@@ -747,17 +740,13 @@ class ds.Router extends Backbone.Router
   dotstormEditIdea: (slug, id) =>
     updateNavLinks()
     @open slug, ->
-      model = new Idea _id: id
-      model.fetch
-        success: (model) ->
-          if not model.get("dotstorm_id")
-            flash "error", "Model with id #{id} not found."
-          else
-            view = new ds.EditIdea(idea: model, dotstorm: ds.model)
-            $("#app").html view.el
-            view.render()
-        error: ->
-          flash "error", "Model with id #{id} not found."
+      idea = ds.ideas.get(id)
+      if not idea?
+        flash "error", "Idea not found.  Check the URL?"
+      else
+        view = new ds.EditIdea(idea: idea, dotstorm: ds.model)
+        $("#app").html view.el
+        view.render()
     return false
 
   open: (name, callback) =>
@@ -772,8 +761,6 @@ class ds.Router extends Backbone.Router
       return callback()
 
     coll = new DotstormList
-
-
     coll.fetch
       query: { slug }
       success: (coll) ->
@@ -781,25 +768,37 @@ class ds.Router extends Backbone.Router
           new Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "New dotstorm \"#{name}\" created."
-              ds.joinRoom(model)
               ds.app.navigate "/d/#{model.get("slug")}"
-              callback()
+              ds.joinRoom(model, true, callback)
             error: (model, err) ->
               flash "error", err
         else if coll.length == 1
-          ds.joinRoom(coll.models[0])
-          callback()
+          ds.joinRoom(coll.models[0], false, callback)
         else
           flash "error", "Ouch. Something broke. Sorry."
       error: (coll, res) => flash "error", res.error
     return false
 
-ds.joinRoom = (newModel) ->
+ds.joinRoom = (newModel, isNew, callback) ->
   if ds.model? and ds.client? and ds.model.id != newModel.id
     ds.client.leave ds.model.id
   if ds.model?.id != newModel.id
     ds.client.join newModel.id
   ds.model = newModel
+  ds.ideas = new IdeaList
+  ds.groups = new IdeaGroupList
+  if isNew
+    # Nothing else to fetch yet -- we're brand spanking new.
+    return
+  cbCount = 2
+  for attr in ["ideas", "groups"]
+    ds[attr].fetch
+      error: (coll, err) -> flash "error", "Error fetching data."
+      success: (coll) ->
+        cbCount -= 1
+        if cbCount == 0
+          callback?()
+      query: {dotstorm_id: ds.model.id}
 
 # Establish socket.
 ds.socket = io.connect("/io", reconnect: false)
@@ -808,8 +807,6 @@ ds.app = new ds.Router
 ds.socket.on 'connect', ->
   ds.client = new Client(ds.socket)
   Backbone.history.start pushState: true
-  if ds.model? then ds.joinRoom ds.model
-
   ds.socket.on 'users', (data) ->
     ds.users = new ds.UsersView(users: data)
     $("#auth").html ds.users.el
@@ -818,24 +815,60 @@ ds.socket.on 'connect', ->
     ds.users?.removeUser(user)
   ds.socket.on 'user_joined', (user) ->
     ds.users?.addUser(user)
-  ds.socket.on 'images:Idea', (data) ->
-    console.log "images:Idea", data
-  for cname in ["Idea", "IdeaGroup", "Dotstorm"]
-    do (cname) ->
-      ds.socket.on "after:update:#{cname}", (data) -> console.log "update", cname, data
-      ds.socket.on "after:create:#{cname}", (data) -> console.log "create", cname, data
-      ds.socket.on "after:delete:#{cname}", (data) -> console.log "delete", cname, data
+
+  ds.socket.on 'backbone', (data) ->
+    switch data.signature.collectionName
+      when "Idea"
+        switch data.signature.method
+          when "create"
+            ds.ideas.add(new Idea(data.model))
+          when "update"
+            model = ds.ideas.get(data.model._id)
+            if model?
+              model.set(data.model)
+            else
+              ds.ideas.fetch()
+          when "delete"
+            model = ds.ideas.get(data.model._id)
+            if model?
+              ds.ideas.remove(model)
+            else
+              ds.ideas.fetch()
+
+      when "IdeaGroup"
+        switch data.signature.method
+          when "create"
+            ds.groups.add(new IdeaGroup(data.model))
+            ds.groups.trigger "change"
+          when "update"
+            model = ds.groups.get(data.model._id)
+            if model?
+              model.set(data.model)
+            else
+              ds.groups.fetch()
+          when "delete"
+            model = ds.groups.get(data.model._id)
+            if model?
+              ds.groups.remove(model)
+            else
+              ds.groups.fetch()
+            ds.groups.trigger "change"
+      when "Dotstorm"
+        switch data.signature.method
+          when "update"
+            ds.model.set data.model
 
 ds.socket.on 'disconnect', ->
+  # Timeout prevents a flash when you are just closing a tab.
   setTimeout ->
     flash "error", "Connection lost.  <a href=''>Click to reconnect</a>."
   , 500
 
 
-# Use soft refresh for nav links.
 $("nav a").on 'click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false
+
 
 # Debug:
 do ->
