@@ -819,6 +819,7 @@ ds.socket.on 'connect', ->
     ds.users?.addUser(user)
 
   ds.socket.on 'backbone', (data) ->
+    console.log data
     switch data.signature.collectionName
       when "Idea"
         switch data.signature.method

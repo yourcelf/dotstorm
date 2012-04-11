@@ -33,6 +33,7 @@ mkdirs = (dir, mode, callback) ->
 
 clearDir = (dir, callback) ->
   # Remove everything in the given directory.
+  logger.debug "clearing #{dir}"
   mkdirs dir, "0775", (err) ->
     if err then return callback?(err)
     fs.readdir dir, (err, files) ->
@@ -59,17 +60,23 @@ canvas2thumbnails = (canvas, thumbnails, callback) ->
   # Given a canvas and an array of thumbnail definitions in the form:
   #   [[ <destination_path>, <maxx>, <maxy> ]]
   # create thumbnail files on disk.
+  logger.debug "building thumbnails...", thumbnails
+  logger.debug "libcairo #{Canvas.cairoVersion}"
   img = canvas.toBuffer (err, buf) ->
     if err then return callback?(err)
+    logger.debug "buffer loaded."
     count = thumbnails.length
     for data in thumbnails
       do (data) ->
+        logger.debug "processing #{data}"
         [dest, maxx, maxy] = data
         dims = getThumbnailDims(canvas.width, canvas.height, maxx, maxy)
         thumb = new Canvas(dims[0], dims[1])
         img = new Canvas.Image
         img.src = buf
+        logger.debug "image loaded."
         ctx = thumb.getContext('2d')
+        logger.debug "context loaded."
         ctx.drawImage(img, 0, 0, dims[0], dims[1])
         logger.debug "Writing file #{dest}"
         out = fs.createWriteStream dest
@@ -83,6 +90,7 @@ canvas2thumbnails = (canvas, thumbnails, callback) ->
 
 draw = (idea, callback) ->
   # Render the drawing instructions contained in the idea to a canvas.
+  logger.debug "drawing #{idea.id}"
   dims = idea.get("dims")
   canvas = new Canvas dims.x, dims.y
   ctx = canvas.getContext('2d')
@@ -132,17 +140,6 @@ mkthumbs = (idea, callback) ->
         callback(null)
   else
     logger.debug("skipping thumbnail; empty model")
-
-#checkMkThumbs = (model) ->
-#  if model.get("background")? and model.get("drawing")?
-#    mkthumbs model, (err) ->
-#      if err then logger.error(err)
-#      logger.debug("successfully made thumbs for #{model.id}")
-#      Backbone.sync.emit "images:Idea",
-#        dotstorm_id: model.get("dotstorm_id")
-#        imageVersion: model.get("imageVersion")
-#        _id: model.id
-#  else
 
 remove = (model) ->
   dir = BASE_PATH + path.dirname(model.getThumbnailURL('small'))
