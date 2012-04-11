@@ -6,13 +6,24 @@ nav.tabs
 div#app
 
 script#dotstormTopic(type='text/template')
-  h1 <%= name %>
+  h1.name
+    span.clickToEdit <%= name %>
   div#dotstorm
-    div.clickToEdit.topic <%| _.escapeHTML(topic).replace(/\n/g, "\n<br />") %>
+    div.topic
+      div.clickToEdit <%| _.escapeHTML(topic).replace(/\n/g, "\n<br />") %>
+  div#about
+    | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
+    | To join, go to: <a href='<%= url %>'><%= url %></a>
+    div(style='clear: both')
 
-script#dotstormTopicEditor(type='text/template')
+script#dotstormInPlaceInput(type='text/template')
   form
-    textarea <%= topic %>
+    <input type='text' value='<%= text %>' />
+    input(type='submit', value='OK')
+
+script#dotstormInPlaceTextarea(type='text/template')
+  form
+    textarea <%= text %>
     br
     input(type='submit', value='save')
     a.cancel(href='#') cancel
@@ -68,8 +79,8 @@ script#dotstormShowIdeas(type='text/template')
       a.resize.large(data-size='large') &nbsp;
     div#showIdeas
     div(style='clear: both;')
-    div.sort-link
-      <a class='sort-link cta <%= sorting ? "cta-blue" : "cta-yellow" %>' href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Start sorting" %></a>
+    //div.sort-link
+    //  <a class='sort-link cta <%= sorting ? "cta-blue" : "cta-yellow" %>' href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Start sorting" %></a>
 
 script#dotstormSmallIdea(type='text/template')
   div.border
@@ -93,20 +104,25 @@ script#dotstormBigIdea(type='text/template')
   div.shadow
     div.note
       a.close(href="#", title='close') &#10006;
-      div.canvas
-      div.nav
-        <% if (hasPrev) { %>
-        a.cta.cta-yellow.prev(href='#') &laquo; Prev
-        <% } %>
-        a.edit(href='#', title='edit')
-          img(src="/img/pencil.png", alt='edit')
-        <% if (hasNext) { %>
-        a.cta.cta-yellow.next(href='#') Next &raquo;
-        <% } %>
-        div(style='clear: both;')
+      div.image
+        div.nav
+          <% if (hasPrev) { %>
+          a.cta.cta-yellow.prev(href='#') &laquo; Prev
+          <% } %>
+          a.edit(href='#', title='edit')
+            img(src="/img/pencil.png", alt='edit')
+          <% if (hasNext) { %>
+          a.cta.cta-yellow.next(href='#') Next &raquo;
+          <% } %>
+        div.canvas
       div.text
-        div.description
-          <%= description %>
-        div.tags
-          b tags:&nbsp;
-          <%= tags %>
+        div.border
+          div.tags
+            b tags:&nbsp;
+            span.clickToEdit
+              <%= $.trim(tags) || "[Click to add]"%>
+          div.description
+            b description:&nbsp;
+            span.clickToEdit
+              <%| _.escapeHTML(description || "[Click to add]").replace(/\n/g, "\n<br />") %>
+      div(style='clear: both;')

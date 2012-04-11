@@ -50,10 +50,14 @@ class ds.Topic extends Backbone.View
   # describes an idea.
   #
   template: _.template $("#dotstormTopic").html() or ""
-  editorTemplate: _.template $("#dotstormTopicEditor").html() or ""
+  textareaEditorTemplate: _.template $("#dotstormInPlaceTextarea").html() or ""
+  inputEditorTemplate: _.template $("#dotstormInPlaceInput").html() or ""
+
   events:
-    'click .topic': 'editTopic'
-    'submit form': 'saveTopic'
+    'click .topic .clickToEdit': 'editTopic'
+    'submit .topic form': 'saveTopic'
+    'click .name .clickToEdit': 'editName'
+    'submit .name form': 'saveName'
     'click .cancel': 'cancel'
 
   initialize: (options) ->
@@ -64,18 +68,30 @@ class ds.Topic extends Backbone.View
     @$el.html @template
       name: @model.get("name")
       topic: @model.get("topic") or "Click to edit topic..."
+      url: window.location.href
     this
 
+  editName: (event) =>
+    $(event.currentTarget).replaceWith @inputEditorTemplate text: @model.get("name")
+
+  saveName: (event) =>
+    val = @$(".name input[type=text]").val()
+    if val == @model.get("name")
+      @render()
+    else
+      @model.save name: val,
+        error: (model, err) => flash "error", err
+
   editTopic: (event) =>
-    topic = @model.get("topic")
-    $(event.currentTarget).replaceWith @editorTemplate { topic }
+    $(event.currentTarget).replaceWith @textareaEditorTemplate text: @model.get("topic")
 
   saveTopic: (event) =>
-    val = @$("textarea").val()
+    val = @$(".topic textarea").val()
     if val == @model.get("topic")
       @render()
     else
-      @model.save topic: val
+      @model.save topic: val,
+        error: (model, err) => flash "error", err
     return false
 
   cancel: (event) =>
@@ -221,7 +237,7 @@ class ds.EditIdea extends Backbone.View
   render: =>
     @$el.html @template
       description: @idea.get "description"
-      tags: @idea.get("tags") or " "
+      tags: @idea.get("tags") or ""
       camera: navigator?.camera?
     if not @idea.get("background")?
       @canvas.background = @$(".note-color:first").css("background-color")
@@ -241,7 +257,8 @@ class ds.EditIdea extends Backbone.View
       @$("#draw").css("display", "")
       toolbarHeight = @$("#draw").height()
       canvasHeight = Math.min(600, Math.max(200, totalHeight - top - appHeight - toolbarHeight + 10))
-      canvasWidth = canvasHeight
+      canvasWidth = Math.min(totalWidth, canvasHeight)
+      canvasHeight = canvasWidth = Math.min(canvasHeight, canvasWidth)
       @canvas.$el.css
         height: canvasHeight + "px"
         width: canvasWidth + "px"
@@ -258,6 +275,7 @@ class ds.EditIdea extends Backbone.View
     return false
 
   saveIdea: =>
+    ideaIsNew = not @idea.id?
     @idea.save {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
@@ -267,6 +285,8 @@ class ds.EditIdea extends Backbone.View
       drawing: @canvas.actions
     }, {
       success: (model) ->
+        if ideaIsNew
+          ds.ideas.add(model)
         ds.app.navigate "/d/#{ds.model.get("slug")}/show/#{model.id}", trigger: true
       error: (model, err) ->
         console.log(err)
@@ -449,7 +469,7 @@ class ds.SortIdeas extends ds.ShowIdeas
 
   render: =>
     @$el.html @template(sorting: true, slug: @model.get("slug"))
-    @$el.prepend "<span class='info'>Drag and drop notes to sort.  When finished, click <a href='show'><em>done sorting</em></a>.</span>"
+    #@$el.prepend "<span class='info'>Drag and drop notes to sort.  When finished, click <a href='show'><em>done sorting</em></a>.</span>"
     @$el.addClass "sorting"
 
     $(window).on "mouseup", @stopDrag
@@ -485,6 +505,10 @@ class ds.SortIdeas extends ds.ShowIdeas
   startDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
+    @maybeClick = true
+    setTimeout =>
+      @maybeClick = false
+    , 200
     $(event.currentTarget).addClass("active")
     @mouseIsDown = true
     @active = $(event.currentTarget)
@@ -536,6 +560,9 @@ class ds.SortIdeas extends ds.ShowIdeas
     hovered = @$(".hovered")
     dragged = $(event.currentTarget)
     source = @ideas.get dragged.attr("data-id")
+    if @maybeClick == true
+      @showBig(source)
+      return
     unless source?
       return
     if hovered[0]? and hovered[0] != event.currentTarget
@@ -622,21 +649,34 @@ class ds.ShowIdeaSmall extends Backbone.View
 
 class ds.ShowIdeaBig extends Backbone.View
   template: _.template $("#dotstormBigIdea").html() or ""
+  editorTemplate: _.template $("#dotstormInPlaceTextarea").html() or ""
   events:
     'click .shadow': 'close'
     'click .close': 'close'
-    'click .note': 'nothing'
     'click .next': 'next'
     'click .prev': 'prev'
     'click .edit': 'edit'
+
+    'click .tags .clickToEdit': 'editTags'
+    'submit .tags form': 'saveTags'
+
+    'click .description .clickToEdit': 'editDescription'
+    'submit .description form': 'saveDescription'
+
+    'click .cancel': 'cancel'
+
+    'click .note': 'nothing'
 
   initialize: (options) ->
     @model = options.model
 
   render: =>
-    args = @model.toJSON()
-    args.hasNext = @model.showNext?
-    args.hasPrev = @model.showPrev?
+    args = _.extend {
+      tags: ""
+      description: ""
+      hasNext: @model.showNext?
+      hasPrev: @model.showPrev?
+    }, @model.toJSON()
     @$el.html @template args
     @$el.addClass("bigIdea")
     @$el.css backgroundColor: @model.get("background")
@@ -646,29 +686,46 @@ class ds.ShowIdeaBig extends Backbone.View
     img = $("<img/>").attr
       src: @model.getThumbnailURL("full")
       alt: "Loading..."
-    img.on "load", -> img.attr "alt", "Drawing"
     @$(".canvas").html(img)
     this
+
+  cancel: (event) =>
+    @render()
 
   close: (event) =>
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/show"
 
   nothing: (event) =>
-    event.preventDefault()
     event.stopPropagation()
 
   next: (event) =>
     @close()
     @model.showNext() if @model.showNext?
 
+  prev: (event) =>
+    @close()
+    @model.showPrev() if @model.showPrev?
+
   edit: (event) =>
     ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}",
       trigger: true
 
-  prev: (event) =>
-    @close()
-    @model.showPrev() if @model.showPrev?
+  editTags: (event) =>
+    @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("tags") or ""
+
+  saveTags: (event) =>
+    @model.save {tags: @$(".tags textarea").val()},
+      error: (model, err) => flash "error", err
+    return false
+
+  editDescription: (event) =>
+    @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("description") or ""
+  saveDescription: (event) =>
+    @model.save {description: @$(".description textarea").val()},
+      error: (model, err) => flash "error", err
+    return false
+ 
 
 updateNavLinks = ->
   $("nav a").each ->
@@ -705,7 +762,7 @@ class ds.Router extends Backbone.Router
   routes:
     'd/:slug/add':        'dotstormAddIdea'
     'd/:slug/edit/:id':   'dotstormEditIdea'
-    'd/:slug/show':       'dotstormShowIdeas'
+    'd/:slug/show':       'dotstormSortIdeas'
     'd/:slug/show/:id':   'dotstormShowIdeas'
     'd/:slug/sort':       'dotstormSortIdeas'
     'd/:slug':            'dotstormTopic'
@@ -728,6 +785,7 @@ class ds.Router extends Backbone.Router
     return false
 
   dotstormSortIdeas: (slug) =>
+    updateNavLinks()
     @open slug, ->
       $("#app").html new ds.SortIdeas(model: ds.model, ideas: ds.ideas, groups: ds.groups).render().el
 
@@ -819,7 +877,7 @@ ds.socket.on 'connect', ->
     ds.users?.addUser(user)
 
   ds.socket.on 'backbone', (data) ->
-    console.log data
+    console.log 'backbone sync', data
     switch data.signature.collectionName
       when "Idea"
         switch data.signature.method
