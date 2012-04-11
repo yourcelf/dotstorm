@@ -16,3 +16,4 @@ jasmine-node
 mongodb
 markdown
 canvas
+node-uuid

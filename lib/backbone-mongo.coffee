@@ -51,7 +51,6 @@ Backbone.sync = (method, model, options) ->
         else
           Model = models.modelFromCollectionName(collectionName)
           newModel = new Model(result[0])
-        logger.debug "emit after:#{method}:#{model.collectionName}"
         cb(newModel)
 
     if model.id? or options.query?._id?
