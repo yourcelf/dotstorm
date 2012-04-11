@@ -22,7 +22,6 @@ script#dotstormAddIdea(type='text/template')
     div.tabgroup
       ul.tabs
         li.active#draw.tab
-          h2 Draw
           div.toolbar
             a.tool.active(data-tool='pencil')
               img(src='/img/pencil.png', alt='Pencil')
@@ -39,7 +38,6 @@ script#dotstormAddIdea(type='text/template')
           | TODO camera!
         <% } %>
         li#share.tab
-          h2 Share
           form
             p
               label(for='id_description') Description
@@ -64,13 +62,14 @@ script#dotstormAddIdea(type='text/template')
 script#dotstormShowIdeas(type='text/template')
   div.idea-browser
     div.sizes
-      <a class='sort-link' href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Sort" %></a>
       | size:
       a.resize.small(data-size='small') &nbsp;
       a.resize.medium(data-size='medium') &nbsp;
       a.resize.large(data-size='large') &nbsp;
     div#showIdeas
     div(style='clear: both;')
+    div.sort-link
+      <a class='sort-link cta <%= sorting ? "cta-blue" : "cta-yellow" %>' href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Start sorting" %></a>
 
 script#dotstormSmallIdea(type='text/template')
   div.border

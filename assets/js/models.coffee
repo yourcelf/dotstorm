@@ -33,7 +33,7 @@ class Idea extends Backbone.Model
       attrs.imageVersion = 0
 
   getThumbnailURL: (size) =>
-    return "/static/uploads/idea/#{@.id}/#{size}#{@get "imageVersion"}.png"
+    return "/uploads/idea/#{@.id}/#{size}#{@get "imageVersion"}.png"
 
 class IdeaList extends Backbone.Collection
   model: Idea

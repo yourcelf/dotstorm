@@ -3,7 +3,7 @@ h        = require './helper'
 fs       = require 'fs'
 path     = require 'path'
 
-BASE_DIR = __dirname + "/.."
+BASE_DIR = __dirname + "/../static"
 
 describe "Canvas to image from idea", ->
   server = global.server

@@ -1,4 +1,5 @@
 #= require lib/jquery
+#= require lib/jquery.cookie
 #= require lib/underscore
 #= require lib/underscore-autoescape
 #= require lib/backbone
@@ -16,10 +17,6 @@ if typeof console == 'undefined'
 #
 if not window.ds?
   ds = window.ds = {}
-ds.socket = io.connect("/io")
-ds.client = Client(ds.socket)
-Backbone.setSocket(ds.socket)
-
 
 class ds.Intro extends Backbone.View
   #
@@ -105,15 +102,18 @@ class ds.IdeaCanvas extends Backbone.View
     @tool = "pencil"
     if options.readOnly == true
       @events = undefined
+    $(window).on 'mouseup', @handleEnd
 
   render: =>
     @ctxDims = @idea.get("dims") or {
-      x: @$el.width() * 2
-      y: @canvas.height() * 2
+      x: 600
+      y: 600
     }
+
     @canvas.attr
-      width: @ctxDims.x
+      width:  @ctxDims.x
       height: @ctxDims.y
+    
 
     @ctx = @canvas[0].getContext('2d')
     if @idea.get("drawing")?
@@ -227,13 +227,31 @@ class ds.EditIdea extends Backbone.View
     @$(".canvas").append(@canvas.el)
     @canvas.render()
     @tool = 'pencil'
-    $(window).on 'mouseup', @handleEnd
+    #
+    # Canvas size voodoo
+    #
+    resize = =>
+      totalHeight = $(window).height()
+      totalWidth = $(window).width()
+      top = @$el.position().top
+      @$("#draw").css("display", "none")
+      @canvas.$el.css("height", 0)
+      appHeight = @$el.outerHeight()
+      @$("#draw").css("display", "")
+      toolbarHeight = @$("#draw").height()
+      canvasHeight = Math.min(600, Math.max(200, totalHeight - top - appHeight - toolbarHeight + 10))
+      canvasWidth = canvasHeight
+      @canvas.$el.css
+        height: canvasHeight + "px"
+        width: canvasWidth + "px"
+    resize()
+    $(window).on "resize", resize
     this
 
   tabnav: (event) =>
     link = @$(event.currentTarget)
-    tabgroup = link.parent().parent().parent()
-    @$(".tab, .tablinks a", tabgroup).removeClass("active")
+    tabgroup = link.parents(".tabgroup:first")
+    @$(".tab.active, .tablinks a.active", tabgroup).removeClass("active")
     @$(link.attr("href"), tabgroup).addClass("active")
     link.addClass("active")
     return false
@@ -336,8 +354,9 @@ class ds.ShowIdeas extends Backbone.View
     for idea in ungrouped
       if count > 0
         idea.prev = model_order[count - 1]
-      else if count < @ideas.models.length - 1
-        idea.next = model_order[count + 1]
+        idea.prev.next = idea
+      model_order.push(idea)
+      count += 1
     group_order.push({ models: ungrouped })
     return group_order
 
@@ -435,7 +454,10 @@ class ds.SortIdeas extends ds.ShowIdeas
 
   render: =>
     @$el.html @template(sorting: true, slug: @model.get("slug"))
+    @$el.prepend "<span class='info'>Drag and drop notes to sort.  When finished, click <a href='show'><em>done sorting</em></a>.</span>"
     @$el.addClass "sorting"
+
+    $(window).on "mouseup", @stopDrag
 
     group_order = @sortGroups()
     for group in group_order
@@ -466,6 +488,9 @@ class ds.SortIdeas extends ds.ShowIdeas
         $(dim.el).removeClass("hovered")
 
   startDrag: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+    $(event.currentTarget).addClass("active")
     @mouseIsDown = true
     @active = $(event.currentTarget)
     @placeholder = $("<div class='smallIdea'></div>").css
@@ -489,25 +514,35 @@ class ds.SortIdeas extends ds.ShowIdeas
     @moveNote(event)
 
   continueDrag: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
     if @mouseIsDown
       @moveNote(event)
 
   stopDrag: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+    $(event.currentTarget).removeClass("active")
     # reset drag UI...
+    @placeholder?.remove()
+    @mouseIsDown = false
+    @noteDims = []
+    @mouseOffset = null
+    unless @active?
+      return
     @active.css
       position: "relative"
       left: 0
       top: 0
       zIndex: "auto"
       opacity: 1
-    @mouseIsDown = false
-    @noteDims = []
     @active = null
-    @mouseOffset = null
-    @placeholder.remove()
 
     hovered = @$(".hovered")
-    source = @ideas.get $(event.currentTarget).attr("data-id")
+    dragged = $(event.currentTarget)
+    source = @ideas.get dragged.attr("data-id")
+    unless source?
+      return
     if hovered[0]? and hovered[0] != event.currentTarget
       #
       # Are we being dragged into a group?
@@ -515,6 +550,8 @@ class ds.SortIdeas extends ds.ShowIdeas
       target = @ideas.get hovered.attr("data-id")
       targetGroup = null
       for group in @groups.models
+        unless group?
+          continue
         if $.inArray(target.id, group.get("ideas")) != -1
           targetGroup = group
         # Remove old group, if any
@@ -546,10 +583,10 @@ class ds.SortIdeas extends ds.ShowIdeas
       #
       # Are we being dragged out of all groups?
       #
-      groupParent = $(event.currentTarget).parentsUntil(".group").parent()
-      if groupParent.length > 0
+      groupParent = dragged.parents(".group:first")
+      if groupParent.length == 1 and groupParent.attr("data-id")?
         pos = @getPosition(event)
-        dims = groupParent.position()
+        dims = groupParent.offset()
         dims.width = groupParent.width()
         dims.height = groupParent.height()
         unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
@@ -571,15 +608,21 @@ class ds.ShowIdeaSmall extends Backbone.View
   template: _.template $("#dotstormSmallIdea").html() or ""
   initialize: (options) ->
     @model = options.model
+    @size = options.size or "medium"
 
   render: =>
     @$el.html @template @model.toJSON()
     @$el.attr("data-id", @model.id)
     @$el.addClass("smallIdea")
     @$el.css backgroundColor: @model.get("background")
-    canvas = new ds.IdeaCanvas idea: @model, readOnly: true
-    @$(".canvas").html canvas.el
-    canvas.render()
+    #canvas = new ds.IdeaCanvas idea: @model, readOnly: true
+    #@$(".canvas").html canvas.el
+    #canvas.render()
+    img = $("<img/>").attr
+      src: @model.getThumbnailURL(@size)
+      alt: "Loading..."
+    img.on "load", -> img.attr "alt", "drawing thumbnail"
+    @$(".canvas").html img
     this
 
 class ds.ShowIdeaBig extends Backbone.View
@@ -602,9 +645,14 @@ class ds.ShowIdeaBig extends Backbone.View
     @$el.html @template args
     @$el.addClass("bigIdea")
     @$el.css backgroundColor: @model.get("background")
-    canvas = new ds.IdeaCanvas idea: @model, readOnly: true
-    @$(".canvas").html canvas.el
-    canvas.render()
+    #canvas = new ds.IdeaCanvas idea: @model, readOnly: true
+    #@$(".canvas").html canvas.el
+    #canvas.render()
+    img = $("<img/>").attr
+      src: @model.getThumbnailURL("full")
+      alt: "Loading..."
+    img.on "load", -> img.attr "alt", "Drawing"
+    @$(".canvas").html(img)
     this
 
   close: (event) =>
@@ -634,6 +682,29 @@ updateNavLinks = ->
       $(@).addClass("active")
     else
       $(@).removeClass("active")
+
+class ds.UsersView extends Backbone.View
+  initialize: (options) ->
+    @self = options.users.self
+    @users = options.users.others
+
+  render: =>
+    usernames = []
+    for id,u of @users
+      if id != @self.user_id
+        usernames.push u.name or "Anon"
+    @$el.html "Online: #{@self.name or "You"}, #{usernames.join(", ")}"
+    this
+
+  removeUser: (user) =>
+    #TODO: something smarter when we have actual users.
+    delete @users[user.user_id]
+    @render()
+
+  addUser: (user) =>
+    if user.user_id != @self.user_id
+      @users[user.user_id] = user
+    @render()
 
 class ds.Router extends Backbone.Router
   routes:
@@ -702,6 +773,7 @@ class ds.Router extends Backbone.Router
 
     coll = new DotstormList
 
+
     coll.fetch
       query: { slug }
       success: (coll) ->
@@ -709,24 +781,59 @@ class ds.Router extends Backbone.Router
           new Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "New dotstorm \"#{name}\" created."
-              ds.model = model
+              ds.joinRoom(model)
               ds.app.navigate "/d/#{model.get("slug")}"
               callback()
             error: (model, err) ->
               flash "error", err
         else if coll.length == 1
-          ds.model = model = coll.models[0]
+          ds.joinRoom(coll.models[0])
           callback()
         else
           flash "error", "Ouch. Something broke. Sorry."
       error: (coll, res) => flash "error", res.error
     return false
 
-ds.app = new ds.Router
-Backbone.history.start pushState: true
+ds.joinRoom = (newModel) ->
+  if ds.model? and ds.client? and ds.model.id != newModel.id
+    ds.client.leave ds.model.id
+  if ds.model?.id != newModel.id
+    ds.client.join newModel.id
+  ds.model = newModel
 
+# Establish socket.
+ds.socket = io.connect("/io", reconnect: false)
+Backbone.setSocket(ds.socket)
+ds.app = new ds.Router
+ds.socket.on 'connect', ->
+  ds.client = new Client(ds.socket)
+  Backbone.history.start pushState: true
+  if ds.model? then ds.joinRoom ds.model
+
+  ds.socket.on 'users', (data) ->
+    ds.users = new ds.UsersView(users: data)
+    $("#auth").html ds.users.el
+    ds.users.render()
+  ds.socket.on 'user_left', (user) ->
+    ds.users?.removeUser(user)
+  ds.socket.on 'user_joined', (user) ->
+    ds.users?.addUser(user)
+  ds.socket.on 'images:Idea', (data) ->
+    console.log "images:Idea", data
+  for cname in ["Idea", "IdeaGroup", "Dotstorm"]
+    do (cname) ->
+      ds.socket.on "after:update:#{cname}", (data) -> console.log "update", cname, data
+      ds.socket.on "after:create:#{cname}", (data) -> console.log "create", cname, data
+      ds.socket.on "after:delete:#{cname}", (data) -> console.log "delete", cname, data
+
+ds.socket.on 'disconnect', ->
+  setTimeout ->
+    flash "error", "Connection lost.  <a href=''>Click to reconnect</a>."
+  , 500
+
+
+# Use soft refresh for nav links.
 $("nav a").on 'click', (event) ->
-  # Use soft refresh for nav links.
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false
 

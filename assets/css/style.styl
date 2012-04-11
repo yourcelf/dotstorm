@@ -29,6 +29,7 @@ input[type=text]
 nav.tabs, ul.tablinks
   background: tabbackground
   a
+    border: 1px solid transparent
     color: white
     text-decoration: none
     padding-left: 0.5em
@@ -49,24 +50,28 @@ ul.tablinks, ul.tabs
 ul.tabs
   li
     display: none
-    h2
-      display: none
   li.active
     display: block
+
+a:link.cta, a:visited.cta, a.cta
+  color: white
+  z-index: auto
   
-@media only screen and (min-width: 640px)
+#foot
+  clear: both
+  display: none
+
+#auth
+  float: right
+  color: white
+
+@media only screen and (min-width: 900px)
   ul.tablinks
     display: none
   ul.tabs li
     display: block
-    h2
-      display: block
-
-#auth
-
-#foot
-  display: none
-@media only screen and (min-width: 640px)
+    float: left
+  /*
   #foot
     display: block
     font-size: 14px
@@ -81,11 +86,13 @@ ul.tabs
       margin-left: 0.5em
     a
       text-decoration: none
+      */
 
 #size
+  user-select: none
   position: fixed
   bottom: 0
-  left: 0
+  right: 0
   background: rgba(255, 255, 255, 0.8)
   padding: 0.5em
 
@@ -158,13 +165,20 @@ ul.tabs
       &.green
         background-color: #dfd
     
-  canvas
+  .canvas
+    padding: 0
+    margin: 0
+    border: none
     position: relative
-    border-top: 1px solid black
-    border-bottom: 1px solid black
-    width: 100%
+  canvas
+    padding: 0
+    border: none
+    position: relative
+    margin-left: auto
+    margin-right: auto
+
   textarea
-    width: 100%
+    width: 95%
     max-width: 40em
 
 .idea-browser
@@ -224,6 +238,7 @@ ul.tabs
 #showIdeas
   position: relative
 
+
   .group
     display: inline-block
     text-align: center
@@ -233,14 +248,24 @@ ul.tabs
     padding: 1em
 
 .sorting
-  .smallIdea
+  .info
+    font-size: larger
+    background-color: #efe
+    padding: 0.5em
+    border: 1px solid green
+  *, &
+    -webkit-user-select: none
+    -khtml-user-select: none
+    -moz-user-select: none
+    -o-user-select: none
     user-select: none
+  .smallIdea
     -webkit-transform: rotate(2deg)
     -moz-transform: rotate(2deg)
     -ms-transform: rotate(2deg)
     -o-transform: rotate(2deg)
     transform: rotate(2deg)
-    &:active
+    &:active, &.active
       -webkit-transform: rotate(-2deg)
       -moz-transform: rotate(-2deg)
       -ms-transform: rotate(-2deg)
@@ -285,6 +310,8 @@ ul.tabs
       canvas
         border: 1px solid #eee
         width: 100%
+      .canvas
+        text-align: center
 
 @media only screen and (min-width: 640px)
   .bigIdea .note

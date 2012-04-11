@@ -3,6 +3,7 @@ socketio    = require 'socket.io'
 RedisStore  = require('connect-redis')(express)
 logger      = require './logging'
 Database    = require './backbone-mongo'
+Backbone    = require 'backbone'
 require './ideacanvas2image'
 
 # See Cakefile for options definitions and defaults
@@ -20,7 +21,7 @@ start = (options) ->
   app.logger = logger # debug/dev logging
   app.configure ->
     app.use require('connect-assets')()
-    app.use express.logger()
+    #app.use express.logger()
     app.use express.bodyParser()
     app.use express.cookieParser()
     app.use express.session
@@ -33,6 +34,8 @@ start = (options) ->
     app.use express.errorHandler { dumpExceptions: true, showStack: true }
     app.get '/test', (req, res) ->
       res.render 'test', layout: false
+    app.get '/argh', (req, res) ->
+      res.render 'argh', layout: false
 
   app.configure 'production', ->
     app.use express.static __dirname + '/../static', { maxAge: 1000*60*60*24 }
@@ -55,10 +58,22 @@ start = (options) ->
   io = socketio.listen(app)
   io.set 'log level', 0
 
-  # binds to '/iorooms'
+  # binds to '/io'
   channel = '/io'
   require('./iorooms.server').attach(channel, io, sessionStore)
   require('./backbone-socket.server').attach(channel, io)
+  roomserver = io.of(channel)
+  rebroadcast = (key) ->
+    Backbone.sync.on key, (data) ->
+      console.log "rebroadcast #{key}"
+      roomserver.in(data.dotstorm_id).emit key, data
+  rebroadcast("images:Idea")
+  for collectionName in ["Idea", "IdeaGroup", "Dotstorm"]
+    do (collectionName) ->
+      rebroadcast("after:update:#{collectionName}")
+      rebroadcast("after:create:#{collectionName}")
+      rebroadcast("after:delete:#{collectionName}")
+
 
   return { app, io, sessionStore, getDb: (-> db) }
 

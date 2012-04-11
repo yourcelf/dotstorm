@@ -4,7 +4,7 @@ fs       = require 'fs'
 path     = require 'path'
 logger   = require './logging'
 
-BASE_PATH = __dirname + "/.."
+BASE_PATH = __dirname + "/../static"
 
 sizes =
   # Sizes allow for 1px border, and fit well on mobile screens (240px, 480px)
@@ -78,7 +78,8 @@ canvas2thumbnails = (canvas, thumbnails, callback) ->
           out.write chunk
         stream.on 'end', ->
           count -= 1
-          if count == 0 then callback?(null)
+          if count == 0
+            callback?(null)
 
 draw = (idea, callback) ->
   # Render the drawing instructions contained in the idea to a canvas.
@@ -134,6 +135,9 @@ checkMkThumbs = (model) ->
     mkthumbs model, (err) ->
       if err then logger.error(err)
       logger.info("successfully made thumbs for #{model.id}")
+      Backbone.sync.emit "images:Idea",
+        dotstorm_id: model.get("dotstorm_id")
+        idea_id: model.id
   else
     logger.info("skipping thumbnail; empty model")
 
