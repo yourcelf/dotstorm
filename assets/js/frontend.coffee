@@ -65,7 +65,6 @@ class ds.Topic extends Backbone.View
     @model = options.model
     @model.on "change", =>
       @render()
-      @delegateEvents()
 
   render: =>
     @$el.html @template
@@ -283,6 +282,9 @@ class ds.EditIdea extends Backbone.View
 
   saveIdea: =>
     ideaIsNew = not @idea.id?
+    if (@idea.get("drawing") != @canvas.actions or
+          @idea.get("background") != @canvas.background)
+      @idea.incImageVersion()
     @idea.save {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
@@ -399,8 +401,6 @@ class ds.ShowIdeas extends Backbone.View
     @groups.on "change", =>
       @render()
 
-    @topic = new ds.Topic(model: @dotstorm)
-
     $(window).on "mouseup", @stopDrag
 
   softNav: (event) =>
@@ -466,9 +466,9 @@ class ds.ShowIdeas extends Backbone.View
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
-      url: "#{window.location.protocol}//#{window.location.host}/d/#{@model.get("slug")}/"
     @$el.addClass "sorting"
-    @$(".topic").html @topic.render().el
+
+    @$(".topic").html new ds.Topic(model: @dotstorm).render().el
 
     group_order = @sortGroups()
     if @ideas.length == 0
@@ -714,10 +714,12 @@ class ds.ShowIdeaBig extends Backbone.View
   next: (event) =>
     @close()
     @model.showNext() if @model.showNext?
+    return false
 
   prev: (event) =>
     @close()
     @model.showPrev() if @model.showPrev?
+    return false
 
   edit: (event) =>
     ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}",
@@ -760,6 +762,7 @@ class ds.UsersView extends Backbone.View
     @self = options.users.self
     @users = options.users.others
     @open = false
+    @url = options.url
 
   render: =>
     userlist = _.reject (u for i,u of @users), (u) => u.user_id == @self.user_id
@@ -767,6 +770,7 @@ class ds.UsersView extends Backbone.View
       self: @self
       users: userlist
       open: @open
+      url: @url
     this
 
   toggle: (event) =>
@@ -898,7 +902,9 @@ ds.socket.on 'connect', ->
   Backbone.history.start pushState: true
   ds.socket.on 'users', (data) ->
     console.log "users", data
-    ds.users = new ds.UsersView(users: data)
+    ds.users = new ds.UsersView
+      users: data
+      url: "#{window.location.protocol}//#{window.location.host}/d/#{ds.model.get("slug")}/"
     $("#auth").html ds.users.el
     ds.users.render()
   ds.socket.on 'user_left', (user) ->

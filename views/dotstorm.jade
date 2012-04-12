@@ -58,11 +58,6 @@ script#dotstormShowIdeas(type='text/template')
   div.idea-browser
     div#showIdeas
     div(style='clear: both;')
-  div#about
-    | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
-    | Others can join in using this URL:<br />
-    | <a href='<%= url %>'><%= url %></a>
-    div(style='clear: both')
 
 script#dotstormSmallIdea(type='text/template')
   div.border
@@ -88,42 +83,54 @@ script#dotstormSmallIdeaGroupEditLabel(type='text/template')
 
 script#dotstormBigIdea(type='text/template')
   div.shadow
-    div.note
-      a.close(title='close') &#10006;
-      div.image
-        div.nav
+    div.noteHolder
+      div.note
+        a.close(title='close') &#10006;
+        div.nav.image-boxed
           <% if (hasPrev) { %>
-          a.cta.cta-yellow.prev(href='#') &laquo; Prev
+          a.cta.cta-yellow.prev(href='#') &laquo;
           <% } %>
           a.edit(href='#', title='edit')
             img(src="/img/pencil.png", alt='edit')
+          //a.upvote(href='#', title='upvote')
+          //  img(src="/img/upvote.png", alt='up vote', title="Vote for this!")
+          //span.note-vote-count 0
           <% if (hasNext) { %>
-          a.cta.cta-yellow.next(href='#') Next &raquo;
+          a.cta.cta-yellow.next(href='#') &raquo;
           <% } %>
         div.canvasHolder
           div.canvas
           div.text
             textarea(disabled="disabled") <%= description %>
-      div.metadata
-        div.tags
-          b tags:&nbsp;
-          span.clickToEdit
-            <%= $.trim(tags) || "[Click to add]"%>
+        div.metadata.image-boxed
+          div.tags
+            b tags:&nbsp;
+            span.clickToEdit
+              <%= $.trim(tags) || "[Click to add]"%>
       div(style='clear: both;')
 
 script#usersWidget(type='text/template')
-  span.users
-    img(src='/img/user.png', style='width: 22px; height: 22px')
-    span.count
-      <%= users.length + 1 %>
-  <ol class='userlist' style='display: <%= open ? 'block' : 'none' %>'>
-  li <%= users.length + 1 %> online:
-  li.you
-    | <input tile='<%= self.user_id %>' type=text value='<%= self.name || "" %>' placeholder='Your name' />
-  <% for (var i = 0; i < users.length; i++) { %>
-  <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
-  <% } %>
-  </ol>
+  <span class='users' title='Online: <%= ["You"].concat(_.map(users, function(u) { return u.name || "Anon" }).join(", ")).join(", ") %>'>
+  img(src='/img/user.png', style='width: 22px; height: 22px')
+  span.count
+    <%= users.length + 1 %>
+  </span>
+  <div class='userlist' style='display: <%= open ? 'block' : 'none' %>'>
+  div.box
+    <%= users.length + 1 %> online:
+    ol
+      li.you
+        | <input tile='<%= self.user_id %>' type=text value='<%= self.name || "" %>' placeholder='Enter your name' />
+      <% for (var i = 0; i < users.length; i++) { %>
+      <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
+      <% } %>
+  div.box.invite
+    | Invite others using this URL:<br />
+    | <nobr><a href='<%= url %>'><%= url %></a></nobr>
+    | or with the handy barcode dohickey:
+    | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
+    div(style='clear: both')
+  </div>
 
 
 script#intro(type='text/template')
