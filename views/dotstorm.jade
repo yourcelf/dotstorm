@@ -1,21 +1,15 @@
 nav.tabs
-  a(href='/d/#{slug}/') Show ideas
-  a(href='/d/#{slug}/add') Add +
+  a.show-ideas(href='/d/#{slug}/') Show ideas
+  a.add(href='/d/#{slug}/add') Add +
 
 div#app
 
 script#dotstormTopic(type='text/template')
   div#dotstorm
-    h1.name
+    h1.nameEdit
       span.clickToEdit <%= name %>
-    div.topic
+    div.topicEdit
       div.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
-  | <!--
-  div#about
-    | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
-    | To join, go to: <a href='<%= url %>'><%= url %></a>
-    div(style='clear: both')
-  | -->
 
 script#dotstormInPlaceInput(type='text/template')
   form
@@ -64,8 +58,11 @@ script#dotstormShowIdeas(type='text/template')
   div.idea-browser
     div#showIdeas
     div(style='clear: both;')
-    //div.sort-link
-    //  <a class='sort-link cta <%= sorting ? "cta-blue" : "cta-yellow" %>' href='/d/<%= slug %>/<%= sorting ? "show" : "sort" %>'><%= sorting ? "Done sorting" : "Start sorting" %></a>
+  div#about
+    | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
+    | Others can join in using this URL:<br />
+    | <a href='<%= url %>'><%= url %></a>
+    div(style='clear: both')
 
 script#dotstormSmallIdea(type='text/template')
   div.border
@@ -116,3 +113,17 @@ script#dotstormBigIdea(type='text/template')
 
 script#usersWidget(type='text/template')
   | USERS
+
+script#intro(type='text/template')
+  div#intro
+    h1= title
+    p Welcome to DotStorm!
+    form#random
+      input.cta.cta-blue(type='submit', value='New dotstorm')
+    form#named
+      p
+        label(for='id_join')
+          | Or choose a name:
+        br
+        input(type='text', name='room', id='id_join', placeholder='name')
+        input.cta.cta-green(type='submit', value='OK')

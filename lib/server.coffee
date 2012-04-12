@@ -43,7 +43,7 @@ start = (options) ->
   app.set 'view engine', 'jade'
 
   app.get '/', (req, res) ->
-    res.render 'index', title: "DotStorm", initial: {}
+    res.render 'dotstorm', title: "DotStorm", slug: "", initial: {}
 
   # /d/:slug/:action
   app.get /\/d\/([^/]+)(\/.*)?/, (req, res) ->
