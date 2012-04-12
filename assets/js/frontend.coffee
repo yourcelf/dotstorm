@@ -28,6 +28,7 @@ class ds.Intro extends Backbone.View
     'submit #named': 'openNamed'
     'submit #random': 'openRandom'
   render: =>
+    flash "error", "Warning: this is pre-alpha software. Data is periodically deleted without warning."
     @$el.html @template()
     this
 
