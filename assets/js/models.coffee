@@ -22,13 +22,26 @@ class Idea extends Backbone.Model
 
   validate: (attrs) =>
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
-    if not attrs.dotstorm_id
-      return "Dotstorm ID missing."
-    if not attrs.version
-      attrs.imageVersion = 0
+    if not attrs.dotstorm_id then return "Dotstorm ID missing."
+    if not attrs.version? then attrs.imageVersion = 0
+    if not attrs.created? then attrs.created = new Date().getTime()
+    if attrs.tags?
+      attrs.tags = @getTags(attrs.tags).join(", ")
+    attrs.modified = new Date().getTime()
+    return
 
   getThumbnailURL: (size) =>
     return "/uploads/idea/#{@.id}/#{size}#{@get "imageVersion"}.png"
+
+  cleanTag: (tag) => return tag.replace(/[^-\w\s]/g, '').trim()
+
+  getTags: (tags) =>
+    cleaned = []
+    for tag in (tags or (@get("tags") or "")).split(",")
+      clean = @cleanTag(tag)
+      if clean
+        cleaned.push(clean)
+    return cleaned
 
 class IdeaList extends Backbone.Collection
   model: Idea
@@ -70,8 +83,12 @@ class Dotstorm extends Backbone.Model
   validate: (attrs) ->
     if not attrs.name
       return "Missing a name."
-    if attrs.name?.length < 4
+    if attrs.slug?.length < 4
       return "Name must be 4 or more characters."
+    if not attrs.created?
+      attrs.created = new Date().getTime()
+    attrs.modified = new Date().getTime()
+    return
 
 class DotstormList extends Backbone.Collection
   model: Dotstorm

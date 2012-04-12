@@ -145,12 +145,6 @@ class ds.IdeaCanvas extends Backbone.View
     @redraw()
   
   redraw: () =>
-    #@ctx.fillStyle = @background
-    #@ctx.beginPath()
-    #@ctx.fillRect(0, 0, @ctxDims.x, @ctxDims.y)
-    #@ctx.fill()
-    #@ctx.closePath()
-    #@lastTool = null
     for action in @actions
       @drawAction(action)
 
@@ -284,14 +278,18 @@ class ds.EditIdea extends Backbone.View
     if (@idea.get("drawing") != @canvas.actions or
           @idea.get("background") != @canvas.background)
       @idea.incImageVersion()
-    @idea.save {
+    attrs = {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
       tags: $("#id_tags").val()
       background: @canvas.background
       dims: @canvas.ctxDims
       drawing: @canvas.actions
-    }, {
+      editor: ds.users?.self?.user_id
+    }
+    if ideaIsNew
+      attrs.creator = ds.users?.self?.user_id
+    @idea.save attrs,
       success: (model) ->
         if ideaIsNew
           ds.ideas.add(model)
@@ -300,7 +298,7 @@ class ds.EditIdea extends Backbone.View
         console.log(err)
         str = if err.error? then err.error else err
         flash "error", "Error saving: #{str}"
-    }
+
     return false
 
   changeTool: (event) =>
@@ -368,13 +366,15 @@ class ds.ShowIdeaGroup extends Backbone.View
 
 class ds.ShowIdeas extends Backbone.View
   #
-  # Display a list of ideas, and provide UI for sorting and grouping them via
+  # Display a list of ideas, and provide UI for grouping them via
   # drag and drop.
   #
   template: _.template $("#dotstormShowIdeas").html() or ""
   events:
     'click .sizes a': 'resize'
     'click .sort-link': 'softNav'
+    'click .add-link': 'softNav'
+    'click .tag': 'toggleTag'
     'mousedown  .smallIdea': 'startDrag'
     'mousemove  .smallIdea': 'continueDrag'
     'mouseup    .smallIdea': 'stopDrag'
@@ -391,6 +391,8 @@ class ds.ShowIdeas extends Backbone.View
     @dotstorm = options.model
     # ID of a single note to show, popped out
     @showId = options.showId
+    # name of a tag to show, popped out
+    @showTag = options.showTag
     @ideas = options.ideas
     @groups = options.groups
 
@@ -445,7 +447,7 @@ class ds.ShowIdeas extends Backbone.View
     # For prev/next navigation, we assume that 'prev' and 'next' have been set
     # on the model for ordering, linked-list style.  This is done by @sortGroups.
     # Without this, prev and next nav buttons just won't show up.
-    ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}"
+    ds.app.navigate "/d/#{@dotstorm.get("slug")}/#{model.id}"
     if model.prev?
       model.showPrev = => @showBig(model.prev)
     if model.next?
@@ -454,6 +456,51 @@ class ds.ShowIdeas extends Backbone.View
     big.on "close", => @showId = null
     @$el.append big.el
     big.render()
+
+  getTags: () =>
+    # Return a hash of tags and counts of tags from all ideas in our
+    # collection.
+    tags = {}
+    hasTags = false
+    for idea in @ideas.models
+      taglist = idea.getTags()
+      for tag in taglist
+        hasTags = true
+        tags[tag] = (tags[tag] or 0) + 1
+    if hasTags
+      return tags
+    return null
+
+
+  filterByTag: (tag) =>
+    if tag?
+      ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}"
+      cleanedTag = Idea.prototype.cleanTag(tag)
+      regex = new RegExp("(^|,)\\s*(#{cleanedTag})\\s*(,|$)")
+      for noteDom in @$(".smallIdea")
+        idea = @ideas.get noteDom.getAttribute('data-id')
+        match = regex.exec(idea.get("tags"))
+        if not match?
+          $(noteDom).addClass("fade")
+        else
+          $(noteDom).removeClass("fade")
+      @$("a.tag").removeClass("active").addClass("inactive")
+      @$("a.tag[data-tag=\"#{cleanedTag}\"]").addClass("active").removeClass("inactive")
+    else
+      ds.app.navigate "/d/#{@dotstorm.get("slug")}/"
+      updateNavLinks()
+      @$(".smallIdea").removeClass("fade")
+      @$("a.tag").removeClass("inactive active")
+
+  toggleTag: (event) =>
+    tag = event.currentTarget.getAttribute("data-tag")
+    if tag == @showTag
+      @showTag = null
+      @filterByTag()
+    else
+      @showTag = tag
+    @filterByTag(@showTag)
+    return false
   
   resize: (event) =>
     size = $(event.currentTarget).attr("data-size")
@@ -465,6 +512,7 @@ class ds.ShowIdeas extends Backbone.View
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
+      tags: @getTags()
     @$el.addClass "sorting"
 
     @$(".topic").html new ds.Topic(model: @dotstorm).render().el
@@ -479,7 +527,9 @@ class ds.ShowIdeas extends Backbone.View
     if @showId?
       model = @ideas.get(@showId)
       if model? then @showBig model
-    this
+    else if @showTag?
+      @filterByTag(@showTag)
+    return this
 
   getPosition: (event) =>
     pointerObj = event.originalEvent?.touches?[0] or event
@@ -508,7 +558,7 @@ class ds.ShowIdeas extends Backbone.View
     @maybeClick = true
     setTimeout =>
       @maybeClick = false
-    , 150
+    , 400
     $(event.currentTarget).addClass("active")
     @mouseIsDown = true
     @active = $(event.currentTarget)
@@ -659,42 +709,6 @@ class ds.ShowIdeaSmall extends Backbone.View
       }).render().el
     this
 
-class ds.VoteWidget extends Backbone.View
-  template: _.template $("#dotstormVoteWidget").html() or ""
-  events:
-    'click .upvote': 'toggleVote'
-  initialize: (options) ->
-    @idea = options.idea
-    @self = options.self
-    @readOnly = options.readOnly
-    if @readOnly
-      @undelegateEvents()
-
-  render: =>
-    @$el.addClass("vote-widget")
-    votes = @idea.get("votes") or []
-    @$el.html @template
-      votes: votes.length
-      youVoted: _.contains votes, @self?.user_id
-      readOnly: @readOnly
-    this
-
-  toggleVote: =>
-    if @self?.user_id?
-      votes = @idea.get("votes") or []
-      pos = _.indexOf votes, @self.user_id
-      if pos == -1
-        votes.push @self.user_id
-      else
-        votes.splice(pos, 1)
-      @idea.save {votes: votes},
-        success: (model) =>
-          @idea = model
-          @render()
-        error: (model, err) =>
-          flash "error", "Error saving vote: #{err}"
-          @render()
-
 class ds.ShowIdeaBig extends Backbone.View
   template: _.template $("#dotstormBigIdea").html() or ""
   editorTemplate: _.template $("#dotstormInPlaceInput").html() or ""
@@ -751,6 +765,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @trigger "close", this
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
+    updateNavLinks()
 
   nothing: (event) => event.stopPropagation()
 
@@ -782,6 +797,43 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.save {description: @$(".description textarea").val()},
       error: (model, err) => flash "error", err
     return false
+
+class ds.VoteWidget extends Backbone.View
+  template: _.template $("#dotstormVoteWidget").html() or ""
+  events:
+    'click .upvote': 'toggleVote'
+  initialize: (options) ->
+    @idea = options.idea
+    @self = options.self
+    @readOnly = options.readOnly
+    if @readOnly
+      @undelegateEvents()
+
+  render: =>
+    @$el.addClass("vote-widget")
+    votes = @idea.get("votes") or []
+    @$el.html @template
+      votes: votes.length
+      youVoted: _.contains votes, @self?.user_id
+      readOnly: @readOnly
+    this
+
+  toggleVote: =>
+    if @self?.user_id?
+      votes = @idea.get("votes") or []
+      pos = _.indexOf votes, @self.user_id
+      if pos == -1
+        votes.push @self.user_id
+      else
+        votes.splice(pos, 1)
+      @idea.save {votes: votes},
+        success: (model) =>
+          @idea = model
+          @render()
+        error: (model, err) =>
+          flash "error", "Error saving vote: #{err}"
+          @render()
+
 
 updateNavLinks = ->
   if window.location.pathname == "/"
@@ -846,6 +898,7 @@ class ds.Router extends Backbone.Router
   routes:
     'd/:slug/add':        'dotstormAddIdea'
     'd/:slug/edit/:id':   'dotstormEditIdea'
+    'd/:slug/tag/:tag':   'dotstormShowTag'
     'd/:slug/:id':        'dotstormShowIdeas'
     'd/:slug/':           'dotstormShowIdeas'
     'd/:slug': ->         'addSlash'
@@ -857,11 +910,20 @@ class ds.Router extends Backbone.Router
 
   addSlash: (slug) => return ds.app.navigate "/d/#{slug}/", trigger: true
 
-  dotstormShowIdeas: (slug, id) =>
+  dotstormShowIdeas: (slug, id, tag) =>
     updateNavLinks()
     @open slug, ->
-      $("#app").html new ds.ShowIdeas(model: ds.model, ideas: ds.ideas, groups: ds.groups, showId: id).render().el
+      $("#app").html new ds.ShowIdeas({
+        model: ds.model
+        ideas: ds.ideas
+        groups: ds.groups
+        showId: id
+        showTag: tag
+      }).render().el
     return false
+
+  dotstormShowTag: (slug, tag) =>
+    @dotstormShowIdeas(slug, null, tag)
 
   dotstormAddIdea: (slug) =>
     updateNavLinks()
@@ -889,8 +951,9 @@ class ds.Router extends Backbone.Router
     slug = Dotstorm.prototype.slugify(name)
     unless callback?
       # force refresh to get new template.
-      callback = ->
-        ds.app.navigate "/d/#{slug}/", trigger: true
+      callback = =>
+        ds.app.navigate "/d/#{slug}/"
+        @dotstormShowIdeas(slug)
 
     if ds.model?.get("slug") == slug
       return callback()
@@ -905,7 +968,7 @@ class ds.Router extends Backbone.Router
           new Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "Created!  Click things to change them."
-              callback()
+              ds.joinRoom(model, true, callback)
             error: (model, err) ->
               flash "error", err
         else if coll.length == 1
@@ -925,7 +988,7 @@ ds.joinRoom = (newModel, isNew, callback) ->
   ds.groups = new IdeaGroupList
   if isNew
     # Nothing else to fetch yet -- we're brand spanking new.
-    return
+    return callback()
   cbCount = 2
   for attr in ["ideas", "groups"]
     ds[attr].fetch
@@ -936,7 +999,9 @@ ds.joinRoom = (newModel, isNew, callback) ->
           callback?()
       query: {dotstorm_id: ds.model.id}
 
-# Establish socket.
+# 
+# Socket data!!!!!!!!!!!!!!
+#
 ds.socket = io.connect("/io", reconnect: false)
 Backbone.setSocket(ds.socket)
 ds.app = new ds.Router

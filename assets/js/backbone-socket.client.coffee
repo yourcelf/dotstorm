@@ -22,7 +22,7 @@ Backbone.sync = (method, model, options) ->
   # Create a response event name to use once, if we have a success callback to
   # respond with.
   if options.success? or options.error?
-    event = [model.collectionName, model.method, Math.random()].join(":")
+    event = [model.collectionName, method, Math.random()].join(":")
     socket.once event, (data) ->
       if data.error
         options.error(data) if options.error

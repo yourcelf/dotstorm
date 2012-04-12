@@ -1,6 +1,6 @@
 nav.tabs
   a.show-ideas(href='/d/#{slug}/') Show ideas
-  a.add(href='/d/#{slug}/add') Add +
+  a.add(href='/d/#{slug}/add') Add idea +
 
 div#app
 
@@ -12,7 +12,7 @@ script#dotstormTopic(type='text/template')
       div.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
 
 script#dotstormInPlaceInput(type='text/template')
-  form
+  form.editInPlace
     <input type='text' value='<%= text %>' />
     input(type='submit', value='OK')
 
@@ -55,6 +55,16 @@ script#dotstormAddIdea(type='text/template')
 
 script#dotstormShowIdeas(type='text/template')
   div.topic
+  div.tag-links
+    | Order by
+    <% if (tags) { %>
+    | Filter by tag:
+    | <% for (var tag in tags) { %>
+    |   <a class='tag' href='/d/<%= slug %>/tag/<%= encodeURIComponent(tag) %>'
+    |    data-tag='<%= tag %>'><%= tag %>
+    |    (<%= tags[tag] %>)</a> 
+    | <% } %>
+    <% } %>
   div.idea-browser
     div#showIdeas
     div(style='clear: both;')
@@ -97,11 +107,11 @@ script#dotstormBigIdea(type='text/template')
             textarea(disabled="disabled") <%= description %>
           <% if (hasPrev) { %>
           div.nav.prevHolder
-            div.navlink.prev(title='previous') &lt;
+            div.navlink.prev(title='previous') &laquo;
           <% } %>
           <% if (hasNext) { %>
           div.nav.nextHolder
-            div.navlink.next(title='next') &gt;
+            div.navlink.next(title='next') &raquo;
           <% } %>
         div.metadata.image-boxed
           div.tags
@@ -109,6 +119,9 @@ script#dotstormBigIdea(type='text/template')
             span.clickToEdit
               <%= $.trim(tags) || "[Click to add]"%>
       div(style='clear: both;')
+
+script#dotstormTagOverlay(type='text/template')
+  div.shadow
 
 script#dotstormVoteWidget(type='text/template')
   <% if (!readOnly) { %>
