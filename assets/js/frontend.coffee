@@ -262,12 +262,12 @@ class ds.EditIdea extends Backbone.View
     #
     canvasHolder = @$(".canvasHolder")
     resize = =>
-      [width, height] = fillSquare(canvasHolder, @$el, 600, 240)
-      @$el.css "width", width + "px"
+      [width, height] = fillSquare(canvasHolder, @$el, 600, 160)
+      @$el.css "min-width", width + "px"
       @$(".canvasHolder textarea").css
         fontSize: (height / 10) + "px"
-    resize()
     $(window).on "resize", resize
+    resize()
     this
 
   tabnav: (event) =>
@@ -291,7 +291,7 @@ class ds.EditIdea extends Backbone.View
       success: (model) ->
         if ideaIsNew
           ds.ideas.add(model)
-        ds.app.navigate "/d/#{ds.model.get("slug")}/show/#{model.id}", trigger: true
+        ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}", trigger: true
       error: (model, err) ->
         console.log(err)
         str = if err.error? then err.error else err
@@ -443,7 +443,7 @@ class ds.ShowIdeas extends Backbone.View
     # For prev/next navigation, we assume that 'prev' and 'next' have been set
     # on the model for ordering, linked-list style.  This is done by @sortGroups.
     # Without this, prev and next nav buttons just won't show up.
-    ds.app.navigate "/d/#{ds.model.get("slug")}/show/#{model.id}"
+    ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}"
     if model.prev?
       model.showPrev = => @showBig(model.prev)
     if model.next?
@@ -553,6 +553,7 @@ class ds.ShowIdeas extends Backbone.View
     dragged = $(event.currentTarget)
     source = @ideas.get dragged.attr("data-id")
     if @maybeClick == true
+      console.log "ok bye"
       @showBig(source)
       return
     unless source?
@@ -682,7 +683,8 @@ class ds.ShowIdeaBig extends Backbone.View
       [width, height] = fillSquare(@$(".canvasHolder"), @$(".note"), 600, 200)
       @$(".text").css "font-size", (height / 10) + "px"
       @$(".note").css "max-width", width + "px"
-    img.on "load", resize
+    @$(".canvasHolder img").on "load", resize
+    resize()
     $(window).on "resize", resize
     this
 
@@ -691,7 +693,7 @@ class ds.ShowIdeaBig extends Backbone.View
 
   close: (event) =>
     @$el.remove()
-    ds.app.navigate "/d/#{ds.model.get("slug")}/show"
+    ds.app.navigate "/d/#{ds.model.get("slug")}/"
 
   nothing: (event) =>
     event.stopPropagation()
@@ -757,21 +759,13 @@ class ds.Router extends Backbone.Router
   routes:
     'd/:slug/add':        'dotstormAddIdea'
     'd/:slug/edit/:id':   'dotstormEditIdea'
-    'd/:slug/show':       'dotstormShowIdeas'
-    'd/:slug/show/:id':   'dotstormShowIdeas'
-    'd/:slug/sort':       'dotstormShowIdeas'
-    'd/:slug':            'dotstormTopic'
+    'd/:slug/:id':        'dotstormShowIdeas'
+    'd/:slug/':           'dotstormShowIdeas'
     '':                   'intro'
 
   intro: ->
     updateNavLinks()
     $("#app").html new ds.Intro().render().el
-
-  dotstormTopic: (slug) =>
-    updateNavLinks()
-    @open slug, ->
-      $("#app").html new ds.Topic(model: ds.model).render().el
-    return false
 
   dotstormShowIdeas: (slug, id) =>
     updateNavLinks()

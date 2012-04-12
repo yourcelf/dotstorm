@@ -1,5 +1,5 @@
 nav.tabs
-  a(href='/d/#{slug}/show') Show ideas
+  a(href='/d/#{slug}/') Show ideas
   a(href='/d/#{slug}/add') Add +
 
 div#app
@@ -92,7 +92,7 @@ script#dotstormSmallIdeaGroupEditLabel(type='text/template')
 script#dotstormBigIdea(type='text/template')
   div.shadow
     div.note
-      a.close(href="#", title='close') &#10006;
+      a.close(title='close') &#10006;
       div.image
         div.nav
           <% if (hasPrev) { %>
