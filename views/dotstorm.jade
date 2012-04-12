@@ -69,6 +69,7 @@ script#dotstormSmallIdea(type='text/template')
       div.dragger
       div.tags
         <%= tags %>
+      div.votes
 
 script#dotstormSmallIdeaGroup(type='text/template')
   div.label.clickToEdit
@@ -86,28 +87,35 @@ script#dotstormBigIdea(type='text/template')
     div.noteHolder
       div.note
         a.close(title='close') &#10006;
-        div.nav.image-boxed
-          <% if (hasPrev) { %>
-          a.cta.cta-yellow.prev(href='#') &laquo;
-          <% } %>
+        div.toolbar.image-boxed
           a.edit(href='#', title='edit')
             img(src="/img/pencil.png", alt='edit')
-          //a.upvote(href='#', title='upvote')
-          //  img(src="/img/upvote.png", alt='up vote', title="Vote for this!")
-          //span.note-vote-count 0
-          <% if (hasNext) { %>
-          a.cta.cta-yellow.next(href='#') &raquo;
-          <% } %>
+          span.vote-widget
         div.canvasHolder
           div.canvas
           div.text
             textarea(disabled="disabled") <%= description %>
+          <% if (hasPrev) { %>
+          div.nav.prevHolder
+            div.navlink.prev(title='previous') &lt;
+          <% } %>
+          <% if (hasNext) { %>
+          div.nav.nextHolder
+            div.navlink.next(title='next') &gt;
+          <% } %>
         div.metadata.image-boxed
           div.tags
             b tags:&nbsp;
             span.clickToEdit
               <%= $.trim(tags) || "[Click to add]"%>
       div(style='clear: both;')
+
+script#dotstormVoteWidget(type='text/template')
+  <% if (!readOnly) { %>
+  a.upvote(href='#', title='upvote')
+    <img src="/img/upvote<%= youVoted ? "-active" : "" %>.png" alt='vote' title="Vote!" />
+  <% } %>
+  <span class='vote-count<%= youVoted ? " active" : "" %>'><%= votes %></span>
 
 script#usersWidget(type='text/template')
   <span class='users' title='Online: <%= ["You"].concat(_.map(users, function(u) { return u.name || "Anon" }).join(", ")).join(", ") %>'>

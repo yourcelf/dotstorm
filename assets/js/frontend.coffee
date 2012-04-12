@@ -266,8 +266,7 @@ class ds.EditIdea extends Backbone.View
     resize = =>
       [width, height] = fillSquare(canvasHolder, @$el, 600, 160)
       @$el.css "min-width", width + "px"
-      @$(".canvasHolder textarea").css
-        fontSize: (height / 10) + "px"
+      @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
     $(window).on "resize", resize
     resize()
     this
@@ -646,13 +645,55 @@ class ds.ShowIdeaSmall extends Backbone.View
       src: @model.getThumbnailURL(@size)
       alt: "Loading..."
     resize = =>
-      @$(".text").css
-        fontSize: @$(".canvasHolder").height() / 10 + "px"
+      @$(".text").css "fontSize", (@$(".canvasHolder").height() / 10) + "px"
     img.on "load", ->
       img.attr "alt", "drawing thumbnail"
       resize()
     @$(".canvas").html img
+
+    if @model.get("votes")?.length > 0
+      @$(".votes").html new ds.VoteWidget({
+        idea: @model
+        self: ds.users.self
+        readOnly: true
+      }).render().el
     this
+
+class ds.VoteWidget extends Backbone.View
+  template: _.template $("#dotstormVoteWidget").html() or ""
+  events:
+    'click .upvote': 'toggleVote'
+  initialize: (options) ->
+    @idea = options.idea
+    @self = options.self
+    @readOnly = options.readOnly
+    if @readOnly
+      @undelegateEvents()
+
+  render: =>
+    @$el.addClass("vote-widget")
+    votes = @idea.get("votes") or []
+    @$el.html @template
+      votes: votes.length
+      youVoted: _.contains votes, @self?.user_id
+      readOnly: @readOnly
+    this
+
+  toggleVote: =>
+    if @self?.user_id?
+      votes = @idea.get("votes") or []
+      pos = _.indexOf votes, @self.user_id
+      if pos == -1
+        votes.push @self.user_id
+      else
+        votes.splice(pos, 1)
+      @idea.save {votes: votes},
+        success: (model) =>
+          @idea = model
+          @render()
+        error: (model, err) =>
+          flash "error", "Error saving vote: #{err}"
+          @render()
 
 class ds.ShowIdeaBig extends Backbone.View
   template: _.template $("#dotstormBigIdea").html() or ""
@@ -697,6 +738,9 @@ class ds.ShowIdeaBig extends Backbone.View
       @$(".note").css "max-width", width + "px"
     @$(".canvasHolder img").on "load", resize
     resize()
+
+    @$(".vote-widget").html new ds.VoteWidget(idea: @model, self: ds.users.self).render().el
+
     $(window).on "resize", resize
     this
 
@@ -708,8 +752,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
 
-  nothing: (event) =>
-    event.stopPropagation()
+  nothing: (event) => event.stopPropagation()
 
   next: (event) =>
     @close()
