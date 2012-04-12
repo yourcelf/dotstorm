@@ -112,7 +112,19 @@ script#dotstormBigIdea(type='text/template')
       div(style='clear: both;')
 
 script#usersWidget(type='text/template')
-  | USERS
+  span.users
+    img(src='/img/user.png', style='width: 22px; height: 22px')
+    span.count
+      <%= users.length + 1 %>
+  <ol class='userlist' style='display: <%= open ? 'block' : 'none' %>'>
+  li <%= users.length + 1 %> online:
+  li.you
+    | <input tile='<%= self.user_id %>' type=text value='<%= self.name || "" %>' placeholder='Your name' />
+  <% for (var i = 0; i < users.length; i++) { %>
+  <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
+  <% } %>
+  </ol>
+
 
 script#intro(type='text/template')
   div#intro

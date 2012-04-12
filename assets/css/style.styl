@@ -65,8 +65,29 @@ a:link.cta, a:visited.cta, a.cta
   display: none
 
 #auth
+  position: relative
   float: right
   color: white
+  z-index: 100
+  span.users
+    margin-right: 1em
+    cursor: pointer
+    img
+      vertical-align: middle
+  .userlist
+    background: rgba(0, 0, 0, 0.7)
+    position: absolute
+    border-radius: 5px 0px 5px 5px
+    top: 3px
+    right: 0
+    padding: 0.5em
+    li
+      margin: 0
+      padding: 0
+      list-style-type: none
+  input
+    width: 8em
+    
 
 #size
   user-select: none

@@ -64,15 +64,12 @@ attach = (route, io, store) ->
       unless data.room? and socket.session?
         socket.emit "error", error: "Room not specified or session not found"
         return
+      socket.session.room = data.room
       socket.join data.room
       users = getUsers(data.room, socket)
       socket.emit 'users', users
       unless users.others[socket.session.user_id]
         socket.broadcast.to(data.room).emit 'user_joined', users.self
-
-    socket.on 'users', (data) ->
-      users = getUsers(data.room, socket)
-      socket.emit 'users', users
 
     socket.on 'leave', (data) ->
       unless data.room? and socket.session?
@@ -84,6 +81,17 @@ attach = (route, io, store) ->
         socket.broadcast.to(data.room).emit 'user_left',
           user_id: session.user_id
           name: session.name
+
+    socket.on 'username', (data) ->
+      socket.session.name = data.name
+      store.set socket.session.sid, socket.session, (err) ->
+        if err?
+          logger.error "Session store error", err
+        else
+          socket.broadcast.to(socket.room).emit 'username', {
+            user_id: socket.session.user_id
+            name: data.name
+          }
 
     socket.on 'disconnect', ->
       logger.debug "disconnect", socket.id

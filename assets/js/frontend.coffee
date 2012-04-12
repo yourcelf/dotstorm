@@ -751,15 +751,34 @@ updateNavLinks = ->
 
 class ds.UsersView extends Backbone.View
   template: _.template $("#usersWidget").html() or ""
+  events:
+    'click .users': 'toggle'
+    'keyup .you input': 'changeName'
+
   initialize: (options) ->
     @self = options.users.self
     @users = options.users.others
+    @open = false
 
   render: =>
+    userlist = _.reject (u for i,u of @users), (u) => u.user_id == @self.user_id
     @$el.html @template
       self: @self
-      users: @users
+      users: userlist
+      open: @open
     this
+
+  toggle: (event) =>
+    @open = not @open
+    @render()
+
+  changeName: (event) =>
+    @self.name = $(event.currentTarget).val()
+    if @updateTimeout?
+      clearTimeout @updateTimeout
+    @updateTimeout = setTimeout =>
+      ds.client.setName @self.name
+    , 500
 
   removeUser: (user) =>
     #TODO: something smarter when we have actual users.
@@ -769,6 +788,10 @@ class ds.UsersView extends Backbone.View
   addUser: (user) =>
     if user.user_id != @self.user_id
       @users[user.user_id] = user
+    @render()
+
+  setUser: (user) =>
+    @users[user.user_id] = user
     @render()
 
 class ds.Router extends Backbone.Router
@@ -824,6 +847,8 @@ class ds.Router extends Backbone.Router
     if ds.model?.get("slug") == slug
       return callback()
 
+    $("nav a.show-ideas").attr("href", "/d/#{slug}/")
+    $("nav a.add").attr("href", "/d/#{slug}/add")
     coll = new DotstormList
     coll.fetch
       query: { slug }
@@ -832,8 +857,6 @@ class ds.Router extends Backbone.Router
           new Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "Created!  Click things to change them."
-              $("nav a.show-ideas").attr("href", "/d/#{slug}/")
-              $("nav a.add").attr("href", "/d/#{slug}/add")
               callback()
             error: (model, err) ->
               flash "error", err
@@ -873,6 +896,7 @@ ds.socket.on 'connect', ->
   ds.client = new Client(ds.socket)
   Backbone.history.start pushState: true
   ds.socket.on 'users', (data) ->
+    console.log "users", data
     ds.users = new ds.UsersView(users: data)
     $("#auth").html ds.users.el
     ds.users.render()
@@ -880,6 +904,8 @@ ds.socket.on 'connect', ->
     ds.users?.removeUser(user)
   ds.socket.on 'user_joined', (user) ->
     ds.users?.addUser(user)
+  ds.socket.on 'username', (user) ->
+    ds.users?.setUser(user)
 
   ds.socket.on 'backbone', (data) ->
     console.log 'backbone sync', data
