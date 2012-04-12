@@ -812,7 +812,7 @@ class ds.Router extends Backbone.Router
           new Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "New dotstorm \"#{name}\" created."
-              ds.app.navigate "/d/#{model.get("slug")}"
+              ds.app.navigate "/d/#{model.get("slug")}/"
               ds.joinRoom(model, true, callback)
             error: (model, err) ->
               flash "error", err
