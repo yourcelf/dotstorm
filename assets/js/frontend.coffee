@@ -102,7 +102,7 @@ class ds.IdeaCanvas extends Backbone.View
   #
   # A canvas element suitable for drawing and recalling drawn ideas.
   #
-  tagName: 'canvas'
+  tagName: "canvas"
   events:
     'mousedown':  'handleStart'
     'mouseup':    'handleEnd'
@@ -114,12 +114,12 @@ class ds.IdeaCanvas extends Backbone.View
 
   initialize: (options) ->
     @idea = options.idea
-    # don't listen for changes.. cuz we're busy drawing!
-    @canvas = @$el
+    # don't listen for changes to @idea.. cuz we're busy drawing!
     @tool = "pencil"
     if options.readOnly == true
       @events = undefined
     $(window).on 'mouseup', @handleEnd
+    @canvas = @$el
 
   render: =>
     @ctxDims = @idea.get("dims") or {
@@ -130,7 +130,6 @@ class ds.IdeaCanvas extends Backbone.View
     @canvas.attr
       width:  @ctxDims.x
       height: @ctxDims.y
-    
 
     @ctx = @canvas[0].getContext('2d')
     if @idea.get("drawing")?
@@ -144,12 +143,12 @@ class ds.IdeaCanvas extends Backbone.View
     @redraw()
   
   redraw: () =>
-    @ctx.fillStyle = @background
-    @ctx.beginPath()
-    @ctx.fillRect(0, 0, @ctxDims.x, @ctxDims.y)
-    @ctx.fill()
-    @ctx.closePath()
-    @lastTool = null
+    #@ctx.fillStyle = @background
+    #@ctx.beginPath()
+    #@ctx.fillRect(0, 0, @ctxDims.x, @ctxDims.y)
+    #@ctx.fill()
+    #@ctx.closePath()
+    #@lastTool = null
     for action in @actions
       @drawAction(action)
 
@@ -163,12 +162,11 @@ class ds.IdeaCanvas extends Backbone.View
       x: parseInt((pointerObj.pageX - @offset.left) / @curDims.x * @ctxDims.x)
       y: parseInt((pointerObj.pageY - @offset.top) / @curDims.y * @ctxDims.y)
 
-  # Draw!
-
   handleStart: (event) =>
+    if @disabled then return
+    event.preventDefault()
     @offset = @canvas.offset()
     @curDims = { x: @canvas.width(), y: @canvas.height() }
-    event.preventDefault()
     @mouseIsDown = true
     @getPointer(event)
     @handleDrag(event)
@@ -179,6 +177,7 @@ class ds.IdeaCanvas extends Backbone.View
     @pointer = null
     return false
   handleDrag: (event) =>
+    if @disabled then return
     event.preventDefault()
     event.stopPropagation()
     if @mouseIsDown
@@ -213,6 +212,19 @@ class ds.IdeaCanvas extends Backbone.View
     @ctx.lineTo action[3], action[4]
     @ctx.stroke()
 
+fillSquare = (el, container, max=600, min=240) ->
+  totalHeight = $(window).height()
+  totalWidth = $(window).width()
+  top = container.position().top
+  el.css("height", 0)
+  containerHeight = container.outerHeight()
+  elHeight = Math.min(max, Math.max(min, totalHeight - top - containerHeight))
+  elWidth = Math.max(Math.min(totalWidth, elHeight), min)
+  elWidth = elHeight = Math.min(elWidth, elHeight)
+  el.css
+    height: elHeight + "px"
+    width: elWidth + "px"
+  return [elWidth, elHeight]
 
 class ds.EditIdea extends Backbone.View
   #
@@ -226,8 +238,8 @@ class ds.EditIdea extends Backbone.View
     'click .tablinks a': 'tabnav'
     'click .tool': 'changeTool'
     'touchstart .tool': 'changeTool'
-    'click .note-color': 'changeBackgroundColor'
-    'touchstart .note-color': 'changeBackgroundColor'
+    'click .note-color': 'handleChangeBackgroundColor'
+    'touchstart .note-color': 'handleChangeBackgroundColor'
 
   initialize: (options) ->
     @idea = options.idea
@@ -236,32 +248,24 @@ class ds.EditIdea extends Backbone.View
 
   render: =>
     @$el.html @template
+      longDescription: @idea.get "longDescription"
       description: @idea.get "description"
       tags: @idea.get("tags") or ""
       camera: navigator?.camera?
-    if not @idea.get("background")?
-      @canvas.background = @$(".note-color:first").css("background-color")
+    @changeBackgroundColor @idea.get("background") or @$(".note-color:first").css("background-color")
+    @noteTextarea = @$("#id_description")
     @$(".canvas").append(@canvas.el)
     @canvas.render()
     @tool = 'pencil'
     #
     # Canvas size voodoo
     #
+    canvasHolder = @$(".canvasHolder")
     resize = =>
-      totalHeight = $(window).height()
-      totalWidth = $(window).width()
-      top = @$el.position().top
-      @$("#draw").css("display", "none")
-      @canvas.$el.css("height", 0)
-      appHeight = @$el.outerHeight()
-      @$("#draw").css("display", "")
-      toolbarHeight = @$("#draw").height()
-      canvasHeight = Math.min(600, Math.max(200, totalHeight - top - appHeight - toolbarHeight + 10))
-      canvasWidth = Math.min(totalWidth, canvasHeight)
-      canvasHeight = canvasWidth = Math.min(canvasHeight, canvasWidth)
-      @canvas.$el.css
-        height: canvasHeight + "px"
-        width: canvasWidth + "px"
+      [width, height] = fillSquare(canvasHolder, @$el, 600, 240)
+      @$el.css "width", width + "px"
+      @$(".canvasHolder textarea").css
+        fontSize: (height / 10) + "px"
     resize()
     $(window).on "resize", resize
     this
@@ -299,24 +303,81 @@ class ds.EditIdea extends Backbone.View
     event.preventDefault()
     event.stopPropagation()
     el = $(event.currentTarget)
-    @canvas.tool = el.attr("data-tool")
+    tool = el.attr("data-tool")
+    if tool == "text"
+      @$(".text").before(@$(".canvas"))
+    else
+      @$(".text").after(@$(".canvas"))
+      @canvas.tool = tool
     el.parent().find(".tool").removeClass("active")
     el.addClass("active")
 
-  changeBackgroundColor: (event) =>
-    event.preventDefault()
-    event.stopPropagation()
-    @canvas.background = $(event.currentTarget).css("background-color")
-    @canvas.redraw()
+  handleChangeBackgroundColor: (event) =>
+    @changeBackgroundColor $(event.currentTarget).css("background-color")
+  changeBackgroundColor: (color) =>
+    @canvas.background = color
+    @$(".canvasHolder").css "background", @canvas.background
+
+class ds.ShowIdeaGroup extends Backbone.View
+  template: _.template $("#dotstormSmallIdeaGroup").html() or ""
+  editTemplate: _.template $("#dotstormSmallIdeaGroupEditLabel").html() or ""
+  events:
+    'click   .label': 'editLabel'
+    'click  .cancel': 'cancelEdit'
+    'submit    form': 'saveLabel'
+  initialize: (options) ->
+    @group = options.group
+    @ideas = options.ideas
+
+  editLabel: (event) =>
+    $(event.currentTarget).replaceWith @editTemplate
+      label: @group.get("label") or ""
+    @$("input[type=text]").select()
+
+  cancelEdit: (event) =>
+    @render()
+  
+  saveLabel: (event) =>
+    @group.set "label", @$("input[type=text]").val()
+    @render()
+    @group.save {},
+      error: (model, err) =>
+        flash "error", "Error saving group: #{err}"
+        @render()
+    return false
+
+  render: =>
+    if @group?
+      @$el.html @template
+        label: @group.get('label')
+      container = @$(".ideas")
+      @$el.attr("data-id", @group.id)
+      @$el.addClass("group")
+    else
+      container = @$el
+    for model in @ideas
+      idea = new ds.ShowIdeaSmall(model: model)
+      container.append idea.el
+      idea.render()
+      do (model) => idea.$el.on 'click', => @trigger "ideaClicked", model
+    this
 
 class ds.ShowIdeas extends Backbone.View
   #
-  # Show a list of ideas, as well as any groupings that they involve.
+  # Display a list of ideas, and provide UI for sorting and grouping them via
+  # drag and drop.
   #
   template: _.template $("#dotstormShowIdeas").html() or ""
   events:
     'click .sizes a': 'resize'
     'click .sort-link': 'softNav'
+    'mousedown  .smallIdea': 'startDrag'
+    'mousemove  .smallIdea': 'continueDrag'
+    'mouseup    .smallIdea': 'stopDrag'
+    'touchstart .smallIdea': 'startDrag'
+    'touchmove  .smallIdea': 'continueDrag'
+    'touchend   .smallIdea': 'stopDrag'
+
   sizes:
     small: 78
     medium: 118
@@ -334,6 +395,10 @@ class ds.ShowIdeas extends Backbone.View
       @render()
     @groups.on "change", =>
       @render()
+
+    @topic = new ds.Topic(model: @dotstorm)
+
+    $(window).on "mouseup", @stopDrag
 
   softNav: (event) =>
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
@@ -394,91 +459,18 @@ class ds.ShowIdeas extends Backbone.View
       height: @sizes[size] + "px"
 
   render: =>
-    @$el.html @template(sorting: false, slug: @model.get("slug"))
+    @$el.html @template(sorting: true, slug: @model.get("slug"))
+    @$el.addClass "sorting"
+    @$(".topic").html @topic.render().el
+
     group_order = @sortGroups()
     for group in group_order
       groupView = new ds.ShowIdeaGroup group: group.group, ideas: group.models
       @$("#showIdeas").append groupView.el
       groupView.render()
-      groupView.on "ideaClicked", @showBig
     if @showId?
       model = @ideas.get(@showId)
       if model? then @showBig model
-    this
-
-class ds.ShowIdeaGroup extends Backbone.View
-  template: _.template $("#dotstormSmallIdeaGroup").html() or ""
-  editTemplate: _.template $("#dotstormSmallIdeaGroupEditLabel").html() or ""
-  events:
-    'click   .label': 'editLabel'
-    'click  .cancel': 'cancelEdit'
-    'submit    form': 'saveLabel'
-  initialize: (options) ->
-    @group = options.group
-    @ideas = options.ideas
-
-  editLabel: (event) =>
-    $(event.currentTarget).replaceWith @editTemplate
-      label: @group.get("label") or ""
-    @$("input[type=text]").select()
-
-  cancelEdit: (event) =>
-    @render()
-  
-  saveLabel: (event) =>
-    @group.set "label", @$("input[type=text]").val()
-    @render()
-    @group.save {},
-      error: (model, err) =>
-        flash "error", "Error saving group: #{err}"
-        @render()
-    return false
-
-  render: =>
-    if @group?
-      @$el.html @template
-        label: @group.get('label') or "Click to add label..."
-      container = @$(".ideas")
-      @$el.attr("data-id", @group.id)
-      @$el.addClass("group")
-    else
-      container = @$el
-    for model in @ideas
-      idea = new ds.ShowIdeaSmall(model: model)
-      container.append idea.el
-      idea.render()
-      do (model) => idea.$el.on 'click', => @trigger "ideaClicked", model
-    this
-
-class ds.SortIdeas extends ds.ShowIdeas
-  #
-  # Display a list of ideas, and provide UI for sorting and grouping them via
-  # drag and drop.
-  #
-  events:
-    # From parent class
-    'click .sizes a': 'resize'
-    'click .sort-link': 'softNav'
-    # From us
-    'mousedown  .smallIdea': 'startDrag'
-    'mousemove  .smallIdea': 'continueDrag'
-    'mouseup    .smallIdea': 'stopDrag'
-    'touchstart .smallIdea': 'startDrag'
-    'touchmove  .smallIdea': 'continueDrag'
-    'touchend   .smallIdea': 'stopDrag'
-
-  render: =>
-    @$el.html @template(sorting: true, slug: @model.get("slug"))
-    #@$el.prepend "<span class='info'>Drag and drop notes to sort.  When finished, click <a href='show'><em>done sorting</em></a>.</span>"
-    @$el.addClass "sorting"
-
-    $(window).on "mouseup", @stopDrag
-
-    group_order = @sortGroups()
-    for group in group_order
-      groupView = new ds.ShowIdeaGroup group: group.group, ideas: group.models
-      @$("#showIdeas").append groupView.el
-      groupView.render()
     this
 
   getPosition: (event) =>
@@ -508,7 +500,7 @@ class ds.SortIdeas extends ds.ShowIdeas
     @maybeClick = true
     setTimeout =>
       @maybeClick = false
-    , 200
+    , 150
     $(event.currentTarget).addClass("active")
     @mouseIsDown = true
     @active = $(event.currentTarget)
@@ -637,13 +629,15 @@ class ds.ShowIdeaSmall extends Backbone.View
     @$el.attr("data-id", @model.id)
     @$el.addClass("smallIdea")
     @$el.css backgroundColor: @model.get("background")
-    #canvas = new ds.IdeaCanvas idea: @model, readOnly: true
-    #@$(".canvas").html canvas.el
-    #canvas.render()
     img = $("<img/>").attr
       src: @model.getThumbnailURL(@size)
       alt: "Loading..."
-    img.on "load", -> img.attr "alt", "drawing thumbnail"
+    resize = =>
+      @$(".text").css
+        fontSize: @$(".canvasHolder").height() / 10 + "px"
+    img.on "load", ->
+      img.attr "alt", "drawing thumbnail"
+      resize()
     @$(".canvas").html img
     this
 
@@ -680,13 +674,16 @@ class ds.ShowIdeaBig extends Backbone.View
     @$el.html @template args
     @$el.addClass("bigIdea")
     @$el.css backgroundColor: @model.get("background")
-    #canvas = new ds.IdeaCanvas idea: @model, readOnly: true
-    #@$(".canvas").html canvas.el
-    #canvas.render()
     img = $("<img/>").attr
       src: @model.getThumbnailURL("full")
       alt: "Loading..."
     @$(".canvas").html(img)
+    resize = =>
+      [width, height] = fillSquare(@$(".canvasHolder"), @$(".note"), 600, 200)
+      @$(".text").css "font-size", (height / 10) + "px"
+      @$(".note").css "max-width", width + "px"
+    img.on "load", resize
+    $(window).on "resize", resize
     this
 
   cancel: (event) =>
@@ -725,7 +722,6 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.save {description: @$(".description textarea").val()},
       error: (model, err) => flash "error", err
     return false
- 
 
 updateNavLinks = ->
   $("nav a").each ->
@@ -736,16 +732,15 @@ updateNavLinks = ->
       $(@).removeClass("active")
 
 class ds.UsersView extends Backbone.View
+  template: _.template $("#usersWidget").html() or ""
   initialize: (options) ->
     @self = options.users.self
     @users = options.users.others
 
   render: =>
-    usernames = []
-    for id,u of @users
-      if id != @self.user_id
-        usernames.push u.name or "Anon"
-    @$el.html "Online: #{@self.name or "You"}, #{usernames.join(", ")}"
+    @$el.html @template
+      self: @self
+      users: @users
     this
 
   removeUser: (user) =>
@@ -762,9 +757,9 @@ class ds.Router extends Backbone.Router
   routes:
     'd/:slug/add':        'dotstormAddIdea'
     'd/:slug/edit/:id':   'dotstormEditIdea'
-    'd/:slug/show':       'dotstormSortIdeas'
+    'd/:slug/show':       'dotstormShowIdeas'
     'd/:slug/show/:id':   'dotstormShowIdeas'
-    'd/:slug/sort':       'dotstormSortIdeas'
+    'd/:slug/sort':       'dotstormShowIdeas'
     'd/:slug':            'dotstormTopic'
     '':                   'intro'
 
@@ -783,11 +778,6 @@ class ds.Router extends Backbone.Router
     @open slug, ->
       $("#app").html new ds.ShowIdeas(model: ds.model, ideas: ds.ideas, groups: ds.groups, showId: id).render().el
     return false
-
-  dotstormSortIdeas: (slug) =>
-    updateNavLinks()
-    @open slug, ->
-      $("#app").html new ds.SortIdeas(model: ds.model, ideas: ds.ideas, groups: ds.groups).render().el
 
   dotstormAddIdea: (slug) =>
     updateNavLinks()

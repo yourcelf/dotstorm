@@ -1,20 +1,21 @@
 nav.tabs
-  a(href='/d/#{slug}') Topic
-  a(href='/d/#{slug}/add') Add idea
   a(href='/d/#{slug}/show') Show ideas
+  a(href='/d/#{slug}/add') Add +
 
 div#app
 
 script#dotstormTopic(type='text/template')
-  h1.name
-    span.clickToEdit <%= name %>
   div#dotstorm
+    h1.name
+      span.clickToEdit <%= name %>
     div.topic
-      div.clickToEdit <%| _.escapeHTML(topic).replace(/\n/g, "\n<br />") %>
+      div.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
+  | <!--
   div#about
     | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
     | To join, go to: <a href='<%= url %>'><%= url %></a>
     div(style='clear: both')
+  | -->
 
 script#dotstormInPlaceInput(type='text/template')
   form
@@ -30,53 +31,37 @@ script#dotstormInPlaceTextarea(type='text/template')
 
 script#dotstormAddIdea(type='text/template')
   div#addIdea
-    div.tabgroup
-      ul.tabs
-        li.active#draw.tab
-          div.toolbar
-            a.tool.active(data-tool='pencil')
-              img(src='/img/pencil.png', alt='Pencil')
-            a.tool(data-tool='eraser')
-              img(src='/img/erase.png', alt='Eraser')
-            span(style='float: right')
-              a.note-color.yellow
-              a.note-color.pink
-              a.note-color.aqua
-              a.note-color.green
-          div.canvas
-        <% if (camera) { %>
-        li#camera.tab
-          | TODO camera!
-        <% } %>
-        li#share.tab
-          form
-            p
-              label(for='id_description') Description
-              br
-              textarea#id_description <%= description %>
-            p
-              label(for='id_tags') Tags
-              <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
-            p
-              input.cta.cta-blue(type='submit', value='Share')
-      ul.tablinks
-        li
-          a.active(href='#draw') Draw
-        <% if (camera) { %>
-        li
-          a(href='#camera') Camera
-        <% } %>
-        li
-          a(href='#share') Share -&gt;
-    div#debug
+    div.toolbar
+      a.tool.active(data-tool='text')
+        img(src='/img/T.png', alt='Text')
+      a.tool(data-tool='pencil')
+        img(src='/img/pencil.png', alt='Pencil')
+      a.tool(data-tool='eraser')
+        img(src='/img/erase.png', alt='Eraser')
+      span(style='float: right')
+        a.note-color.yellow
+        a.note-color.pink
+        a.note-color.aqua
+        a.note-color.green
+    div.canvasHolder
+      div.canvas
+      div.text
+        textarea#id_description <%= description %>
+
+      <% if (camera) { %>
+      li#camera.tab
+        | TODO camera!
+      <% } %>
+    form
+      label(for='id_tags') Tags
+      <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
+      //a.cta.cta-yellow.cta-thin Say more
+      input.cta.cta-blue.cta-thin(type='submit', value='Share &raquo;', style='float: right')
+    div(style='clear: both;')
 
 script#dotstormShowIdeas(type='text/template')
+  div.topic
   div.idea-browser
-    div.sizes
-      | size:
-      a.resize.small(data-size='small') &nbsp;
-      a.resize.medium(data-size='medium') &nbsp;
-      a.resize.large(data-size='large') &nbsp;
     div#showIdeas
     div(style='clear: both;')
     //div.sort-link
@@ -84,14 +69,18 @@ script#dotstormShowIdeas(type='text/template')
 
 script#dotstormSmallIdea(type='text/template')
   div.border
-    div.canvas
-    div.text
+    div.canvasHolder
+      div.canvas
+      div.text
+        textarea(disabled='disabled')
+          <%= description %>
+      div.dragger
       div.tags
         <%= tags %>
 
 script#dotstormSmallIdeaGroup(type='text/template')
   div.label.clickToEdit
-    <%= label %>
+    <%= label || "[Click to add label]" %>
   div.ideas
 
 script#dotstormSmallIdeaGroupEditLabel(type='text/template')
@@ -114,15 +103,16 @@ script#dotstormBigIdea(type='text/template')
           <% if (hasNext) { %>
           a.cta.cta-yellow.next(href='#') Next &raquo;
           <% } %>
-        div.canvas
-      div.text
-        div.border
-          div.tags
-            b tags:&nbsp;
-            span.clickToEdit
-              <%= $.trim(tags) || "[Click to add]"%>
-          div.description
-            b description:&nbsp;
-            span.clickToEdit
-              <%| _.escapeHTML(description || "[Click to add]").replace(/\n/g, "\n<br />") %>
+        div.canvasHolder
+          div.canvas
+          div.text
+            textarea(disabled="disabled") <%= description %>
+      div.metadata
+        div.tags
+          b tags:&nbsp;
+          span.clickToEdit
+            <%= $.trim(tags) || "[Click to add]"%>
       div(style='clear: both;')
+
+script#usersWidget(type='text/template')
+  | USERS

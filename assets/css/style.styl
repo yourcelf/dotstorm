@@ -56,6 +56,9 @@ ul.tabs
 a:link.cta, a:visited.cta, a.cta
   color: white
   z-index: auto
+.cta-thin
+  line-height: 1.5em
+  height: 1.5em
   
 #foot
   clear: both
@@ -64,29 +67,6 @@ a:link.cta, a:visited.cta, a.cta
 #auth
   float: right
   color: white
-
-@media only screen and (min-width: 900px)
-  ul.tablinks
-    display: none
-  ul.tabs li
-    display: block
-    float: left
-  /*
-  #foot
-    display: block
-    font-size: 14px
-    text-align: center
-    ul
-      padding: 0
-      margin: 0
-    li
-      display: inline-block
-      list-style-type: none
-      margin-right: 0.5em
-      margin-left: 0.5em
-    a
-      text-decoration: none
-      */
 
 #size
   user-select: none
@@ -149,14 +129,46 @@ a:link.cta, a:visited.cta, a.cta
     content: "✎"
 
 #dotstorm
-  font-size: 24pt
+  h1
+    margin-top: 0.2em
+    margin-bottom: 0.2em
   textarea
     width: 40em
     max-width: 80%
     height: 10em
     max-height: 30%
+  margin-bottom: 1em
+  border-bottom: 1px solid #ddd
+
+.canvasHolder
+  position: relative
+  .canvas
+    width: 100%
+    height: 100%
+  .text, .text textarea, .text textarea[disabled=disabled]
+    position: absolute
+    top: 0
+    left: 0
+    margin: 0
+    padding: 0
+    width: 100%
+    height: 100%
+    white-space: pre-wrap
+    color: black
+    font-family: Arial
+    line-height: 1em
+    width: 100%
+    height: 100%
+    border: none 
+    background: transparent
+    text-align: left
+    overflow: hidden
+    resize: none
+
 
 #addIdea
+  min-width: 240px
+  max-width: 600px
   position: relative
   div.toolbar
     margin-top: 1em
@@ -178,24 +190,14 @@ a:link.cta, a:visited.cta, a.cta
       &.green
         background-color: #dfd
     
-  .canvas
-    padding: 0
-    margin: 0
-    border: none
-    position: relative
   canvas
-    padding: 0
-    border: none
-    position: relative
-    margin-left: auto
-    margin-right: auto
-
-  textarea
-    width: 95%
-    max-width: 40em
+    position: absolute
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
 
 .idea-browser
-  text-align: right
   clear: both
   .sort-link
     float: left
@@ -227,11 +229,10 @@ a:link.cta, a:visited.cta, a.cta
 
 .smallIdea
   cursor: pointer
-  font-size: 12px
   overflow: hidden
   position: relative
-  width: 138px
-  height: 138px
+  width: 118px
+  height: 118px
   margin: 1px
   float: left
   .canvas img
@@ -240,13 +241,19 @@ a:link.cta, a:visited.cta, a.cta
   .border
     width: 100%
     height: 100%
-  .text
-    background: rgba(0, 0, 0, 0.2)
-    color: white
+  .tags
     position: absolute
-    bottom: 0
+    bottom: 5px 
+    left: 0
+    background-color: rgba(0, 0, 0, 0.5)
+    color: white
+    font-size: 12px
+  .dragger
+    position: absolute
+    top: 0
     left: 0
     width: 100%
+    height: 100%
 
 #showIdeas
   position: relative
@@ -256,17 +263,12 @@ a:link.cta, a:visited.cta, a.cta
     display: inline-block
     text-align: center
     float: left
-    border: 1px solid #eee
-    background: rgba(255, 255, 255, 0.5)
+    border: 1px solid #999
+    background: rgba(200, 220, 200, 0.5)
     padding: 1em
 
-.sorting
-  .info
-    font-size: larger
-    background-color: #efe
-    padding: 0.5em
-    border: 1px solid green
-  *, &
+.idea-browser
+  &, *
     -webkit-user-select: none
     -khtml-user-select: none
     -moz-user-select: none
@@ -278,12 +280,8 @@ a:link.cta, a:visited.cta, a.cta
     -moz-user-select: text
     -o-user-select: text
     user-select: text
+
   .smallIdea
-    -webkit-transform: rotate(2deg)
-    -moz-transform: rotate(2deg)
-    -ms-transform: rotate(2deg)
-    -o-transform: rotate(2deg)
-    transform: rotate(2deg)
     &:active, &.active
       -webkit-transform: rotate(-2deg)
       -moz-transform: rotate(-2deg)
@@ -303,45 +301,35 @@ a:link.cta, a:visited.cta, a.cta
     left: 0
     width: 100%
     height: 100%
-    .note
-      position: relative
-      .close
-        position: absolute
-        right: 0
-        top: 0
-        color: #000
-        text-decoration: none
-        font-size: 24pt
-      .nav
-        text-align: center
-        a:link
-          color: white
-          line-height: 1.5em
-          height: 1.5em
-          padding-left: 5px
-          padding-right: 5px
-        .prev
-          float: left
-        .next
-          float: right
-    .note
-      margin-top: 5%
-      background: rgba(255, 255, 255, 0.8)
-      padding: 1em
-      .image
+  .note
+    position: relative
+    margin-top: 5%
+    margin-left: auto
+    margin-right: auto
+    background: rgba(255, 255, 255, 0.8)
+    padding: 1em
+    .nav
+      min-width: 240px
+      text-align: center
+      a:link
+        color: white
+        line-height: 1.5em
+        height: 1.5em
+        padding-left: 5px
+        padding-right: 5px
+      .prev
         float: left
-        text-align: center
+      .next
+        float: right
+        margin-right: 1em
+    .image
+      text-align: center
+      img
         max-width: 100%
-        img
-          max-width: 100%
-      .text
-        float: left
-        .border
-          margin: 0.5em
-
-@media only screen and (min-width: 640px)
-  .bigIdea .note
-    width: 90%
-    margin-left: 5%
-    .text, .image
-      width: 50%
+    .close
+      position: absolute
+      right: 0
+      top: 0
+      color: #000
+      text-decoration: none
+      font-size: 24pt
