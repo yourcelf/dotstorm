@@ -7,7 +7,7 @@ option '-p', "--port [#{config.port}]", 'port the server runs on'
 option '-h', "--host [#{config.host}]", 'base server name'
 option '-s', "--secret [#{config.secret}]", 'session secret'
 
-task 'runserver', 'Run the server, watching for changes.', (options) ->
+task 'runserver', 'Run the server.', (options) ->
   server = require './lib/server'
   server.start
     host: options.host or config.host

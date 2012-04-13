@@ -571,11 +571,11 @@ class ds.ShowIdeas extends Backbone.View
 
   moveNote: (event) =>
     pos = @getPosition(event)
-    @active.css
+    @dragState.active.css
       position: "absolute"
-      left: pos.x + @mouseOffset.x + "px"
-      top: pos.y + @mouseOffset.y + "px"
-    for dim in @noteDims
+      left: pos.x + @dragState.mouseOffset.x + "px"
+      top: pos.y + @dragState.mouseOffset.y + "px"
+    for dim in @dragState.noteDims
       if dim.left < pos.x < dim.left + dim.width and dim.top < pos.y < dim.top + dim.height
         $(dim.el).addClass("hovered")
       else
@@ -585,70 +585,75 @@ class ds.ShowIdeas extends Backbone.View
   startDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
-    @maybeClick = true
-    setTimeout =>
-      @maybeClick = false
-    , 400
-    $(event.currentTarget).addClass("active")
-    @mouseIsDown = true
-    @active = $(event.currentTarget)
-    @placeholder = $("<div class='smallIdea'></div>").css
-      width: @active.width() + "px",
-      height: @active.height() + "px"
-
-    pos = @getPosition(event)
-    offset = @active.position()
-    @mouseOffset =
-      x: offset.left - pos.x
-      y: offset.top - pos.y
-    @noteDims = []
+    active = $(event.currentTarget)
+    active.addClass("active")
+    @dragState = {
+      startTime: new Date().getTime()
+      startPos: @getPosition(event)
+      active: active
+      offset: active.position()
+      placeholder: $("<div class='smallIdea'></div>").css
+        width: active.width() + "px"
+        height: active.height() + "px"
+      noteDims: []
+    }
+    @dragState.mouseOffset =
+      x: @dragState.offset.left - @dragState.startPos.x
+      y: @dragState.offset.top - @dragState.startPos.y
     for note in @$(".smallIdea")
       $n = $(note)
       dims = $n.offset()
       dims.width = $n.width()
       dims.height = $n.height()
       dims.el = $n
-      @noteDims.push(dims)
-    @active.before(@placeholder)
+      @dragState.noteDims.push(dims)
+    @dragState.active.before(@dragState.placeholder)
     @moveNote(event)
     return false
 
   continueDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
-    if @mouseIsDown
+    if @dragState
       @moveNote(event)
     return false
+
+  checkForClick: (event) =>
+    pos = @getPosition(event)
+    distance = Math.sqrt(
+        Math.pow(pos.x - @dragState.startPos.x, 2) +
+        Math.pow(pos.y - @dragState.startPos.y, 2)
+    )
+    elapsed = new Date().getTime() - @dragState.startTime
+    return distance < 20 and elapsed < 400
 
   stopDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
-    $(event.currentTarget).removeClass("active")
-    # reset drag UI...
-    @placeholder?.remove()
-    @mouseIsDown = false
-    @noteDims = []
-    @mouseOffset = null
-    unless @active?
-      return
 
-    @active.css
+    @dragState?.placeholder?.remove()
+    # reset drag UI...
+    unless @dragState? and @dragState.active?
+      return
+    @dragState.active.removeClass("active")
+    @dragState.active.css
       position: "relative"
       left: 0
       top: 0
-    @active = null
 
     hovered = @$(".hovered")
     hovered.removeClass("hovered")
 
-    dragged = $(event.currentTarget)
-    source = @ideas.get dragged.attr("data-id")
+    sourceModel = @ideas.get @dragState.active.attr("data-id")
+    unless sourceModel?
+      @dragState = null
+      return
 
-    if @maybeClick == true
-      @showBig(source)
+    if @checkForClick(event)
+      @showBig(sourceModel)
+      @dragState = null
       return
-    unless source?
-      return
+
     if hovered[0]? and hovered[0] != event.currentTarget
       #
       # Are we being dragged into a group?
@@ -661,7 +666,7 @@ class ds.ShowIdeas extends Backbone.View
         if group.containsIdea(target.id)
           targetGroup = group
         # Remove old group, if any
-        if group.removeIdea(source.id, {silent: true}) and group.get("ideas").length > 0
+        if group.removeIdea(sourceModel.id, {silent: true}) and group.get("ideas").length > 0
           group.save null,
             error: (model, err) =>
               flash "error", "Error saving group: #{err}"
@@ -674,7 +679,7 @@ class ds.ShowIdeas extends Backbone.View
         targetGroup = new IdeaGroup dotstorm_id: @dotstorm.id
 
       ideas = targetGroup.get("ideas") or []
-      targetGroup.addIdeas([source.id, target.id], silent: true)
+      targetGroup.addIdeas([sourceModel.id, target.id], silent: true)
       if targetGroup.isNew()
         @groups.add(targetGroup, {silent: true})
       targetGroup.save null,
@@ -684,7 +689,7 @@ class ds.ShowIdeas extends Backbone.View
       #
       # Are we being dragged out of all groups?
       #
-      groupParent = dragged.parents(".group:first")
+      groupParent = @dragState.active.parents(".group:first")
       if groupParent.length == 1 and groupParent.attr("data-id")?
         pos = @getPosition(event)
         dims = groupParent.offset()
@@ -693,7 +698,7 @@ class ds.ShowIdeas extends Backbone.View
         unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
           # We've been dragged out. Extricate ourselves from our group.
           group = @groups.get(groupParent.attr("data-id"))
-          if group.removeIdea(source.id, silent: true) and group.get("ideas").length > 0
+          if group.removeIdea(sourceModel.id, silent: true) and group.get("ideas").length > 0
             group.save null,
               error: (model, err) =>
                 flash "error", "Error saving group: #{err}"
@@ -701,6 +706,7 @@ class ds.ShowIdeas extends Backbone.View
             group.destroy
               error: (model, err) =>
                 flash "error", "Error removing group: #{err}"
+    @dragState = null
     return false
 
 class ds.ShowIdeaSmall extends Backbone.View
