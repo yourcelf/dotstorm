@@ -639,7 +639,7 @@ class ds.ShowIdeas extends Backbone.View
     @active = null
 
     hovered = @$(".hovered")
-    hovered.removeClass(".hovered")
+    hovered.removeClass("hovered")
 
     dragged = $(event.currentTarget)
     source = @ideas.get dragged.attr("data-id")
