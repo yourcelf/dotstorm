@@ -66,6 +66,7 @@ class ds.Topic extends Backbone.View
     @model.on "change", @render
 
   render: =>
+    console.log "render topic"
     @$el.html @template
       name: @model.get("name")
       topic: @model.get("topic") or "Click to edit topic..."
@@ -74,6 +75,7 @@ class ds.Topic extends Backbone.View
 
   editName: (event) =>
     $(event.currentTarget).hide().after @inputEditorTemplate text: @model.get("name")
+    return false
 
   saveName: (event) =>
     val = @$(".nameEdit input[type=text]").val()
@@ -82,9 +84,11 @@ class ds.Topic extends Backbone.View
     else
       @model.save name: val,
         error: (model, err) => flash "error", err
+    return false
 
   editTopic: (event) =>
     $(event.currentTarget).hide().after @textareaEditorTemplate text: @model.get("topic")
+    return false
 
   saveTopic: (event) =>
     val = @$(".topicEdit textarea").val()
@@ -133,10 +137,7 @@ class ds.IdeaCanvas extends Backbone.View
       height: @ctxDims.y
 
     @ctx = @canvas[0].getContext('2d')
-    if @idea.get("drawing")?
-      @actions = (instruction for instruction in @idea.get("drawing"))
-    else
-      @actions = []
+    @actions = @idea.get("drawing")?.slice() or []
     if @idea.get("background")?
       @background = @idea.get("background")
     else
@@ -156,6 +157,7 @@ class ds.IdeaCanvas extends Backbone.View
     @pointer =
       x: parseInt((pointerObj.pageX - @offset.left) / @curDims.x * @ctxDims.x)
       y: parseInt((pointerObj.pageY - @offset.top) / @curDims.y * @ctxDims.y)
+    return @pointer
 
   handleStart: (event) =>
     if @disabled then return
@@ -312,9 +314,11 @@ class ds.EditIdea extends Backbone.View
       @canvas.tool = tool
     el.parent().find(".tool").removeClass("active")
     el.addClass("active")
+    return false
 
   handleChangeBackgroundColor: (event) =>
     @changeBackgroundColor $(event.currentTarget).css("background-color")
+    return false
   changeBackgroundColor: (color) =>
     @canvas.background = color
     @$(".canvasHolder").css "background", @canvas.background
@@ -328,20 +332,22 @@ class ds.ShowIdeaGroup extends Backbone.View
     'submit    form': 'saveLabel'
   initialize: (options) ->
     @group = options.group
-    @ideas = options.ideas
+    @ideaViews = options.ideaViews
 
   editLabel: (event) =>
     $(event.currentTarget).replaceWith @editTemplate
       label: @group.get("label") or ""
     @$("input[type=text]").select()
+    return false
 
   cancelEdit: (event) =>
     @render()
+    return false
   
   saveLabel: (event) =>
     @group.set "label", @$("input[type=text]").val()
     @render()
-    @group.save {},
+    @group.save null,
       error: (model, err) =>
         flash "error", "Error saving group: #{err}"
         @render()
@@ -356,11 +362,8 @@ class ds.ShowIdeaGroup extends Backbone.View
       @$el.addClass("group")
     else
       container = @$el
-    for model in @ideas
-      idea = new ds.ShowIdeaSmall(model: model)
-      container.append idea.el
-      idea.render()
-      do (model) => idea.$el.on 'click', => @trigger "ideaClicked", model
+    for view in @ideaViews
+      container.append view.el
     this
 
 class ds.ShowIdeas extends Backbone.View
@@ -387,6 +390,7 @@ class ds.ShowIdeas extends Backbone.View
     large: 238
 
   initialize: (options) ->
+    console.log 'Dotstorm: NEW DOTSTORM'
     @dotstorm = options.model
     # ID of a single note to show, popped out
     @showId = options.showId
@@ -394,10 +398,23 @@ class ds.ShowIdeas extends Backbone.View
     @showTag = options.showTag
     @ideas = options.ideas
     @groups = options.groups
+    @smallIdeaViews = {}
 
-    @dotstorm.on "change", @render
-    @ideas.on "change", @render
-    @groups.on "change", @render
+    @dotstorm.on "change", =>
+      console.log "Dotstorm: dotstorm changed"
+      @renderTopic()
+    @groups.on "change", =>
+      console.log "Dotstorm: groups changed"
+      @renderGroups()
+    @groups.on "remove", =>
+      console.log "Dotstorm: group deleted"
+      @renderGroups()
+    @groups.on "add", =>
+      console.log "Dotstorm: group added"
+      @renderGroups()
+    @ideas.on "add", =>
+      console.log "Dotstorm: idea added"
+      @renderGroups()
 
     $(window).on "mouseup", @stopDrag
 
@@ -468,7 +485,6 @@ class ds.ShowIdeas extends Backbone.View
       return tags
     return null
 
-
   filterByTag: (tag) =>
     if tag?
       ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}"
@@ -504,23 +520,43 @@ class ds.ShowIdeas extends Backbone.View
     @$(".smallIdea").css
       width: @sizes[size] + "px"
       height: @sizes[size] + "px"
+    return false
 
   render: =>
+    console.log "Dotstorm: RENDER DOTSTORM"
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
       tags: @getTags()
     @$el.addClass "sorting"
 
+    @renderTopic()
+    @renderGroups()
+    @renderOverlay()
+
+  renderTopic: =>
     @$(".topic").html new ds.Topic(model: @dotstorm).render().el
 
+  renderGroups: =>
+    console.log "render groups"
     group_order = @sortGroups()
+    @$("#showIdeas").html("")
     if @ideas.length == 0
       @$("#showIdeas").html "To get started, edit the topic or name above, and then <a href='add'>add an idea</a>!"
     for group in group_order
-      groupView = new ds.ShowIdeaGroup group: group.group, ideas: group.models
+      views = []
+      for model in group.models
+        unless @smallIdeaViews[model.id]
+          view = new ds.ShowIdeaSmall(model:model)
+          view.render()
+          @smallIdeaViews[model.id] = view
+        views.push @smallIdeaViews[model.id]
+
+      groupView = new ds.ShowIdeaGroup group: group.group, ideaViews: views
       @$("#showIdeas").append groupView.el
       groupView.render()
+
+  renderOverlay: =>
     if @showId?
       model = @ideas.get(@showId)
       if model? then @showBig model
@@ -546,6 +582,7 @@ class ds.ShowIdeas extends Backbone.View
         $(dim.el).addClass("hovered")
       else
         $(dim.el).removeClass("hovered")
+    return false
 
   startDrag: (event) =>
     event.preventDefault()
@@ -576,12 +613,14 @@ class ds.ShowIdeas extends Backbone.View
       @noteDims.push(dims)
     @active.before(@placeholder)
     @moveNote(event)
+    return false
 
   continueDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
     if @mouseIsDown
       @moveNote(event)
+    return false
 
   stopDrag: (event) =>
     event.preventDefault()
@@ -594,6 +633,7 @@ class ds.ShowIdeas extends Backbone.View
     @mouseOffset = null
     unless @active?
       return
+
     @active.css
       position: "relative"
       left: 0
@@ -601,8 +641,11 @@ class ds.ShowIdeas extends Backbone.View
     @active = null
 
     hovered = @$(".hovered")
+    hovered.removeClass(".hovered")
+
     dragged = $(event.currentTarget)
     source = @ideas.get dragged.attr("data-id")
+
     if @maybeClick == true
       @showBig(source)
       return
@@ -617,33 +660,28 @@ class ds.ShowIdeas extends Backbone.View
       for group in @groups.models
         unless group?
           continue
-        if $.inArray(target.id, group.get("ideas")) != -1
+        if group.containsIdea(target.id)
           targetGroup = group
         # Remove old group, if any
-        source_group_index = $.inArray(source.id, group.get("ideas"))
-        if group.removeIdea(source.id) and group.get("ideas").length > 0
-          group.save {},
+        if group.removeIdea(source.id, {silent: true}) and group.get("ideas").length > 0
+          group.save null,
             error: (model, err) =>
               flash "error", "Error saving group: #{err}"
-              @render()
         else if group.get("ideas").length == 0
           group.destroy
             error: (model, err) =>
               flash "error", "Error removing group: #{err}"
-              @render()
 
       unless targetGroup?
         targetGroup = new IdeaGroup dotstorm_id: @dotstorm.id
-        @groups.add(targetGroup)
 
       ideas = targetGroup.get("ideas") or []
-      targetGroup.addIdea(source.id)
-      targetGroup.addIdea(target.id)
-      targetGroup.save {},
+      targetGroup.addIdeas([source.id, target.id], silent: true)
+      if targetGroup.isNew()
+        @groups.add(targetGroup, {silent: true})
+      targetGroup.save null,
         error: (model, err) =>
           flash "error", "Error saving group: #{err}"
-          @render()
-      @render()
     else
       #
       # Are we being dragged out of all groups?
@@ -657,25 +695,28 @@ class ds.ShowIdeas extends Backbone.View
         unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
           # We've been dragged out. Extricate ourselves from our group.
           group = @groups.get(groupParent.attr("data-id"))
-          if group.removeIdea(source.id) and group.get("ideas").length > 0
-            group.save {},
+          if group.removeIdea(source.id, silent: true) and group.get("ideas").length > 0
+            group.save null,
               error: (model, err) =>
                 flash "error", "Error saving group: #{err}"
-                @render()
           else if group.get("ideas").length == 0
             group.destroy
               error: (model, err) =>
                 flash "error", "Error removing group: #{err}"
-                @render()
-          @render()
+    return false
 
 class ds.ShowIdeaSmall extends Backbone.View
   template: _.template $("#dotstormSmallIdea").html() or ""
   initialize: (options) ->
     @model = options.model
     @size = options.size or "medium"
+    @model.on "change:tags", @render
+    @model.on "change:drawing", @render
+    @model.on "change:background", @render
+    @model.on "change:description", @render
 
   render: =>
+    console.log "render small", @model.id
     args = _.extend
       tags: ""
       description: ""
@@ -693,14 +734,15 @@ class ds.ShowIdeaSmall extends Backbone.View
       img.attr "alt", "drawing thumbnail"
       resize()
     @$(".canvas").html img
+    @renderVotes()
 
-    if @model.get("votes")?.length > 0
-      @$(".votes").html new ds.VoteWidget({
-        idea: @model
-        self: ds.users.self
-        readOnly: true
-      }).render().el
-    this
+  renderVotes: =>
+    @$(".votes").html new ds.VoteWidget({
+      idea: @model
+      self: ds.users.self
+      readOnly: true
+      hideOnZero: true
+    }).render().el
 
 class ds.ShowIdeaBig extends Backbone.View
   template: _.template $("#dotstormBigIdea").html() or ""
@@ -724,8 +766,13 @@ class ds.ShowIdeaBig extends Backbone.View
 
   initialize: (options) ->
     @model = options.model
+    @model.on "change:description", @render
+    @model.on "change:tags", @render
+    @model.on "change:background", @render
+    @model.on "change:drawing", @render
 
   render: =>
+    console.log "render big"
     args = _.extend {
       tags: ""
       description: ""
@@ -745,22 +792,28 @@ class ds.ShowIdeaBig extends Backbone.View
       @$(".note").css "max-width", width + "px"
     @$(".canvasHolder img").on "load", resize
     resize()
-
-    @$(".vote-widget").html new ds.VoteWidget(idea: @model, self: ds.users.self).render().el
+    @renderVotes()
 
     $(window).on "resize", resize
     this
 
+  renderVotes: =>
+    @$(".vote-widget").html new ds.VoteWidget(idea: @model, self: ds.users.self).render().el
+
   cancel: (event) =>
     @render()
+    return false
 
   close: (event) =>
     @trigger "close", this
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
     updateNavLinks()
+    return false
 
-  nothing: (event) => event.stopPropagation()
+  nothing: (event) =>
+    event.stopPropagation()
+    return false
 
   next: (event) =>
     @close()
@@ -775,9 +828,11 @@ class ds.ShowIdeaBig extends Backbone.View
   edit: (event) =>
     ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}",
       trigger: true
+    return false
 
   editTags: (event) =>
     @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("tags") or ""
+    return false
 
   saveTags: (event) =>
     @model.save {tags: @$(".tags input[type=text]").val()},
@@ -786,6 +841,8 @@ class ds.ShowIdeaBig extends Backbone.View
 
   editDescription: (event) =>
     @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("description") or ""
+    return false
+
   saveDescription: (event) =>
     @model.save {description: @$(".description textarea").val()},
       error: (model, err) => flash "error", err
@@ -797,36 +854,38 @@ class ds.VoteWidget extends Backbone.View
     'click .upvote': 'toggleVote'
   initialize: (options) ->
     @idea = options.idea
+    @idea.on "change:votes", @render
     @self = options.self
     @readOnly = options.readOnly
+    @hideOnZero = options.hideOnZero
     if @readOnly
       @undelegateEvents()
 
   render: =>
+    console.log "render votewidget", @idea.id
     @$el.addClass("vote-widget")
     votes = @idea.get("votes") or []
     @$el.html @template
       votes: votes.length
       youVoted: _.contains votes, @self?.user_id
       readOnly: @readOnly
+    if @hideOnZero
+      if votes.length == 0 then @$el.hide() else @$el.show()
     this
 
   toggleVote: =>
     if @self?.user_id?
-      votes = @idea.get("votes") or []
+      # Must copy array; otherwise change events don't fire properly.
+      votes = @idea.get("votes")?.slice() or []
       pos = _.indexOf votes, @self.user_id
       if pos == -1
         votes.push @self.user_id
       else
         votes.splice(pos, 1)
       @idea.save {votes: votes},
-        success: (model) =>
-          @idea = model
-          @render()
         error: (model, err) =>
           flash "error", "Error saving vote: #{err}"
-          @render()
-
+    return false
 
 updateNavLinks = ->
   if window.location.pathname == "/"
@@ -864,6 +923,7 @@ class ds.UsersView extends Backbone.View
   toggle: (event) =>
     @open = not @open
     @render()
+    return false
 
   changeName: (event) =>
     @self.name = $(event.currentTarget).val()
@@ -872,6 +932,7 @@ class ds.UsersView extends Backbone.View
     @updateTimeout = setTimeout =>
       ds.client.setName @self.name
     , 500
+    return false
 
   removeUser: (user) =>
     #TODO: something smarter when we have actual users.
@@ -1022,7 +1083,6 @@ ds.socket.on 'connect', ->
         switch data.signature.method
           when "create"
             ds.ideas.add(new Idea(data.model))
-            ds.ideas.trigger "change"
           when "update"
             model = ds.ideas.get(data.model._id)
             if model?
@@ -1040,7 +1100,6 @@ ds.socket.on 'connect', ->
         switch data.signature.method
           when "create"
             ds.groups.add(new IdeaGroup(data.model))
-            ds.groups.trigger "change"
           when "update"
             model = ds.groups.get(data.model._id)
             if model?
@@ -1053,7 +1112,6 @@ ds.socket.on 'connect', ->
               ds.groups.remove(model)
             else
               ds.groups.fetch()
-            ds.groups.trigger "change"
       when "Dotstorm"
         switch data.signature.method
           when "update"

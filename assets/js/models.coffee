@@ -23,13 +23,15 @@ class Idea extends Backbone.Model
   validate: (attrs) =>
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
     if not attrs.dotstorm_id then return "Dotstorm ID missing."
-    if not attrs.imageVersion?
-      @set "imageVersion", 0, silent: true
-    if not attrs.created?
-      @set "created", new Date().getTime(), silent: true
-    if attrs.tags?
-      @set "tags", @getTags().join(", "), silent: true
-    @set "modified", new Date().getTime(), silent: true
+    if attrs.tags? and @get("tags") != attrs.tags
+      cleaned = @getTags(attrs.tags).join(", ")
+      if cleaned != attrs.tags
+        @set "tags", cleaned, silent: true
+#    if not attrs.imageVersion?
+#      @set "imageVersion", 0, silent: true
+#    if not attrs.created?
+#      @set "created", new Date().getTime(), silent: true
+#    @set "modified", new Date().getTime(), silent: true
     return
 
   getThumbnailURL: (size) =>
@@ -51,22 +53,26 @@ class IdeaList extends Backbone.Collection
 
 class IdeaGroup extends Backbone.Model
   collectionName: 'IdeaGroup'
-  addIdea: (id) =>
-    ideas = @get("ideas") or []
-    unless _.include(ideas, id)
-      ideas.push(id)
-      @set ideas: ideas
-      return true
-    return false
 
-  removeIdea: (id) =>
-    ideas = @get("ideas") or []
+  addIdeas: (idlist, options) =>
+    ideas = @get("ideas")?.slice() or []
+    for id in idlist
+      unless _.include(ideas, id)
+        ideas.push(id)
+    @set({ideas}, options)
+
+  removeIdea: (id, options) =>
+    ideas = @get("ideas")?.slice() or []
     index = _.indexOf(ideas, id)
     unless index == -1
       ideas.splice(index, 1)
-      @set ideas: ideas
+      @set({ideas}, options)
       return true
     return false
+
+  containsIdea: (id) =>
+    return _.contains @get("ideas"), id
+
   validate: (attrs) ->
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
     if not attrs.dotstorm_id

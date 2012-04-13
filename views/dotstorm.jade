@@ -21,7 +21,7 @@ script#dotstormInPlaceTextarea(type='text/template')
     textarea <%= text %>
     br
     input(type='submit', value='save')
-    a.cancel(href='#') cancel
+    a.cancel(href='') cancel
 
 script#dotstormAddIdea(type='text/template')
   div#addIdea
@@ -98,7 +98,7 @@ script#dotstormBigIdea(type='text/template')
       div.note
         a.close(title='close') &#10006;
         div.toolbar.image-boxed
-          a.edit(href='#', title='edit')
+          a.edit(href='', title='edit')
             img(src="/img/pencil.png", alt='edit')
           span.vote-widget
         div.canvasHolder
@@ -125,7 +125,7 @@ script#dotstormTagOverlay(type='text/template')
 
 script#dotstormVoteWidget(type='text/template')
   <% if (!readOnly) { %>
-  a.upvote(href='#', title='upvote')
+  a.upvote(href='', title='upvote')
     <img src="/img/upvote<%= youVoted ? "-active" : "" %>.png" alt='vote' title="Vote!" />
   <% } %>
   <span class='vote-count<%= youVoted ? " active" : "" %>'><%= votes %></span>
