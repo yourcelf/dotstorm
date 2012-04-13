@@ -63,8 +63,7 @@ class ds.Topic extends Backbone.View
 
   initialize: (options) ->
     @model = options.model
-    @model.on "change", =>
-      @render()
+    @model.on "change", @render
 
   render: =>
     @$el.html @template
@@ -135,7 +134,7 @@ class ds.IdeaCanvas extends Backbone.View
 
     @ctx = @canvas[0].getContext('2d')
     if @idea.get("drawing")?
-      @actions = @idea.get("drawing")
+      @actions = (instruction for instruction in @idea.get("drawing"))
     else
       @actions = []
     if @idea.get("background")?
@@ -397,10 +396,8 @@ class ds.ShowIdeas extends Backbone.View
     @groups = options.groups
 
     @dotstorm.on "change", @render
-    @ideas.on "change", =>
-      @render()
-    @groups.on "change", =>
-      @render()
+    @ideas.on "change", @render
+    @groups.on "change", @render
 
     $(window).on "mouseup", @stopDrag
 
