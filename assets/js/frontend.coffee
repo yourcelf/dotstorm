@@ -541,8 +541,6 @@ class ds.ShowIdeas extends Backbone.View
       position: "absolute"
       left: pos.x + @mouseOffset.x + "px"
       top: pos.y + @mouseOffset.y + "px"
-      zIndex: 10
-      opacity: 0.8
     for dim in @noteDims
       if dim.left < pos.x < dim.left + dim.width and dim.top < pos.y < dim.top + dim.height
         $(dim.el).addClass("hovered")
@@ -600,8 +598,6 @@ class ds.ShowIdeas extends Backbone.View
       position: "relative"
       left: 0
       top: 0
-      zIndex: "auto"
-      opacity: 1
     @active = null
 
     hovered = @$(".hovered")
