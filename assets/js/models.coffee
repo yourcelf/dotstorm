@@ -23,13 +23,13 @@ class Idea extends Backbone.Model
   validate: (attrs) =>
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
     if not attrs.dotstorm_id then return "Dotstorm ID missing."
-
-    #XXX: These don't seem to be setting.
-    if not attrs.version? then attrs.imageVersion = 0
-    if not attrs.created? then attrs.created = new Date().getTime()
-    attrs.modified = new Date().getTime()
+    if not attrs.version?
+      @set "imageVersion", 0, silent: true
+    if not attrs.created?
+      @set "created", new Date().getTime(), silent: true
     if attrs.tags?
-      attrs.tags = @getTags(attrs.tags).join(", ")
+      @set "tags", @getTags().join(", "), silent: true
+    @set "modified", new Date().getTime(), silent: true
     return
 
   getThumbnailURL: (size) =>

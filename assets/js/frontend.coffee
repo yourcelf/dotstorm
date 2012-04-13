@@ -281,7 +281,7 @@ class ds.EditIdea extends Backbone.View
     attrs = {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
-      tags: @idea.cleanTags($("#id_tags").val())
+      tags: $("#id_tags").val()
       background: @canvas.background
       dims: @canvas.ctxDims
       drawing: @canvas.actions
@@ -787,7 +787,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("tags") or ""
 
   saveTags: (event) =>
-    @model.save {tags: @model.cleanTags(@$(".tags input[type=text]").val())},
+    @model.save {tags: @$(".tags input[type=text]").val()},
       error: (model, err) => flash "error", err
     return false
 
