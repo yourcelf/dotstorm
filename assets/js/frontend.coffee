@@ -346,11 +346,9 @@ class ds.ShowIdeaGroup extends Backbone.View
   
   saveLabel: (event) =>
     @group.set "label", @$("input[type=text]").val()
-    @render()
     @group.save null,
       error: (model, err) =>
         flash "error", "Error saving group: #{err}"
-        @render()
     return false
 
   render: =>
@@ -543,18 +541,18 @@ class ds.ShowIdeas extends Backbone.View
     @$("#showIdeas").html("")
     if @ideas.length == 0
       @$("#showIdeas").html "To get started, edit the topic or name above, and then <a href='add'>add an idea</a>!"
-    for group in group_order
-      views = []
-      for model in group.models
-        unless @smallIdeaViews[model.id]
-          view = new ds.ShowIdeaSmall(model:model)
-          view.render()
-          @smallIdeaViews[model.id] = view
-        views.push @smallIdeaViews[model.id]
-
-      groupView = new ds.ShowIdeaGroup group: group.group, ideaViews: views
-      @$("#showIdeas").append groupView.el
-      groupView.render()
+    else
+      for group in group_order
+        views = []
+        for model in group.models
+          unless @smallIdeaViews[model.id]
+            view = new ds.ShowIdeaSmall(model:model)
+            view.render()
+            @smallIdeaViews[model.id] = view
+          views.push @smallIdeaViews[model.id]
+        groupView = new ds.ShowIdeaGroup group: group.group, ideaViews: views
+        @$("#showIdeas").append groupView.el
+        groupView.render()
 
   renderOverlay: =>
     if @showId?
