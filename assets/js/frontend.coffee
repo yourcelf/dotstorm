@@ -506,7 +506,8 @@ class ds.ShowIdeas extends Backbone.View
       model_order.push(idea)
       count += 1
     ungrouped = _.sortBy ungrouped, @ideas.comparator
-    group_order.push({ models: ungrouped })
+    if ungrouped.length > 0
+      group_order.push({ models: ungrouped })
     group_order = _.sortBy group_order, (g) => @ideas.comparator(g.models[0])
     return group_order
 
