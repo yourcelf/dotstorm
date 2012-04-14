@@ -232,9 +232,9 @@ a:link.cta, a:visited.cta, a.cta
 .sort.active
   font-weight: bold
   &:before
-    content: "↓"
-  &.reverse:before
     content: "↑"
+  &.reverse:before
+    content: "↓"
 
 .smallIdea
   cursor: pointer
@@ -291,6 +291,15 @@ a:link.cta, a:visited.cta, a.cta
     border: 1px solid #999
     background: rgba(200, 220, 200, 0.5)
     padding: 1em
+
+.front-matter
+  .tag-links
+    display: none
+    max-width: 200px
+    float: right
+@media only screen and (min-width: 300px)
+  .front-matter .tag-links
+    display: block
 
 .idea-browser
   &, *

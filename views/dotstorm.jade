@@ -54,8 +54,13 @@ script#dotstormAddIdea(type='text/template')
     div(style='clear: both;')
 
 script#dotstormShowIdeas(type='text/template')
-  div.topic
+  div.front-matter
+    div.topic
+  div.idea-browser
+    div#showIdeas
+    div(style='clear: both;')
   div.tag-links
+    hr
     | Order by
     a.sort(href='?sort=drop', data-sort='drop') drop
     |, 
@@ -63,17 +68,6 @@ script#dotstormShowIdeas(type='text/template')
     |, 
     a.sort(href='?sort=date', data-sort='date') date
     br
-    <% if (tags) { %>
-    | Filter by tag:
-    | <% for (var tag in tags) { %>
-    |   <a class='tag' href='/d/<%= slug %>/tag/<%= encodeURIComponent(tag) %>'
-    |    data-tag='<%= tag %>'><%= tag %>
-    |    (<%= tags[tag] %>)</a> 
-    | <% } %>
-    <% } %>
-  div.idea-browser
-    div#showIdeas
-    div(style='clear: both;')
 
 script#dotstormSmallIdea(type='text/template')
   div.border
