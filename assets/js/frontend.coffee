@@ -661,6 +661,7 @@ class ds.ShowIdeas extends Backbone.View
         if dim.left + dim.width * 0.2 < pos.x < dim.left + dim.width * 0.8
           dim.el.addClass("hovered")
         if dim.left + dim.width * 0.8 < pos.x < dim.left + dim.width
+          console.log "rightside"
           dim.el.addClass("rightside")
     return false
 
