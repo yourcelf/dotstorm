@@ -57,6 +57,12 @@ script#dotstormShowIdeas(type='text/template')
   div.topic
   div.tag-links
     | Order by
+    a.sort(href='?sort=drop', data-sort='drop') drop
+    |, 
+    a.sort(href='?sort=votes', data-sort='votes') votes
+    |, 
+    a.sort(href='?sort=date', data-sort='date') date
+    br
     <% if (tags) { %>
     | Filter by tag:
     | <% for (var tag in tags) { %>

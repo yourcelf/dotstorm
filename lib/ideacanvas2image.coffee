@@ -133,12 +133,18 @@ draw = (idea, callback) ->
 mkthumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
   if idea.get("background")? and idea.get("drawing")?
-    clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
-      if (err) then return callback?(err)
-      draw idea, (err) ->
-        if (err) then return callback?(err)
-        callback(null)
+    path.exists BASE_PATH + idea.getThumbnailURL('small'), (exists) ->
+      unless exists
+        clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
+          if (err) then return callback?(err)
+          draw idea, (err) ->
+            if (err) then return callback?(err)
+            callback(null)
+      else
+        callback()
+        logger.debug("skipping thumbnail; already exists")
   else
+    callback()
     logger.debug("skipping thumbnail; empty model")
 
 remove = (model) ->

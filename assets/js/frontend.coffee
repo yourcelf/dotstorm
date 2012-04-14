@@ -18,6 +18,13 @@ if typeof console == 'undefined'
 if not window.ds?
   ds = window.ds = {}
 
+getQueryStrParameterByName = (name) ->
+  # Get url query parameter by name.
+  # http://stackoverflow.com/questions/901115/get-query-string-values-in-javascript
+  match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search)
+  return match && decodeURIComponent(match[1].replace(/\+/g, ' '))
+
+
 class ds.Intro extends Backbone.View
   #
   # A front-page form for opening or creating new dotstorms.
@@ -373,8 +380,8 @@ class ds.ShowIdeas extends Backbone.View
   template: _.template $("#dotstormShowIdeas").html() or ""
   events:
     'click .sizes a': 'resize'
-    'click .sort-link': 'softNav'
     'click .add-link': 'softNav'
+    'click .sort': 'handleSort'
     'click .tag': 'toggleTag'
     'mousedown  .smallIdea': 'startDrag'
     'mousemove  .smallIdea': 'continueDrag'
@@ -396,7 +403,6 @@ class ds.ShowIdeas extends Backbone.View
     # name of a tag to show, popped out
     @showTag = options.showTag
     @ideas = options.ideas
-    @ideas.comparator = (model) -> return model.get("order")
     @groups = options.groups
     @smallIdeaViews = {}
 
@@ -416,13 +422,53 @@ class ds.ShowIdeas extends Backbone.View
       console.debug "Dotstorm: idea added"
       @renderGroups()
     @ideas.on "sort", =>
-      console.debug "Dotstorm: sorted"
+      console.debug "Dotstorm: sorted", @sort
       @renderGroups()
-
+    @ideas.on "change:order", =>
+      console.log "Dostorm: sorted", @sort
+      if @orderChangeTimeout
+        clearTimeout @orderChangeTimeout
+      @orderChangeTimeout = setTimeout (=> @renderGroups()), 200
     $(window).on "mouseup", @stopDrag
 
   softNav: (event) =>
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
+    return false
+
+  setSort: (sort, options) =>
+    @sort = sort or getQueryStrParameterByName('sort')
+    switch @sort
+      when "date"
+        @ideas.comparator = (model) -> return model.get("created")
+      when "-date"
+        @ideas.comparator = (model) -> return -model.get("created")
+      when "votes"
+        @ideas.comparator = (model) -> return model.get("votes")?.length or 0
+      when "-votes"
+        @ideas.comparator = (model) -> return -(model.get("votes")?.length or 0)
+      when "-order"
+        @ideas.comparator = (model) -> return -(model.get("order") or 0)
+      else
+        @ideas.comparator = (model) -> return model.get("order")
+    @ideas.sort()
+    @ideas.trigger "sort" unless options?.silent
+    @$(".sort").removeClass("active reverse")
+    if @sort?.substring(0, 1) == "-"
+      sort = @sort.substring(1)
+      reverse = true
+    else
+      sort = @sort
+      reverse = false
+    target = @$("a[data-sort=\"#{sort}\"]")
+    target.addClass("active")
+    if reverse then target.addClass("reverse")
+    ds.app.navigate window.location.pathname + "?sort=#{@sort}", trigger: false
+
+  handleSort: (event) =>
+    sort = $(event.currentTarget).attr("data-sort")
+    if @sort? and @sort == sort
+      sort = "-#{sort}"
+    @setSort sort
     return false
 
   sortGroups: =>
@@ -450,6 +496,7 @@ class ds.ShowIdeas extends Backbone.View
         model_order.push(idea)
         group_set.models.push(idea)
         count += 1
+      group_set.models = _.sortBy group_set.models, @ideas.comparator
       group_order.push(group_set)
     for idea in ungrouped
       if count > 0
@@ -457,7 +504,9 @@ class ds.ShowIdeas extends Backbone.View
         idea.prev.next = idea
       model_order.push(idea)
       count += 1
+    ungrouped = _.sortBy ungrouped, @ideas.comparator
     group_order.push({ models: ungrouped })
+    group_order = _.sortBy group_order, (g) => @ideas.comparator(g.models[0])
     return group_order
 
   showBig: (model) =>
@@ -532,9 +581,8 @@ class ds.ShowIdeas extends Backbone.View
       slug: @model.get("slug")
       tags: @getTags()
     @$el.addClass "sorting"
-
     @renderTopic()
-    @renderGroups()
+    @setSort() #@renderGroups()
     @renderOverlay()
 
   renderTopic: =>
@@ -555,7 +603,6 @@ class ds.ShowIdeas extends Backbone.View
             view.render()
             @smallIdeaViews[model.id] = view
           views.push @smallIdeaViews[model.id]
-        views = _.sortBy views, (v) -> v.model.get("order")
         groupView = new ds.ShowIdeaGroup group: group.group, ideaViews: views
         @$("#showIdeas").append groupView.el
         groupView.render()
@@ -715,7 +762,7 @@ class ds.ShowIdeas extends Backbone.View
       else if model != sourceModel
         newOrder.push(model)
     for i in [0...newOrder.length]
-      newOrder[i].set("order", i, silent: true)
+      newOrder[i].save("order", i, silent: true)
     @ideas.sort()
     @ideas.trigger "sort"
 
