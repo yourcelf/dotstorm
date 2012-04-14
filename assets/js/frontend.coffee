@@ -462,7 +462,8 @@ class ds.ShowIdeas extends Backbone.View
     target = @$("a[data-sort=\"#{sort}\"]")
     target.addClass("active")
     if reverse then target.addClass("reverse")
-    ds.app.navigate window.location.pathname + "?sort=#{@sort}", trigger: false
+    if @sort?
+      ds.app.navigate window.location.pathname + "?sort=#{@sort}", trigger: false
 
   handleSort: (event) =>
     sort = $(event.currentTarget).attr("data-sort")
