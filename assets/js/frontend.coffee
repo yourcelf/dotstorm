@@ -66,7 +66,7 @@ class ds.Topic extends Backbone.View
     @model.on "change", @render
 
   render: =>
-    console.log "render topic"
+    console.debug "render topic"
     @$el.html @template
       name: @model.get("name")
       topic: @model.get("topic") or "Click to edit topic..."
@@ -290,13 +290,14 @@ class ds.EditIdea extends Backbone.View
     }
     if ideaIsNew
       attrs.creator = ds.users?.self?.user_id
+      attrs.order = ds.ideas.length
     @idea.save attrs,
       success: (model) ->
         if ideaIsNew
           ds.ideas.add(model)
         ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}", trigger: true
       error: (model, err) ->
-        console.log(err)
+        console.error(err)
         str = if err.error? then err.error else err
         flash "error", "Error saving: #{str}"
 
@@ -388,30 +389,34 @@ class ds.ShowIdeas extends Backbone.View
     large: 238
 
   initialize: (options) ->
-    console.log 'Dotstorm: NEW DOTSTORM'
+    console.debug 'Dotstorm: NEW DOTSTORM'
     @dotstorm = options.model
     # ID of a single note to show, popped out
     @showId = options.showId
     # name of a tag to show, popped out
     @showTag = options.showTag
     @ideas = options.ideas
+    @ideas.comparator = (model) -> return model.get("order")
     @groups = options.groups
     @smallIdeaViews = {}
 
     @dotstorm.on "change", =>
-      console.log "Dotstorm: dotstorm changed"
+      console.debug "Dotstorm: dotstorm changed"
       @renderTopic()
     @groups.on "change", =>
-      console.log "Dotstorm: groups changed"
+      console.debug "Dotstorm: groups changed"
       @renderGroups()
     @groups.on "remove", =>
-      console.log "Dotstorm: group deleted"
+      console.debug "Dotstorm: group deleted"
       @renderGroups()
     @groups.on "add", =>
-      console.log "Dotstorm: group added"
+      console.debug "Dotstorm: group added"
       @renderGroups()
     @ideas.on "add", =>
-      console.log "Dotstorm: idea added"
+      console.debug "Dotstorm: idea added"
+      @renderGroups()
+    @ideas.on "sort", =>
+      console.debug "Dotstorm: sorted"
       @renderGroups()
 
     $(window).on "mouseup", @stopDrag
@@ -521,7 +526,7 @@ class ds.ShowIdeas extends Backbone.View
     return false
 
   render: =>
-    console.log "Dotstorm: RENDER DOTSTORM"
+    console.debug "Dotstorm: RENDER DOTSTORM"
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
@@ -536,7 +541,7 @@ class ds.ShowIdeas extends Backbone.View
     @$(".topic").html new ds.Topic(model: @dotstorm).render().el
 
   renderGroups: =>
-    console.log "render groups"
+    console.debug "render groups"
     group_order = @sortGroups()
     @$("#showIdeas").html("")
     if @ideas.length == 0
@@ -550,6 +555,7 @@ class ds.ShowIdeas extends Backbone.View
             view.render()
             @smallIdeaViews[model.id] = view
           views.push @smallIdeaViews[model.id]
+        views = _.sortBy views, (v) -> v.model.get("order")
         groupView = new ds.ShowIdeaGroup group: group.group, ideaViews: views
         @$("#showIdeas").append groupView.el
         groupView.render()
@@ -576,10 +582,16 @@ class ds.ShowIdeas extends Backbone.View
       left: pos.x + @dragState.mouseOffset.x + "px"
       top: pos.y + @dragState.mouseOffset.y + "px"
     for dim in @dragState.noteDims
-      if dim.left < pos.x < dim.left + dim.width and dim.top < pos.y < dim.top + dim.height
-        $(dim.el).addClass("hovered")
-      else
-        $(dim.el).removeClass("hovered")
+      if dim.el[0] == @dragState.active[0]
+        continue
+      dim.el.removeClass("hovered leftside rightside")
+      if dim.top < pos.y < dim.top + dim.height
+        if dim.left < pos.x < dim.left + dim.width * 0.2
+          dim.el.addClass("leftside")
+        if dim.left + dim.width * 0.2 < pos.x < dim.left + dim.width * 0.8
+          dim.el.addClass("hovered")
+        if dim.left + dim.width * 0.8 < pos.x < dim.left + dim.width
+          dim.el.addClass("rightside")
     return false
 
   startDrag: (event) =>
@@ -592,10 +604,12 @@ class ds.ShowIdeas extends Backbone.View
       startPos: @getPosition(event)
       active: active
       offset: active.position()
-      placeholder: $("<div class='smallIdea'></div>").css
+      noteDims: []
+      placeholder: $("<div></div>").css
+        float: "left"
         width: active.width() + "px"
         height: active.height() + "px"
-      noteDims: []
+      dropTagrets: []
     }
     @dragState.mouseOffset =
       x: @dragState.offset.left - @dragState.startPos.x
@@ -641,8 +655,10 @@ class ds.ShowIdeas extends Backbone.View
       left: 0
       top: 0
 
+    leftside = @$(".leftside")
+    rightside = @$(".rightside")
     hovered = @$(".hovered")
-    hovered.removeClass("hovered")
+    @$(".smallIdea").removeClass("leftside rightside hovered")
 
     sourceModel = @ideas.get @dragState.active.attr("data-id")
     unless sourceModel?
@@ -654,60 +670,99 @@ class ds.ShowIdeas extends Backbone.View
       @dragState = null
       return
 
-    if hovered[0]? and hovered[0] != event.currentTarget
-      #
-      # Are we being dragged into a group?
-      #
-      target = @ideas.get hovered.attr("data-id")
+    droppable = hovered[0] or leftside[0] or rightside[0]
+    groupParent = @dragState.active.parents(".group:first")
+    if droppable?
+      targetModel = @ideas.get droppable.getAttribute("data-id")
       targetGroup = null
       for group in @groups.models
         unless group?
           continue
-        if group.containsIdea(target.id)
+        if group.containsIdea(targetModel.id)
           targetGroup = group
-        # Remove old group, if any
-        if group.removeIdea(sourceModel.id, {silent: true}) and group.get("ideas").length > 0
-          group.save null,
-            error: (model, err) =>
-              flash "error", "Error saving group: #{err}"
-        else if group.get("ideas").length == 0
-          group.destroy
-            error: (model, err) =>
-              flash "error", "Error removing group: #{err}"
-
-      unless targetGroup?
-        targetGroup = new IdeaGroup dotstorm_id: @dotstorm.id
-
-      ideas = targetGroup.get("ideas") or []
-      targetGroup.addIdeas([sourceModel.id, target.id], silent: true)
-      if targetGroup.isNew()
-        @groups.add(targetGroup, {silent: true})
-      targetGroup.save null,
-        error: (model, err) =>
-          flash "error", "Error saving group: #{err}"
-    else
-      #
+          break
+      if not targetGroup?
+        if hovered[0]?
+          targetGroup = new IdeaGroup dotstorm_id: @dotstorm.id
+          targetGroup.addIdeas [targetModel.id], silent: true
+        else if groupParent[0]?
+          @removeFromGroup(sourceModel, @groups.get(groupParent.attr("data-id")))
+      if targetGroup?
+        @joinGroup sourceModel, targetGroup
+      if leftside[0]?
+        @putModelLeftOf sourceModel, targetModel
+      else
+        @putModelRightOf sourceModel, targetModel
+    else if groupParent[0]?
       # Are we being dragged out of all groups?
-      #
-      groupParent = @dragState.active.parents(".group:first")
-      if groupParent.length == 1 and groupParent.attr("data-id")?
-        pos = @getPosition(event)
-        dims = groupParent.offset()
-        dims.width = groupParent.width()
-        dims.height = groupParent.height()
-        unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
-          # We've been dragged out. Extricate ourselves from our group.
-          group = @groups.get(groupParent.attr("data-id"))
-          if group.removeIdea(sourceModel.id, silent: true) and group.get("ideas").length > 0
-            group.save null,
-              error: (model, err) =>
-                flash "error", "Error saving group: #{err}"
-          else if group.get("ideas").length == 0
-            group.destroy
-              error: (model, err) =>
-                flash "error", "Error removing group: #{err}"
+      pos = @getPosition(event)
+      dims = groupParent.offset()
+      dims.width = groupParent.width()
+      dims.height = groupParent.height()
+      unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
+        # We've been dragged out. Extricate ourselves from our group.
+        @removeFromGroup(sourceModel, @groups.get(groupParent.attr("data-id")))
     @dragState = null
     return false
+
+  putModelLeftOf: (sourceModel, targetModel) =>
+    console.debug "putModelLeftOf"
+    newOrder = []
+    for model in @ideas.models
+      if model == targetModel
+        newOrder.push(sourceModel)
+        newOrder.push(targetModel)
+      else if model != sourceModel
+        newOrder.push(model)
+    for i in [0...newOrder.length]
+      newOrder[i].set("order", i, silent: true)
+    @ideas.sort()
+    @ideas.trigger "sort"
+
+  putModelRightOf: (sourceModel, targetModel) =>
+    console.debug "putModelRightOf"
+    newOrder = []
+    for model in @ideas.models
+      if model == targetModel
+        newOrder.push(targetModel)
+        newOrder.push(sourceModel)
+      else if model != sourceModel
+        newOrder.push(model)
+    for i in [0...newOrder.length]
+      newOrder[i].set("order", i, silent: true)
+    @ideas.sort()
+    @ideas.trigger "sort"
+
+  removeFromGroup: (sourceModel, group) =>
+    if group.removeIdea(sourceModel.id, silent: true) and group.get("ideas").length > 0
+      group.save null,
+        error: (model, err) =>
+          flash "error", "Error saving group: #{err}"
+    else if group.get("ideas").length == 0
+      group.destroy
+        error: (model, err) =>
+          flash "error", "Error removing group: #{err}"
+
+  joinGroup: (sourceModel, targetGroup) =>
+    for group in @groups.models
+      unless group?
+        continue
+      if group.removeIdea(sourceModel.id, {silent: true}) and group.get("ideas").length > 0
+        group.save null,
+          error: (model, err) =>
+            flash "error", "Error saving group: #{err}"
+      else if group.get("ideas").length == 0
+        group.destroy
+          error: (model, err) =>
+            flash "error", "Error removing group: #{err}"
+
+    ideas = targetGroup.get("ideas") or []
+    targetGroup.addIdeas([sourceModel.id], silent: true)
+    if targetGroup.isNew()
+      @groups.add(targetGroup, {silent: true})
+    targetGroup.save null,
+      error: (model, err) =>
+        flash "error", "Error saving group: #{err}"
 
 class ds.ShowIdeaSmall extends Backbone.View
   template: _.template $("#dotstormSmallIdea").html() or ""
@@ -720,7 +775,7 @@ class ds.ShowIdeaSmall extends Backbone.View
     @model.on "change:description", @render
 
   render: =>
-    console.log "render small", @model.id
+    console.debug "render small", @model.id
     args = _.extend
       tags: ""
       description: ""
@@ -776,7 +831,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.on "change:drawing", @render
 
   render: =>
-    console.log "render big"
+    console.debug "render big"
     args = _.extend {
       tags: ""
       description: ""
@@ -866,7 +921,7 @@ class ds.VoteWidget extends Backbone.View
       @undelegateEvents()
 
   render: =>
-    console.log "render votewidget", @idea.id
+    console.debug "render votewidget", @idea.id
     @$el.addClass("vote-widget")
     votes = @idea.get("votes") or []
     @$el.html @template
@@ -1067,7 +1122,7 @@ ds.socket.on 'connect', ->
   ds.client = new Client(ds.socket)
   Backbone.history.start pushState: true
   ds.socket.on 'users', (data) ->
-    console.log "users", data
+    console.debug "users", data
     ds.users = new ds.UsersView
       users: data
       url: "#{window.location.protocol}//#{window.location.host}/d/#{ds.model.get("slug")}/"
@@ -1081,7 +1136,7 @@ ds.socket.on 'connect', ->
     ds.users?.setUser(user)
 
   ds.socket.on 'backbone', (data) ->
-    console.log 'backbone sync', data
+    console.debug 'backbone sync', data
     switch data.signature.collectionName
       when "Idea"
         switch data.signature.method

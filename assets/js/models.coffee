@@ -27,11 +27,11 @@ class Idea extends Backbone.Model
       cleaned = @getTags(attrs.tags).join(", ")
       if cleaned != attrs.tags
         @set "tags", cleaned, silent: true
-#    if not attrs.imageVersion?
-#      @set "imageVersion", 0, silent: true
-#    if not attrs.created?
-#      @set "created", new Date().getTime(), silent: true
-#    @set "modified", new Date().getTime(), silent: true
+    if not attrs.imageVersion?
+      @set "imageVersion", 0, silent: true
+    if not attrs.created?
+      @set "created", new Date().getTime(), silent: true
+    @set "modified", new Date().getTime(), silent: true
     return
 
   getThumbnailURL: (size) =>

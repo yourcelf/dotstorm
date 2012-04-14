@@ -338,8 +338,17 @@ a:link.cta, a:visited.cta, a.cta
       transform: rotate(-2deg)
       opacity: 0.7
       z-index: 10
-    &:hover, &.hovered
+    .border
+      width: 118px
+      height: 118px
+    &.hovered
       outline: 3px solid orange
+    &.leftside .border
+      border-left: 6px solid orange
+      width: 112px
+    &.rightside .border
+      border-right: 6px solid orange
+      width: 112px
 
 .vote-widget
   display: inline-block
