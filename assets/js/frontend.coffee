@@ -446,7 +446,7 @@ class ds.ShowIdeas extends Backbone.View
         @ideas.comparator = (model) -> return model.get("votes")?.length or 0
       when "-votes"
         @ideas.comparator = (model) -> return -(model.get("votes")?.length or 0)
-      when "-order"
+      when "-drop"
         @ideas.comparator = (model) -> return -(model.get("order") or 0)
       else
         @ideas.comparator = (model) -> return model.get("order")
@@ -580,11 +580,32 @@ class ds.ShowIdeas extends Backbone.View
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
-      tags: @getTags()
     @$el.addClass "sorting"
+    @renderTagCloud()
     @renderTopic()
-    @setSort() #@renderGroups()
+    @setSort() #@renderGroups() -- triggered by sort
     @renderOverlay()
+
+  renderTagCloud: =>
+    tags = @getTags()
+    max = 0
+    min = 100000000000000
+    for tag, count of tags
+      if count > max
+        max = count
+      else if count < min
+        min = count
+    minPercent = 70
+    maxPercent = 150
+    for tag, count of tags
+      @$(".tag-links").append($("<a/>").attr({
+          class: 'tag'
+          "data-tag": tag
+          href: "/d/#{@model.get("slug")}/tag/#{encodeURIComponent(tag)}"
+          style: "font-size: #{minPercent + ((max-(max-(count-min)))*(maxPercent - minPercent) / (max-min))}%"
+        }).html( _.escapeHTML tag ), " "
+      )
+      console.log @$(".tag-links")
 
   renderTopic: =>
     @$(".topic").html new ds.Topic(model: @dotstorm).render().el
