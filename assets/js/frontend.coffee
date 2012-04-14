@@ -425,7 +425,7 @@ class ds.ShowIdeas extends Backbone.View
       console.debug "Dotstorm: sorted", @sort
       @renderGroups()
     @ideas.on "change:order", =>
-      console.log "Dostorm: sorted", @sort
+      console.debug "Dostorm: sorted", @sort
       if @orderChangeTimeout
         clearTimeout @orderChangeTimeout
       @orderChangeTimeout = setTimeout (=> @renderGroups()), 200
@@ -606,7 +606,6 @@ class ds.ShowIdeas extends Backbone.View
           style: "font-size: #{minPercent + ((max-(max-(count-min)))*(maxPercent - minPercent) / (max-min))}%"
         }).html( _.escapeHTML tag ), " "
       )
-      console.log @$(".tag-links")
 
   renderTopic: =>
     @$(".topic").html new ds.Topic(model: @dotstorm).render().el
@@ -661,7 +660,6 @@ class ds.ShowIdeas extends Backbone.View
         if dim.left + dim.width * 0.2 < pos.x < dim.left + dim.width * 0.8
           dim.el.addClass("hovered")
         if dim.left + dim.width * 0.8 < pos.x < dim.left + dim.width
-          console.log "rightside"
           dim.el.addClass("rightside")
     return false
 
