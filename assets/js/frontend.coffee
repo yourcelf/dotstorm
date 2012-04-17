@@ -763,8 +763,7 @@ class ds.ShowIdeaSmall extends Backbone.View
     @model = options.model
     @size = options.size or "medium"
     @model.on "change:tags", @render
-    @model.on "change:drawing", @render
-    @model.on "change:background", @render
+    @model.on "change:imageVersion", @render
     @model.on "change:description", @render
 
   render: =>
@@ -1045,9 +1044,12 @@ class ds.Router extends Backbone.Router
       if not idea?
         flash "error", "Idea not found.  Check the URL?"
       else
-        view = new ds.EditIdea(idea: idea, dotstorm: ds.model)
-        $("#app").html view.el
-        view.render()
+        # Re-fetch to pull in deferred fields.
+        idea.fetch
+          success: (idea) =>
+            view = new ds.EditIdea(idea: idea, dotstorm: ds.model)
+            $("#app").html view.el
+            view.render()
     return false
 
   open: (name, callback) =>
@@ -1093,16 +1095,11 @@ ds.joinRoom = (newModel, isNew, callback) ->
   if isNew
     # Nothing else to fetch yet -- we're brand spanking new.
     return callback()
-  toFetch = ["ideas"]
-  cbCount = toFetch.length
-  for attr in toFetch
-    ds[attr].fetch
-      error: (coll, err) -> flash "error", "Error fetching #{attr}."
-      success: (coll) ->
-        cbCount -= 1
-        if cbCount == 0
-          callback?()
-      query: {dotstorm_id: ds.model.id}
+  ds.ideas.fetch
+    error: (coll, err) -> flash "error", "Error fetching #{attr}."
+    success: (coll) -> callback?()
+    query: {dotstorm_id: ds.model.id}
+    fields: {drawing: 0}
 
 # 
 # Socket data!!!!!!!!!!!!!!
@@ -1139,13 +1136,13 @@ ds.socket.on 'connect', ->
             if model?
               model.set(data.model)
             else
-              ds.ideas.fetch()
+              ds.ideas.fetch({fields: drawing: 0})
           when "delete"
             model = ds.ideas.get(data.model._id)
             if model?
               ds.ideas.remove(model)
             else
-              ds.ideas.fetch()
+              ds.ideas.fetch({fields: drawing: 0})
 
       when "Dotstorm"
         switch data.signature.method

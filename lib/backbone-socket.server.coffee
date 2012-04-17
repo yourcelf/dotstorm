@@ -24,10 +24,11 @@ attach = (route, io) ->
             Backbone.sync.emit "backbone:error", socket, data.signature, model, response
             logger.error model
             logger.error response
-        if data.signature.query?
-          callbacks.query = data.signature.query
       else
         callbacks = {}
+
+      callbacks.query = data.signature.query
+      callbacks.fields = data.signature.fields
 
       switch data.signature.method
         when "create" then model.save {}, callbacks

@@ -70,7 +70,11 @@ start = (options) ->
     socket.emit signature.event, {error: error}
 
   Backbone.sync.on "backbone", (socket, signature, model) ->
-    respond = -> socket.emit signature.event, model.toJSON()
+    respond = ->
+      json = model.toJSON()
+      if signature.collectionName == "Idea" and signature.method != "read"
+        delete json.drawing
+      socket.emit signature.event, json
     rebroadcast = ->
       # Only works for models, not collections.
       socket.broadcast.to(model.dotstorm_id).emit "backbone", { signature, model: model.toJSON() }

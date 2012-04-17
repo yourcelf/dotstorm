@@ -71,8 +71,10 @@ Backbone.sync = (method, model, options) ->
         query = options.query or model.toJSON()
         if query._id?
           query._id = _id
+        
+        logger.debug "Read #{collectionName} fields:", options.fields
 
-        coll.find(query).toArray (err, items) ->
+        coll.find(query, options.fields or {}).toArray (err, items) ->
           if err
             cberr(err)
           else
