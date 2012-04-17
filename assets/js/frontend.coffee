@@ -299,7 +299,11 @@ class ds.EditIdea extends Backbone.View
       attrs.creator = ds.users?.self?.user_id
       attrs.order = ds.ideas.length
     @idea.save attrs,
-      success: (model) ->
+      success: (model) =>
+        if ideaIsNew
+          console.log "New idea!"
+          @dotstorm.addIdea(model.id, silent: true)
+          @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
         if ideaIsNew
           ds.ideas.add(model)
         ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}", trigger: true
@@ -307,6 +311,7 @@ class ds.EditIdea extends Backbone.View
         console.error(err)
         str = if err.error? then err.error else err
         flash "error", "Error saving: #{str}"
+
 
     return false
 
@@ -344,7 +349,7 @@ class ds.ShowIdeaGroup extends Backbone.View
 
   editLabel: (event) =>
     $(event.currentTarget).replaceWith @editTemplate
-      label: @group.get("label") or ""
+      label: @group.label or ""
     @$("input[type=text]").select()
     return false
 
@@ -353,21 +358,15 @@ class ds.ShowIdeaGroup extends Backbone.View
     return false
   
   saveLabel: (event) =>
-    @group.set "label", @$("input[type=text]").val()
-    @group.save null,
-      error: (model, err) =>
-        flash "error", "Error saving group: #{err}"
+    @group.label = @$("input[type=text]").val()
+    @trigger "change:label", @group
     return false
 
   render: =>
-    if @group?
-      @$el.html @template
-        label: @group.get('label')
-      container = @$(".ideas")
-      @$el.attr("data-id", @group.id)
-      @$el.addClass("group")
-    else
-      container = @$el
+    @$el.html @template
+      label: @group.label
+    @$el.addClass("group")
+    container = @$(".ideas")
     for view in @ideaViews
       container.append view.el
     this
@@ -384,10 +383,8 @@ class ds.ShowIdeas extends Backbone.View
     'click .sort': 'handleSort'
     'click .tag': 'toggleTag'
     'mousedown  .smallIdea': 'startDrag'
-    'mousemove  .smallIdea': 'continueDrag'
     'mouseup    .smallIdea': 'stopDrag'
     'touchstart .smallIdea': 'startDrag'
-    'touchmove  .smallIdea': 'continueDrag'
     'touchend   .smallIdea': 'stopDrag'
 
   sizes:
@@ -403,20 +400,16 @@ class ds.ShowIdeas extends Backbone.View
     # name of a tag to show, popped out
     @showTag = options.showTag
     @ideas = options.ideas
-    @groups = options.groups
     @smallIdeaViews = {}
 
-    @dotstorm.on "change", =>
-      console.debug "Dotstorm: dotstorm changed"
+    @dotstorm.on "change:topic", =>
+      console.debug "Dotstorm: topic changed"
       @renderTopic()
-    @groups.on "change", =>
-      console.debug "Dotstorm: groups changed"
-      @renderGroups()
-    @groups.on "remove", =>
-      console.debug "Dotstorm: group deleted"
-      @renderGroups()
-    @groups.on "add", =>
-      console.debug "Dotstorm: group added"
+    @dotstorm.on "change:name", =>
+      console.debug "Dotstorm: topic changed"
+      @renderTopic()
+    @dotstorm.on "change:ideas", =>
+      console.debug "Dotstorm: grouping changed"
       @renderGroups()
     @ideas.on "add", =>
       console.debug "Dotstorm: idea added"
@@ -472,44 +465,28 @@ class ds.ShowIdeas extends Backbone.View
     @setSort sort
     return false
 
-  sortGroups: =>
-    grouped = {}
-    for group in @groups.models
-      for id in group.get("ideas")
-        grouped[id] = true
-    ungrouped = []
-    for idea in @ideas.models
-      unless grouped[idea.id]?
-        ungrouped.push(idea)
-
-    # Get linked list for next/previous, and sort models into an array of
-    # groups.
-    model_order = []
-    group_order = []
-    count = 0
-    for group in @groups.models
-      group_set = group: group, models: []
-      for id in group.get('ideas')
-        idea = @ideas.get(id)
-        if count > 0
-          idea.prev = model_order[count - 1]
+  sortGroups: (_model_ids, _prev) =>
+    # Recursively run through the grouped ideas referenced in the dotstorm sort
+    # order, resolving the ids to models, and adding next/prev links to ideas.
+    _model_ids or _model_ids = @dotstorm.get("ideas")
+    groups = []
+    for id_or_obj in _model_ids
+      if id_or_obj.ideas?
+        ideas = @sortGroups(id_or_obj.ideas, _prev)
+        groups.push {
+          label: id_or_obj.label
+          ideas: ideas
+        }
+        _prev = ideas.prev
+      else
+        idea = @ideas.get(id_or_obj)
+        groups.push idea
+        if _prev?
+          idea.prev = _prev
           idea.prev.next = idea
-        model_order.push(idea)
-        group_set.models.push(idea)
-        count += 1
-      group_set.models = _.sortBy group_set.models, @ideas.comparator
-      group_order.push(group_set)
-    for idea in ungrouped
-      if count > 0
-        idea.prev = model_order[count - 1]
-        idea.prev.next = idea
-      model_order.push(idea)
-      count += 1
-    ungrouped = _.sortBy ungrouped, @ideas.comparator
-    if ungrouped.length > 0
-      group_order.push({ models: ungrouped })
-    group_order = _.sortBy group_order, (g) => @ideas.comparator(g.models[0])
-    return group_order
+        _prev = idea
+    groups.prev = _prev
+    return groups
 
   showBig: (model) =>
     # For prev/next navigation, we assume that 'prev' and 'next' have been set
@@ -612,22 +589,35 @@ class ds.ShowIdeas extends Backbone.View
 
   renderGroups: =>
     console.debug "render groups"
-    group_order = @sortGroups()
     @$("#showIdeas").html("")
     if @ideas.length == 0
       @$("#showIdeas").html "To get started, edit the topic or name above, and then <a href='add'>add an idea</a>!"
     else
-      for group in group_order
-        views = []
-        for model in group.models
-          unless @smallIdeaViews[model.id]
-            view = new ds.ShowIdeaSmall(model:model)
-            view.render()
-            @smallIdeaViews[model.id] = view
-          views.push @smallIdeaViews[model.id]
-        groupView = new ds.ShowIdeaGroup group: group.group, ideaViews: views
-        @$("#showIdeas").append groupView.el
-        groupView.render()
+      group_order = @sortGroups()
+      for entity in group_order
+        if entity.ideas?
+          groupView = new ds.ShowIdeaGroup
+            group: entity
+            ideaViews: (@getIdeaView(idea) for idea in entity.ideas)
+          @$("#showIdeas").append groupView.el
+          groupView.render()
+          groupView.on "change:label", (group) =>
+            console.log group
+            @dotstorm.setLabelFor(group.ideas[0].id, group.label)
+            console.log @dotstorm.get "ideas"
+            @dotstorm.save null,
+              error: (err) => flash "error", "Error saving: #{err}"
+            groupView.render()
+        else
+          console.log "show me", entity
+          @$("#showIdeas").append @getIdeaView(entity).el
+
+  getIdeaView: (idea) =>
+    unless @smallIdeaViews[idea.id]
+      view = new ds.ShowIdeaSmall(model: idea)
+      view.render()
+      @smallIdeaViews[idea.id] = view
+    return @smallIdeaViews[idea.id]
 
   renderOverlay: =>
     if @showId?
@@ -692,6 +682,8 @@ class ds.ShowIdeas extends Backbone.View
       @dragState.noteDims.push(dims)
     @dragState.active.before(@dragState.placeholder)
     @moveNote(event)
+    $(window).on "mousemove", @continueDrag
+    $(window).on "touchmove", @continueDrag
     return false
 
   continueDrag: (event) =>
@@ -701,21 +693,14 @@ class ds.ShowIdeas extends Backbone.View
       @moveNote(event)
     return false
 
-  checkForClick: (event) =>
-    pos = @getPosition(event)
-    distance = Math.sqrt(
-        Math.pow(pos.x - @dragState.startPos.x, 2) +
-        Math.pow(pos.y - @dragState.startPos.y, 2)
-    )
-    elapsed = new Date().getTime() - @dragState.startTime
-    return distance < 20 and elapsed < 400
-
   stopDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
+    $(window).off "mousemove", @continueDrag
+    $(window).off "touchmove", @continueDrag
 
-    @dragState?.placeholder?.remove()
     # reset drag UI...
+    @dragState?.placeholder?.remove()
     unless @dragState? and @dragState.active?
       return
     @dragState.active.removeClass("active")
@@ -724,114 +709,53 @@ class ds.ShowIdeas extends Backbone.View
       left: 0
       top: 0
 
+    # Check for drop targets.
+    sourceId = @dragState.active.attr("data-id")
     leftside = @$(".leftside")
     rightside = @$(".rightside")
     hovered = @$(".hovered")
     @$(".smallIdea").removeClass("leftside rightside hovered")
 
-    sourceModel = @ideas.get @dragState.active.attr("data-id")
-    unless sourceModel?
-      @dragState = null
-      return
-
     if @checkForClick(event)
-      @showBig(sourceModel)
+      @showBig @ideas.get(sourceId)
       @dragState = null
       return
 
     droppable = hovered[0] or leftside[0] or rightside[0]
-    groupParent = @dragState.active.parents(".group:first")
     if droppable?
-      targetModel = @ideas.get droppable.getAttribute("data-id")
-      targetGroup = null
-      for group in @groups.models
-        unless group?
-          continue
-        if group.containsIdea(targetModel.id)
-          targetGroup = group
-          break
-      if not targetGroup?
-        if hovered[0]?
-          targetGroup = new IdeaGroup dotstorm_id: @dotstorm.id
-          targetGroup.addIdeas [targetModel.id], silent: true
-        else if groupParent[0]?
-          @removeFromGroup(sourceModel, @groups.get(groupParent.attr("data-id")))
-      if targetGroup?
-        @joinGroup sourceModel, targetGroup
+      targetId = droppable.getAttribute("data-id")
       if leftside[0]?
-        @putModelLeftOf sourceModel, targetModel
+        @dotstorm.putLeftOf(sourceId, targetId)
+      else if rightside[0]?
+        @dotstorm.putRightOf(sourceId, targetId)
       else
-        @putModelRightOf sourceModel, targetModel
-    else if groupParent[0]?
-      # Are we being dragged out of all groups?
-      pos = @getPosition(event)
-      dims = groupParent.offset()
-      dims.width = groupParent.width()
-      dims.height = groupParent.height()
-      unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
-        # We've been dragged out. Extricate ourselves from our group.
-        @removeFromGroup(sourceModel, @groups.get(groupParent.attr("data-id")))
+        @dotstorm.groupify(sourceId, targetId)
+      @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
+    else
+      # Are we being dragged out of our current group?
+      groupParent = @dragState.active.parents(".group:first")
+      if groupParent[0]?
+        pos = @getPosition(event)
+        dims = groupParent.offset()
+        dims.width = groupParent.width()
+        dims.height = groupParent.height()
+        unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
+          # We've been dragged out.
+          @dotstorm.ungroup(sourceId)
+          @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
     @dragState = null
     return false
 
-  putModelLeftOf: (sourceModel, targetModel) =>
-    console.debug "putModelLeftOf"
-    newOrder = []
-    for model in @ideas.models
-      if model == targetModel
-        newOrder.push(sourceModel)
-        newOrder.push(targetModel)
-      else if model != sourceModel
-        newOrder.push(model)
-    for i in [0...newOrder.length]
-      newOrder[i].save("order", i, silent: true)
-    @ideas.sort()
-    @ideas.trigger "sort"
-
-  putModelRightOf: (sourceModel, targetModel) =>
-    console.debug "putModelRightOf"
-    newOrder = []
-    for model in @ideas.models
-      if model == targetModel
-        newOrder.push(targetModel)
-        newOrder.push(sourceModel)
-      else if model != sourceModel
-        newOrder.push(model)
-    for i in [0...newOrder.length]
-      newOrder[i].set("order", i, silent: true)
-    @ideas.sort()
-    @ideas.trigger "sort"
-
-  removeFromGroup: (sourceModel, group) =>
-    if group.removeIdea(sourceModel.id, silent: true) and group.get("ideas").length > 0
-      group.save null,
-        error: (model, err) =>
-          flash "error", "Error saving group: #{err}"
-    else if group.get("ideas").length == 0
-      group.destroy
-        error: (model, err) =>
-          flash "error", "Error removing group: #{err}"
-
-  joinGroup: (sourceModel, targetGroup) =>
-    for group in @groups.models
-      unless group?
-        continue
-      if group.removeIdea(sourceModel.id, {silent: true}) and group.get("ideas").length > 0
-        group.save null,
-          error: (model, err) =>
-            flash "error", "Error saving group: #{err}"
-      else if group.get("ideas").length == 0
-        group.destroy
-          error: (model, err) =>
-            flash "error", "Error removing group: #{err}"
-
-    ideas = targetGroup.get("ideas") or []
-    targetGroup.addIdeas([sourceModel.id], silent: true)
-    if targetGroup.isNew()
-      @groups.add(targetGroup, {silent: true})
-    targetGroup.save null,
-      error: (model, err) =>
-        flash "error", "Error saving group: #{err}"
+  checkForClick: (event) =>
+    # A heuristic for distinguishing clicks from drags, based on time and
+    # distance.
+    pos = @getPosition(event)
+    distance = Math.sqrt(
+        Math.pow(pos.x - @dragState.startPos.x, 2) +
+        Math.pow(pos.y - @dragState.startPos.y, 2)
+    )
+    elapsed = new Date().getTime() - @dragState.startTime
+    return distance < 20 and elapsed < 400
 
 class ds.ShowIdeaSmall extends Backbone.View
   template: _.template $("#dotstormSmallIdea").html() or ""
@@ -1098,7 +1022,6 @@ class ds.Router extends Backbone.Router
       $("#app").html new ds.ShowIdeas({
         model: ds.model
         ideas: ds.ideas
-        groups: ds.groups
         showId: id
         showTag: tag
       }).render().el
@@ -1167,14 +1090,14 @@ ds.joinRoom = (newModel, isNew, callback) ->
     ds.client.join newModel.id
   ds.model = newModel
   ds.ideas = new IdeaList
-  ds.groups = new IdeaGroupList
   if isNew
     # Nothing else to fetch yet -- we're brand spanking new.
     return callback()
-  cbCount = 2
-  for attr in ["ideas", "groups"]
+  toFetch = ["ideas"]
+  cbCount = toFetch.length
+  for attr in toFetch
     ds[attr].fetch
-      error: (coll, err) -> flash "error", "Error fetching data."
+      error: (coll, err) -> flash "error", "Error fetching #{attr}."
       success: (coll) ->
         cbCount -= 1
         if cbCount == 0
@@ -1224,22 +1147,6 @@ ds.socket.on 'connect', ->
             else
               ds.ideas.fetch()
 
-      when "IdeaGroup"
-        switch data.signature.method
-          when "create"
-            ds.groups.add(new IdeaGroup(data.model))
-          when "update"
-            model = ds.groups.get(data.model._id)
-            if model?
-              model.set(data.model)
-            else
-              ds.groups.fetch()
-          when "delete"
-            model = ds.groups.get(data.model._id)
-            if model?
-              ds.groups.remove(model)
-            else
-              ds.groups.fetch()
       when "Dotstorm"
         switch data.signature.method
           when "update"
@@ -1251,6 +1158,22 @@ ds.socket.on 'disconnect', ->
     flash "error", "Connection lost.  <a href=''>Click to reconnect</a>."
   , 500
 
+window.addEventListener 'message', (event) ->
+  if event.origin == "file://"
+    if event.data.cameraEnabled?
+      ds.hasCamera = true
+    else if event.data.image?
+      image = $("<img>")
+      $("#app").prepend image
+      image.attr "src", "data:image/jpg;base64,#{event.data.image}"
+    else if event.error?
+      flash "error", event.error
+, false
+
+#XXX will this work for iframe?
+if window.parent.location.href != window.location.href
+  console.log window.parent?
+  window.parent.postMessage('camera', 'file://')
 
 $("nav a").on 'click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true

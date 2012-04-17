@@ -17,18 +17,19 @@ _.extend Backbone.Model.prototype, {
 
 class Idea extends Backbone.Model
   collectionName: 'Idea'
+
   incImageVersion: =>
     @set {imageVersion: (@get("imageVersion") or 0) + 1}, silent: true
 
   validate: (attrs) =>
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
-    if not attrs.dotstorm_id then return "Dotstorm ID missing."
+    if not attrs.dotstorm_id? then return "Dotstorm ID missing."
+    if not attrs.imageVersion?
+      @set "imageVersion", 0, silent: true
     if attrs.tags? and @get("tags") != attrs.tags
       cleaned = @getTags(attrs.tags).join(", ")
       if cleaned != attrs.tags
         @set "tags", cleaned, silent: true
-    if not attrs.imageVersion?
-      @set "imageVersion", 0, silent: true
     if not attrs.created?
       @set "created", new Date().getTime(), silent: true
     @set "modified", new Date().getTime(), silent: true
@@ -51,70 +52,130 @@ class IdeaList extends Backbone.Collection
   model: Idea
   collectionName: Idea.prototype.collectionName
 
-class IdeaGroup extends Backbone.Model
-  collectionName: 'IdeaGroup'
-
-  addIdeas: (idlist, options) =>
-    ideas = @get("ideas")?.slice() or []
-    for id in idlist
-      unless _.include(ideas, id)
-        ideas.push(id)
-    @set({ideas}, options)
-
-  removeIdea: (id, options) =>
-    ideas = @get("ideas")?.slice() or []
-    index = _.indexOf(ideas, id)
-    unless index == -1
-      ideas.splice(index, 1)
-      @set({ideas}, options)
-      return true
-    return false
-
-  containsIdea: (id) =>
-    return _.contains @get("ideas"), id
-
-  validate: (attrs) ->
-    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
-    if not attrs.dotstorm_id
-      return "Dotstorm ID missing."
-
-class IdeaGroupList extends Backbone.Collection
-  model: IdeaGroup
-  collectionName: IdeaGroup.prototype.collectionName
-
 class Dotstorm extends Backbone.Model
   collectionName: 'Dotstorm'
+  defaults:
+    ideas: []
 
-  slugify: (name) ->
-    return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
+  slugify: (name) -> return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
 
   validate: (attrs) ->
-    if not attrs.name
-      return "Missing a name."
-    if attrs.slug?.length < 4
-      return "Name must be 4 or more characters."
-    if not attrs.created?
-      attrs.created = new Date().getTime()
-    attrs.modified = new Date().getTime()
+    if not attrs.name then return "Missing a name."
+    if attrs.slug?.length < 4 then return "Name must be 4 or more characters."
+    if not attrs.created? then @set "created", new Date().getTime(), silent: true
+    @set "modified", new Date().getTime(), silent: true
     return
+
+  setLabelFor: (idea_id, label, options) =>
+    @getGroup(idea_id).label = label
+
+  getGroup: (idea_id) =>
+    for entity in @get("ideas")
+      if entity.ideas? and _.contains entity.ideas, idea_id
+        return entity
+    return null
+
+  getGroupPos: (idea_id, _list, _group) =>
+    # Return the list containing the ID, and the position within the list.
+    unless _list? then _list = @get("ideas")
+    for i in [0..._list.length]
+      entity = _list[i]
+      if entity == idea_id
+        return { list: _list, pos: i, group: _group }
+      else if entity.ideas?
+        pos = @getGroupPos(idea_id, entity.ideas, _list)
+        if pos
+          return pos
+    return null
+
+  groupify: (id1, id2, rightSide, options) =>
+    # Remove id1 from its original position.
+    id1Pos = @getGroupPos(id1)
+    id1Pos.list.splice(id1Pos.pos, 1)
+
+    # Find id2, and add id2 to it.
+    groupPos = @getGroupPos(id2)
+    if groupPos.group?
+      if rightSide
+        groupPos.list.splice(groupPos.pos + 1, 0, id1)
+      else
+        groupPos.list.splice(groupPos.pos + 0, 0, id1)
+    else
+      # Add a new group in the position of id2.
+      if rightSide
+        newGroup = { ideas: [id2, id1] }
+      else
+        newGroup = { ideas: [id1, id2] }
+      groupPos.list.splice(groupPos.pos, 1, newGroup)
+      # Remove id1 from its original position.
+    @orderChanged(options)
+
+  ungroup: (idea_id, rightSide, options) =>
+    groupPos = @getGroupPos(idea_id)
+    if groupPos.group?
+      # Remove idea_id from the group.
+      groupPos.list.splice(groupPos.pos, 1)
+      for i in [0...groupPos.group.length]
+        # Add idea_id back in.
+        if groupPos.group[i].ideas == groupPos.list
+          # Is the group empty?  Replace it.
+          if groupPos.list.length == 0
+            groupPos.group.splice(i, 1, idea_id)
+          else if rightSide
+            # Not empty?  Insert on the right...
+            groupPos.group.splice(i + 1, 0, idea_id)
+          else
+            # ... or the left.
+            groupPos.group.splice(i, 0, idea_id)
+          @orderChanged(options)
+          return
+
+  putLeftOf: (source_id, target_id, options) =>
+    sourcePos = @getGroupPos(source_id)
+    sourcePos.list.splice(sourcePos.pos, 1)
+    targetPos = @getGroupPos(target_id)
+    targetPos.list.splice(targetPos.pos, 0, source_id)
+    @orderChanged(options)
+
+  putRightOf: (source_id, target_id, options) =>
+    sourcePos = @getGroupPos(source_id)
+    sourcePos.list.splice(sourcePos.pos, 1)
+    targetPos = @getGroupPos(target_id)
+    targetPos.list.splice(targetPos.pos + 1, 0, source_id)
+    @orderChanged(options)
+
+  addIdea: (idea_id, options) =>
+    groupPos = @getGroupPos(idea_id)
+    unless groupPos?
+      ideas = @get("ideas")
+      ideas.push(idea_id)
+      @set("ideas", ideas, options)
+
+  removeIdea: (idea_id, options) =>
+    groupPos = @getGroupPos(idea_id)
+    if groupPos?
+      groupPos.list.splice(groupPos.pos, 1)
+      @orderChanged(options)
+
+  orderChanged: (options) => @trigger "change:ideas" unless options?.silent
+
 
 class DotstormList extends Backbone.Collection
   model: Dotstorm
   collectionName: Dotstorm.prototype.collectionName
 
+
 modelFromCollectionName = (collectionName, isCollection=false) ->
   if isCollection
     switch collectionName
       when "Idea" then IdeaList
-      when "IdeaGroup" then IdeaGroupList
       when "Dotstorm" then DotstormList
       else null
   else
     switch collectionName
       when "Idea" then Idea
-      when "IdeaGroup" then IdeaGroup
       when "Dotstorm" then Dotstorm
       else null
 
-exports = { Dotstorm, DotstormList, Idea, IdeaList, IdeaGroup, IdeaGroupList, modelFromCollectionName }
+exports = { Dotstorm, DotstormList, Idea, IdeaList, modelFromCollectionName }
 _.extend(root, exports)
