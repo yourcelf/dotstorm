@@ -1201,6 +1201,8 @@ window.addEventListener 'message', (event) ->
 $("nav a").on 'click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false
+# Prevent page scrolling on iOS
+$(window).on "touchmove", (e) -> e.preventDefault()
 
 
 # Debug:
