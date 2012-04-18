@@ -34,8 +34,6 @@ start = (options) ->
     app.use express.errorHandler { dumpExceptions: true, showStack: true }
     app.get '/test', (req, res) ->
       res.render 'test', layout: false
-    app.get '/argh', (req, res) ->
-      res.render 'argh', layout: false
 
   app.configure 'production', ->
     app.use express.static __dirname + '/../static', { maxAge: 1000*60*60*24 }

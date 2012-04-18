@@ -1,4 +1,4 @@
-nav.tabs
+nav.tabs(style='display: none;')
   a.home(href='/')
     img(src='/img/home.png', alt='Dotstorm home')
   a.show-ideas(href='/d/#{slug}/') Show ideas
@@ -9,8 +9,8 @@ div#app
 
 script#dotstormTopic(type='text/template')
   div#dotstorm
-    h1.nameEdit
-      span.clickToEdit <%= name %>
+    div.nameEdit
+      h1.clickToEdit <%= name %>
     div.topicEdit
       div.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
 
@@ -20,8 +20,8 @@ script#dotstormInPlaceInput(type='text/template')
     input(type='submit', value='OK')
 
 script#dotstormInPlaceTextarea(type='text/template')
-  form
-    textarea <%= text %>
+  form.inPlaceTextarea
+    textarea(rows="10", cols="20") <%= text %>
     br
     input(type='submit', value='save')
     a.cancel(href='') cancel
@@ -179,3 +179,4 @@ script#intro(type='text/template')
         br
         input(type='text', name='room', id='id_join', placeholder='name')
         input.cta.cta-green(type='submit', value='OK')
+    p Warning: this is pre-alpha software. Data is periodically deleted without warning.

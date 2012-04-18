@@ -35,7 +35,6 @@ class ds.Intro extends Backbone.View
     'submit #named': 'openNamed'
     'submit #random': 'openRandom'
   render: =>
-    flash "info", "Warning: this is pre-alpha software. Data is periodically deleted without warning."
     @$el.html @template()
     this
 
@@ -81,10 +80,12 @@ class ds.Topic extends Backbone.View
     this
 
   editName: (event) =>
-    $(event.currentTarget).hide().after @inputEditorTemplate text: @model.get("name")
+    $(event.currentTarget).replaceWith @inputEditorTemplate text: @model.get("name")
     return false
 
   saveName: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     val = @$(".nameEdit input[type=text]").val()
     if val == @model.get("name")
       @render()
@@ -522,7 +523,7 @@ class ds.ShowIdeas extends Backbone.View
       @$("a.tag[data-tag=\"#{cleanedTag}\"]").addClass("active").removeClass("inactive")
     else
       ds.app.navigate "/d/#{@dotstorm.get("slug")}/"
-      updateNavLinks()
+      ds.app.updateNavLinks(true, "show-ideas")
       @$(".smallIdea").removeClass("fade")
       @$("a.tag").removeClass("inactive active")
 
@@ -576,7 +577,7 @@ class ds.ShowIdeas extends Backbone.View
     console.debug "render groups"
     @$("#showIdeas").html("")
     if @ideas.length == 0
-      @$("#showIdeas").html "To get started, edit the topic or name above, and then <a href='add'>add an idea</a>!"
+      @$("#showIdeas").html "To get started, edit the topic or name above, and then add an idea!"
     else
       group_order = @sortGroups()
       for entity in group_order
@@ -868,7 +869,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @trigger "close", this
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
-    updateNavLinks()
+    ds.app.updateNavLinks(true, "show-ideas")
     return false
 
   nothing: (event) =>
@@ -950,18 +951,6 @@ class ds.VoteWidget extends Backbone.View
           flash "error", "Error saving vote: #{err}"
     return false
 
-updateNavLinks = ->
-  if window.location.pathname == "/"
-    $("nav").hide()
-  else
-    $("nav").show()
-  $("nav a").each ->
-    href = $(@).attr('href')
-    if window.location.pathname == href
-      $(@).addClass("active")
-    else
-      $(@).removeClass("active")
-
 class ds.UsersView extends Backbone.View
   template: _.template $("#usersWidget").html() or ""
   events:
@@ -1022,14 +1011,27 @@ class ds.Router extends Backbone.Router
     'd/:slug': ->         'addSlash'
     '':                   'intro'
 
+  updateNavLinks: (showNav, active) ->
+    if showNav
+      $("nav a").removeClass("active")
+      if active
+        $("nav a.#{active}").addClass("active")
+      $("nav").show()
+    else
+      $("nav").hide()
+
   intro: ->
-    updateNavLinks()
+    if @secondrun
+      @updateNavLinks(true, "home")
+    else
+      @updateNavLinks(false)
+      @secondrun = true
     $("#app").html new ds.Intro().render().el
 
   addSlash: (slug) => return ds.app.navigate "/d/#{slug}/", trigger: true
 
   dotstormShowIdeas: (slug, id, tag) =>
-    updateNavLinks()
+    @updateNavLinks(true, "show-ideas")
     @open slug, ->
       $("#app").html new ds.ShowIdeas({
         model: ds.model
@@ -1043,7 +1045,7 @@ class ds.Router extends Backbone.Router
     @dotstormShowIdeas(slug, null, tag)
 
   dotstormAddIdea: (slug) =>
-    updateNavLinks()
+    @updateNavLinks(true, "add")
     @open slug, ->
       view = new ds.EditIdea
         idea: new Idea
@@ -1063,7 +1065,7 @@ class ds.Router extends Backbone.Router
     return false
 
   dotstormEditIdea: (slug, id) =>
-    updateNavLinks()
+    @updateNavLinks(true, "add")
     @open slug, ->
       idea = ds.ideas.get(id)
       if not idea?
