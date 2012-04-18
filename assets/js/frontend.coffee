@@ -442,9 +442,8 @@ class ds.ShowIdeas extends Backbone.View
       @renderTopic()
     @dotstorm.on "change:ideas", =>
       console.debug "Dotstorm: grouping changed"
-      if @orderChangeTimeout
-        clearTimeout @orderChangeTimeout
-      @orderChangeTimeout = setTimeout (=> @renderGroups()), 200
+      # This double-calls... but ok!
+      @renderGroups()
     @ideas.on "add", =>
       console.debug "Dotstorm: idea added"
       @renderGroups()
