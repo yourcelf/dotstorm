@@ -16,8 +16,8 @@ Backbone.sync = (method, model, options) ->
     collectionName: model.collectionName
     method: method
     isCollection: model instanceof Backbone.Collection
-  signature.query = options.query
-  signature.fields = options.fields
+    query: options.query
+    fields: options.fields
   
   # Create a response event name to use once, if we have a success callback to
   # respond with.

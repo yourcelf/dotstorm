@@ -62,7 +62,9 @@ start = (options) ->
   channel = '/io'
   require('./iorooms.server').attach(channel, io, sessionStore)
   require('./backbone-socket.server').attach(channel, io)
+  require('./imageupload').attach(channel, io)
   roomserver = io.of(channel)
+
   #
   # Events from backbone->mongo:
   #
@@ -83,14 +85,14 @@ start = (options) ->
       when "Idea"
         switch signature.method
           when "create"
-            thumbnails.mkthumbs model, (err) ->
+            thumbnails.drawingThumbs model, (err) ->
               if err?
                 errorOut(err)
               else
                 respond()
                 rebroadcast()
           when "update"
-            thumbnails.mkthumbs model, (err) ->
+            thumbnails.drawingThumbs model, (err) ->
               if err?
                 errorOut(err)
               else

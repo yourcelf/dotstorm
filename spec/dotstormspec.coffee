@@ -62,7 +62,21 @@ describe "Dotstorm idea order", ->
     dotstorm.putLeftOf('4', '5')
     expect(dotstorm.get "ideas").toEqual([{ideas: ['3', '1']}, '4', '5', '2'])
 
+    # move out of group destroy group
+    dotstorm.putRightOf('1', '4')
+    dotstorm.putRightOf('3', '4')
+    expect(dotstorm.get "ideas").toEqual(['4', '3', '1', '5', '2'])
+    dotstorm.groupify('3', '1')
+    dotstorm.putLeftOf('3', '4')
+    dotstorm.putLeftOf('1', '4')
+    expect(dotstorm.get "ideas").toEqual(['3', '1', '4', '5', '2'])
+    dotstorm.groupify('4', '5')
+    dotstorm.putLeftOf('4', '1')
+    dotstorm.groupify('5', '4')
+    expect(dotstorm.get "ideas").toEqual(['3', {ideas: ['5', '4']}, '1', '2'])
+
     # idempotent out of group
+    dotstorm.set("ideas", [{ideas: ['3', '1']}, '4', '5', '2'])
     dotstorm.putRightOf('2', '5')
     expect(dotstorm.get "ideas").toEqual([{ideas: ['3', '1']}, '4', '5', '2'])
     dotstorm.putLeftOf('4', '5')

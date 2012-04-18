@@ -3,6 +3,7 @@ Canvas   = require 'canvas'
 fs       = require 'fs'
 path     = require 'path'
 logger   = require './logging'
+im       = require 'imagemagick'
 
 BASE_PATH = __dirname + "/../static"
 
@@ -94,13 +95,7 @@ draw = (idea, callback) ->
   dims = idea.get("dims")
   canvas = new Canvas dims.x, dims.y
   ctx = canvas.getContext('2d')
-  ctx.fillStyle = idea.get("background")
-  ctx.beginPath()
-  ctx.fillRect 0, 0, dims.x, dims.y
-  ctx.fill()
-
   ctx.lineCap = 'round'
-
   lastTool = null
   for [tool, x1, y1, x2, y2] in idea.get("drawing")
     if tool != lastTool
@@ -112,7 +107,6 @@ draw = (idea, callback) ->
           ctx.lineWidth = 32
           ctx.strokeStyle = idea.get("background")
       lastTool = tool
-
     ctx.beginPath()
     if x1?
       ctx.moveTo x1, y1
@@ -120,39 +114,71 @@ draw = (idea, callback) ->
       ctx.moveTo x2, y2
     ctx.lineTo x2, y2
     ctx.stroke()
-  thumbs = []
-  for name, size of sizes
-    thumb = [BASE_PATH + idea.getThumbnailURL(name)]
-    thumb.push(size[0])
-    thumb.push(size[1])
-    thumbs.push(thumb)
-  canvas2thumbnails canvas, thumbs, (err) ->
-    if (err) then return callback?(err)
-    return callback?(null)
+  return canvas
 
-mkthumbs = (idea, callback) ->
+shrink = (buffer, thumbs, callback) ->
+  # Given a binary image buffer, and a list of paths and sizes:
+  #   [<path>, width, height]
+  # create the thumbnails.
+  count = thumbs.length
+  for thumb in thumbs
+    logger.debug "Writing #{thumb[0]} (#{thumb[1]}x#{thumb[2]})"
+    im.resize
+      dstPath: thumb[0]
+      srcData: buffer
+      width: thumb[1]
+      height: thumb[1]
+      format: 'jpg'
+    , (err) ->
+      if err then return callback?(err)
+      count -= 1
+      if count == 0 then return callback?(null)
+
+drawingThumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
   if idea.get("background")? and idea.get("drawing")?
     path.exists BASE_PATH + idea.getThumbnailURL('small'), (exists) ->
       unless exists
         clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
           if (err) then return callback?(err)
-          draw idea, (err) ->
-            if (err) then return callback?(err)
-            callback(null)
+          canvas = draw(idea)
+          buffer = canvas.toBuffer()
+          thumbs = []
+          for name, size of sizes
+            thumbs.push [BASE_PATH + idea.getThumbnailURL(name), size[0], size[1]]
+          shrink buffer, thumbs, (err) ->
+            if err then callback?(err) else callback?(null)
       else
-        callback()
+        callback?(null)
         logger.debug("skipping thumbnail; already exists")
   else
-    callback()
+    callback?(null)
     logger.debug("skipping thumbnail; empty model")
 
-remove = (model) ->
-  dir = BASE_PATH + path.dirname(model.getThumbnailURL('small'))
-  logger.debug "removing #{dir} and all contents"
-  clearDir dir, (err) ->
-    if (err) then logger.error(err)
-    fs.rmdir dir, (err) ->
-      if (err) then logger.error(err)
+photoThumbs = (idea, photoData, callback) ->
+  path.exists BASE_PATH + idea.getPhotoURL('small'), (exists) ->
+    unless exists
+      clearDir BASE_PATH + path.dirname(idea.getPhotoURL('small')), (err) ->
+        if (err) then return callback?(err)
+        buffer = new Buffer(photoData, 'base64').toString('binary')
+        thumbs = []
+        for name, size of sizes
+          thumbs.push [BASE_PATH + idea.getPhotoURL(name), size[0], size[1]]
+        shrink buffer, thumbs, (err) ->
+          if err then callback?(err) else callback?(null)
+    else
+      callback?(null)
+      logger.debug("skipping photo; already exists")
 
-module.exports = { mkthumbs, remove }
+
+remove = (model) ->
+  for url in [model.getThumbnailURL('small'), model.getPhotoURL('small')]
+    dir = BASE_PATH + path.dirname(url)
+    do (dir) ->
+      logger.debug "removing #{dir} and all contents"
+      clearDir dir, (err) ->
+        if (err) then logger.error(err)
+        fs.rmdir dir, (err) ->
+          if (err) then logger.error(err)
+
+module.exports = { drawingThumbs, photoThumbs, remove }

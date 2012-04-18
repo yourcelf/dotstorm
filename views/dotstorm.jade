@@ -3,6 +3,7 @@ nav.tabs
   a.add(href='/d/#{slug}/add') Add idea +
 
 div#app
+  <img src='/img/spinner.gif' alt='loading' /> Loading...
 
 script#dotstormTopic(type='text/template')
   div#dotstorm
@@ -32,20 +33,21 @@ script#dotstormAddIdea(type='text/template')
         img(src='/img/pencil.png', alt='Pencil')
       a.tool(data-tool='eraser')
         img(src='/img/erase.png', alt='Eraser')
+      <% if (cameraEnabled) { %>
+      a.tool(data-tool='camera')
+        img(src='/img/camera.png', alt='Camera')
+      <% } %>
       span(style='float: right')
         a.note-color.yellow
         a.note-color.pink
         a.note-color.aqua
         a.note-color.green
+    div(style='clear: both;')
     div.canvasHolder
+      div.image
       div.canvas
       div.text
         textarea#id_description <%= description %>
-
-      <% if (camera) { %>
-      li#camera.tab
-        | TODO camera!
-      <% } %>
     form
       label(for='id_tags') Tags
       <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
@@ -72,6 +74,7 @@ script#dotstormShowIdeas(type='text/template')
 script#dotstormSmallIdea(type='text/template')
   div.border
     div.canvasHolder
+      div.image
       div.canvas
       div.text
         textarea(disabled='disabled')
@@ -102,6 +105,7 @@ script#dotstormBigIdea(type='text/template')
             img(src="/img/pencil.png", alt='edit')
           span.vote-widget
         div.canvasHolder
+          div.image
           div.canvas
           div.text
             textarea(disabled="disabled") <%= description %>

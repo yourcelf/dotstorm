@@ -21,11 +21,12 @@ class Idea extends Backbone.Model
   incImageVersion: =>
     @set {imageVersion: (@get("imageVersion") or 0) + 1}, silent: true
 
+  incPhotoVersion: =>
+    @set {photoVersion: (@get("photoVersion") or 0) + 1}, silent: true
+
   validate: (attrs) =>
     #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
     if not attrs.dotstorm_id? then return "Dotstorm ID missing."
-    if not attrs.imageVersion?
-      @set "imageVersion", 0, silent: true
     if attrs.tags? and @get("tags") != attrs.tags
       cleaned = @getTags(attrs.tags).join(", ")
       if cleaned != attrs.tags
@@ -36,7 +37,10 @@ class Idea extends Backbone.Model
     return
 
   getThumbnailURL: (size) =>
-    return "/uploads/idea/#{@.id}/#{size}#{@get "imageVersion"}.png"
+    return "/uploads/idea/#{@.id}/drawing/#{size}#{@get "imageVersion"}.png"
+
+  getPhotoURL: (size) =>
+    return "/uploads/idea/#{@.id}/photo/#{size}#{@get "photoVersion"}.png"
 
   cleanTag: (tag) => return tag.replace(/[^-\w\s]/g, '').trim()
   cleanTags: (tags) => @getTags(tags).join(", ")
@@ -92,6 +96,8 @@ class Dotstorm extends Backbone.Model
     # Remove id1 from its original position.
     id1Pos = @getGroupPos(id1)
     id1Pos.list.splice(id1Pos.pos, 1)
+    if id1Pos.group? and id1Pos.list.length == 0
+      @_purgeGroup(id1Pos.group, id1Pos.list)
 
     # Find id2, and add id2 to it.
     groupPos = @getGroupPos(id2)
@@ -130,19 +136,28 @@ class Dotstorm extends Backbone.Model
           @orderChanged(options)
           return
 
-  putLeftOf: (source_id, target_id, options) =>
+  _purgeGroup: (parent, list) =>
+    for i in [0...parent.length]
+      if parent[i].ideas == list
+        parent.splice(i, 1)
+        return
+
+  _popTo: (source_id, target_id, rightSide, options) =>
+    # Remove source.
     sourcePos = @getGroupPos(source_id)
     sourcePos.list.splice(sourcePos.pos, 1)
+    # Purge empty groups.
+    if sourcePos.group? and sourcePos.list.length == 0
+      @_purgeGroup(sourcePos.group, sourcePos.list)
     targetPos = @getGroupPos(target_id)
-    targetPos.list.splice(targetPos.pos, 0, source_id)
-    @orderChanged(options)
+    offset = if rightSide then 1 else 0
+    targetPos.list.splice(targetPos.pos + offset, 0, source_id)
+
+  putLeftOf: (source_id, target_id, options) =>
+    @_popTo(source_id, target_id, false, options)
 
   putRightOf: (source_id, target_id, options) =>
-    sourcePos = @getGroupPos(source_id)
-    sourcePos.list.splice(sourcePos.pos, 1)
-    targetPos = @getGroupPos(target_id)
-    targetPos.list.splice(targetPos.pos + 1, 0, source_id)
-    @orderChanged(options)
+    @_popTo(source_id, target_id, true, options)
 
   addIdea: (idea_id, options) =>
     groupPos = @getGroupPos(idea_id)

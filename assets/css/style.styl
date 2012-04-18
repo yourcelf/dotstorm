@@ -27,6 +27,7 @@ input[type=text]
   padding: 0.2em
 
 nav.tabs, ul.tablinks
+  font-size: 20px
   background: tabbackground
   a
     border: 1px solid transparent
@@ -70,6 +71,13 @@ a:link.cta, a:visited.cta, a.cta
   float: right
   color: white
   span.users
+    display: block
+    z-index: 2
+    width: 3em;
+    height: 2.5em;
+    text-align: right
+    position: relative
+    top: 3px
     margin-right: 1em
     cursor: pointer
     img
@@ -77,7 +85,7 @@ a:link.cta, a:visited.cta, a.cta
   text-shadow: black 0 0 5px, black 0 0 5px, black 0 0 5px
   .userlist
     position: absolute
-    top: 19px
+    top: 25px
     right: 0
     z-index: 1
     .box
@@ -108,14 +116,6 @@ a:link.cta, a:visited.cta, a.cta
     display: block
     
 
-#size
-  position: fixed
-  bottom: 0
-  right: 0
-  background: rgba(255, 255, 255, 0.8)
-  padding: 0.5em
-  z-index: 100
-
 #flash
   z-index: 100
   font-size: 20px
@@ -123,8 +123,12 @@ a:link.cta, a:visited.cta, a.cta
     color: black
     text-decoration: none
     position: absolute
-    right: 1em
+    text-align: center
+    right: 0em
+    width: 2em
+    height: 2em
   ul
+    z-index: 100
     position: fixed
     width: 85%
     top: 1em
@@ -175,7 +179,15 @@ a:link.cta, a:visited.cta, a.cta
   -moz-box-sizing: border-box
   box-sizing: border-box
   position: relative
+  .image
+    position: absolute
+    bottom: 0
+    left: 0
+    width: 100%
+    img
+      width: 100%
   .canvas
+    position: relative
     width: 100%
     height: 100%
   .text, .text textarea, .text textarea[disabled=disabled]
@@ -198,7 +210,6 @@ a:link.cta, a:visited.cta, a.cta
     overflow: hidden
     resize: none
 
-
 #addIdea
   min-width: 240px
   max-width: 600px
@@ -211,9 +222,14 @@ a:link.cta, a:visited.cta, a.cta
       height: 32px
       border: 1px solid #eee
     a.tool
+      padding: 6px
+    a.tool
       &:active, &.active
         background: #f90
+      float: left
     a.note-color
+      position: relative
+      top: 5px
       &.yellow
         background-color: #ffd
       &.pink
@@ -229,6 +245,8 @@ a:link.cta, a:visited.cta, a.cta
     left: 0
     width: 100%
     height: 100%
+  input[type=text]
+    max-width: 160px
 
 .sort.active
   font-weight: bold
@@ -266,6 +284,7 @@ a:link.cta, a:visited.cta, a.cta
     left: 0
     width: 100%
     height: 100%
+    z-index: 3
   .votes
     position: absolute
     top: 0
@@ -362,6 +381,7 @@ a:link.cta, a:visited.cta, a.cta
     overflow: auto
     background-color: rgba(0, 0, 0, 0.5)
     position: fixed
+    z-index: 10
     top: 0
     left: 0
     width: 100%
@@ -391,6 +411,9 @@ a:link.cta, a:visited.cta, a.cta
     .close
       cursor: pointer
       position: absolute
+      width: 2em
+      height: 2em
+      text-align: center
       right: 0
       top: 0
       color: #000
@@ -431,6 +454,7 @@ a:link.cta, a:visited.cta, a.cta
       text-align: center
       img
         max-width: 100%
+
     .toolbar
       text-align: center
       .edit
@@ -438,3 +462,14 @@ a:link.cta, a:visited.cta, a.cta
       img
         vertical-align: middle
       padding-bottom: 0.5em
+
+#size
+  // Debug sizes
+  display: none
+  position: fixed
+  bottom: 0
+  right: 0
+  background: rgba(255, 255, 255, 0.8)
+  padding: 0.5em
+  z-index: 100
+

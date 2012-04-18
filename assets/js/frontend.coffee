@@ -249,16 +249,25 @@ class ds.EditIdea extends Backbone.View
     @idea = options.idea
     @dotstorm = options.dotstorm
     @canvas = new ds.IdeaCanvas {idea: @idea}
+    @cameraEnabled = options.cameraEnabled
 
   render: =>
     @$el.html @template
       longDescription: @idea.get "longDescription"
       description: @idea.get "description"
       tags: @idea.get("tags") or ""
-      camera: navigator?.camera?
+      cameraEnabled: @cameraEnabled
     @changeBackgroundColor @idea.get("background") or @$(".note-color:first").css("background-color")
     @noteTextarea = @$("#id_description")
     @$(".canvas").append(@canvas.el)
+    if @idea.get("photoVersion")?
+      photo = $("<img/>").attr(
+        src: @idea.getPhotoURL("full")
+        alt: "Loading..."
+      ).css("width", "100%")
+      photo.on "load", -> photo.attr "alt", "photo thumbnail"
+      @$(".image").html photo
+
     @canvas.render()
     @tool = 'pencil'
     #
@@ -281,11 +290,21 @@ class ds.EditIdea extends Backbone.View
     link.addClass("active")
     return false
 
+  setPhoto: (imageData) =>
+    @photo = imageData
+    @$(".image").html $("<img/>").attr(
+      "src", "data:image/jpg;base64," + @photo
+    ).css({width: "100%"})
+
   saveIdea: =>
     ideaIsNew = not @idea.id?
+    
+    # prepare attributes...
     if (@idea.get("drawing") != @canvas.actions or
           @idea.get("background") != @canvas.background)
       @idea.incImageVersion()
+    if @photo?
+      @idea.incPhotoVersion()
     attrs = {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
@@ -298,20 +317,35 @@ class ds.EditIdea extends Backbone.View
     if ideaIsNew
       attrs.creator = ds.users?.self?.user_id
       attrs.order = ds.ideas.length
+
     @idea.save attrs,
       success: (model) =>
         if ideaIsNew
-          console.log "New idea!"
           @dotstorm.addIdea(model.id, silent: true)
           @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
         if ideaIsNew
           ds.ideas.add(model)
-        ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}", trigger: true
+        finish = ->
+          ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}", trigger: true
+        if @photo?
+          # Upload photo
+          responseHandle = "img#{new Date().getTime()}"
+          flash "info", "Uploading photo..."
+          ds.socket.emit "uploadPhoto",
+            idea: model.toJSON()
+            imageData: @photo
+            event: responseHandle
+          ds.socket.once responseHandle, (data) =>
+            if data.error?
+              flash "error", "Error uploading image: #{data.error}"
+            @idea.save(null) # trigger reloads now that image is done.
+            finish()
+        else
+          finish()
       error: (model, err) ->
         console.error(err)
         str = if err.error? then err.error else err
         flash "error", "Error saving: #{str}"
-
 
     return false
 
@@ -320,12 +354,16 @@ class ds.EditIdea extends Backbone.View
     event.stopPropagation()
     el = $(event.currentTarget)
     tool = el.attr("data-tool")
+    if tool == "camera"
+      @trigger "takePhoto"
+      el = @$(".tool[data-tool=text]")
+      tool = "text"
     if tool == "text"
       @$(".text").before(@$(".canvas"))
     else
       @$(".text").after(@$(".canvas"))
       @canvas.tool = tool
-    el.parent().find(".tool").removeClass("active")
+    @$(".tool").removeClass("active")
     el.addClass("active")
     return false
 
@@ -602,14 +640,11 @@ class ds.ShowIdeas extends Backbone.View
           @$("#showIdeas").append groupView.el
           groupView.render()
           groupView.on "change:label", (group) =>
-            console.log group
             @dotstorm.setLabelFor(group.ideas[0].id, group.label)
-            console.log @dotstorm.get "ideas"
             @dotstorm.save null,
               error: (err) => flash "error", "Error saving: #{err}"
             groupView.render()
         else
-          console.log "show me", entity
           @$("#showIdeas").append @getIdeaView(entity).el
 
   getIdeaView: (idea) =>
@@ -634,8 +669,8 @@ class ds.ShowIdeas extends Backbone.View
       y: pointerObj.pageY
     }
 
-  moveNote: (event) =>
-    pos = @getPosition(event)
+  moveNote: () =>
+    pos = @dragState.lastPos
     @dragState.active.css
       position: "absolute"
       left: pos.x + @dragState.mouseOffset.x + "px"
@@ -660,16 +695,16 @@ class ds.ShowIdeas extends Backbone.View
     active.addClass("active")
     @dragState = {
       startTime: new Date().getTime()
-      startPos: @getPosition(event)
       active: active
       offset: active.position()
       noteDims: []
       placeholder: $("<div></div>").css
         float: "left"
-        width: active.width() + "px"
-        height: active.height() + "px"
+        width: active.outerWidth(true) + "px"
+        height: active.outerHeight(true) + "px"
       dropTagrets: []
     }
+    @dragState.lastPos = @dragState.startPos = @getPosition(event)
     @dragState.mouseOffset =
       x: @dragState.offset.left - @dragState.startPos.x
       y: @dragState.offset.top - @dragState.startPos.y
@@ -681,7 +716,7 @@ class ds.ShowIdeas extends Backbone.View
       dims.el = $n
       @dragState.noteDims.push(dims)
     @dragState.active.before(@dragState.placeholder)
-    @moveNote(event)
+    @moveNote()
     $(window).on "mousemove", @continueDrag
     $(window).on "touchmove", @continueDrag
     return false
@@ -689,8 +724,9 @@ class ds.ShowIdeas extends Backbone.View
   continueDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
-    if @dragState
-      @moveNote(event)
+    if @dragState?
+      @dragState.lastPos = @getPosition(event)
+      @moveNote()
     return false
 
   stopDrag: (event) =>
@@ -716,7 +752,7 @@ class ds.ShowIdeas extends Backbone.View
     hovered = @$(".hovered")
     @$(".smallIdea").removeClass("leftside rightside hovered")
 
-    if @checkForClick(event)
+    if @checkForClick()
       @showBig @ideas.get(sourceId)
       @dragState = null
       return
@@ -731,28 +767,31 @@ class ds.ShowIdeas extends Backbone.View
       else
         @dotstorm.groupify(sourceId, targetId)
       @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
+      @dotstorm.trigger "change:ideas"
     else
       # Are we being dragged out of our current group?
       groupParent = @dragState.active.parents(".group:first")
       if groupParent[0]?
-        pos = @getPosition(event)
+        pos = @dragState.lastPos
         dims = groupParent.offset()
         dims.width = groupParent.width()
         dims.height = groupParent.height()
         unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
           # We've been dragged out.
-          @dotstorm.ungroup(sourceId)
+          if pos.x > dims.left + dims.width * 0.5
+            @dotstorm.ungroup(sourceId, true)
+          else
+            @dotstorm.ungroup(sourceId)
           @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
     @dragState = null
     return false
 
-  checkForClick: (event) =>
+  checkForClick: () =>
     # A heuristic for distinguishing clicks from drags, based on time and
     # distance.
-    pos = @getPosition(event)
     distance = Math.sqrt(
-        Math.pow(pos.x - @dragState.startPos.x, 2) +
-        Math.pow(pos.y - @dragState.startPos.y, 2)
+        Math.pow(@dragState.lastPos.x - @dragState.startPos.x, 2) +
+        Math.pow(@dragState.lastPos.y - @dragState.startPos.y, 2)
     )
     elapsed = new Date().getTime() - @dragState.startTime
     return distance < 20 and elapsed < 400
@@ -765,6 +804,7 @@ class ds.ShowIdeaSmall extends Backbone.View
     @model.on "change:tags", @render
     @model.on "change:imageVersion", @render
     @model.on "change:description", @render
+    @model.on "change:photo", @render
 
   render: =>
     console.debug "render small", @model.id
@@ -776,15 +816,24 @@ class ds.ShowIdeaSmall extends Backbone.View
     @$el.attr("data-id", @model.id)
     @$el.addClass("smallIdea")
     @$el.css backgroundColor: @model.get("background")
-    img = $("<img/>").attr
-      src: @model.getThumbnailURL(@size)
-      alt: "Loading..."
     resize = =>
       @$(".text").css "fontSize", (@$(".canvasHolder").height() / 10) + "px"
-    img.on "load", ->
-      img.attr "alt", "drawing thumbnail"
-      resize()
-    @$(".canvas").html img
+    resize()
+    if @model.get("imageVersion")?
+      drawing = $("<img/>").attr
+        src: @model.getThumbnailURL(@size)
+        alt: "Loading..."
+      drawing.on "load", ->
+        drawing.attr "alt", "drawing thumbnail"
+        resize()
+      @$(".canvas").html drawing
+    if @model.get("photoVersion")?
+      photo = $("<img/>").attr
+        src: @model.getPhotoURL(@size)
+        alt: "Loading..."
+      photo.on "load", ->
+        photo.attr "alt", "photo thumbnail"
+      @$(".image").html photo
     @renderVotes()
 
   renderVotes: =>
@@ -821,6 +870,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.on "change:tags", @render
     @model.on "change:background", @render
     @model.on "change:drawing", @render
+    @model.on "change:photo", @render
 
   render: =>
     console.debug "render big"
@@ -832,11 +882,19 @@ class ds.ShowIdeaBig extends Backbone.View
     }, @model.toJSON()
     @$el.html @template args
     @$el.addClass("bigIdea")
-    @$el.css backgroundColor: @model.get("background")
-    img = $("<img/>").attr
-      src: @model.getThumbnailURL("full")
-      alt: "Loading..."
-    @$(".canvas").html(img)
+    @$(".canvasHolder").css backgroundColor: @model.get("background")
+    if @model.get("imageVersion")?
+      drawing = $("<img/>").attr
+        src: @model.getThumbnailURL("full")
+        alt: "Loading..."
+      drawing.on "load", -> drawing.attr "alt", "drawing thumbnail"
+      @$(".canvas").html drawing
+    if @model.get("photoVersion")?
+      photo = $("<img/>").attr
+        src: @model.getPhotoURL("full")
+        alt: "Loading..."
+      photo.on "load", -> photo.attr "alt", "photo thumbnail"
+      @$(".image").html photo
     resize = =>
       [width, height] = fillSquare(@$(".canvasHolder"), @$(".note"), 600, 200)
       @$(".text").css "font-size", (height / 10) + "px"
@@ -856,6 +914,8 @@ class ds.ShowIdeaBig extends Backbone.View
     return false
 
   close: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     @trigger "close", this
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
@@ -867,34 +927,42 @@ class ds.ShowIdeaBig extends Backbone.View
     return false
 
   next: (event) =>
+    event.stopPropagation()
     @close()
     @model.showNext() if @model.showNext?
     return false
 
   prev: (event) =>
+    event.stopPropagation()
     @close()
     @model.showPrev() if @model.showPrev?
     return false
 
   edit: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}",
       trigger: true
     return false
 
   editTags: (event) =>
+    event.stopPropagation()
     @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("tags") or ""
     return false
 
   saveTags: (event) =>
+    event.stopPropagation()
     @model.save {tags: @$(".tags input[type=text]").val()},
       error: (model, err) => flash "error", err
     return false
 
   editDescription: (event) =>
+    event.stopPropagation()
     @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("description") or ""
     return false
 
   saveDescription: (event) =>
+    event.stopPropagation()
     @model.save {description: @$(".description textarea").val()},
       error: (model, err) => flash "error", err
     return false
@@ -924,7 +992,9 @@ class ds.VoteWidget extends Backbone.View
       if votes.length == 0 then @$el.hide() else @$el.show()
     this
 
-  toggleVote: =>
+  toggleVote: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     if @self?.user_id?
       # Must copy array; otherwise change events don't fire properly.
       votes = @idea.get("votes")?.slice() or []
@@ -1032,7 +1102,19 @@ class ds.Router extends Backbone.Router
   dotstormAddIdea: (slug) =>
     updateNavLinks()
     @open slug, ->
-      view = new ds.EditIdea(idea: new Idea, dotstorm: ds.model)
+      view = new ds.EditIdea
+        idea: new Idea
+        dotstorm: ds.model
+        cameraEnabled: ds.cameraEnabled
+      if ds.cameraEnabled
+        view.on "takePhoto", =>
+          flash "info", "Calling camera..."
+          handleImage = (event) ->
+            if event.origin == "file://" and event.data.image?
+              view.setPhoto(event.data.image)
+            window.removeEventListener "message", handleImage, false
+          window.addEventListener 'message', handleImage, false
+          window.parent.postMessage('camera', 'file://')
       $("#app").html view.el
       view.render()
     return false
@@ -1149,6 +1231,12 @@ ds.socket.on 'connect', ->
           when "update"
             ds.model.set data.model
 
+  ds.socket.on 'trigger', (data) ->
+    console.debug 'trigger', data
+    switch data.collectionName
+      when "Idea"
+        ds.ideas.get(data.id).trigger data.event
+
 ds.socket.on 'disconnect', ->
   # Timeout prevents a flash when you are just closing a tab.
   setTimeout ->
@@ -1158,19 +1246,13 @@ ds.socket.on 'disconnect', ->
 window.addEventListener 'message', (event) ->
   if event.origin == "file://"
     if event.data.cameraEnabled?
-      ds.hasCamera = true
-    else if event.data.image?
-      image = $("<img>")
-      $("#app").prepend image
-      image.attr "src", "data:image/jpg;base64,#{event.data.image}"
-    else if event.error?
-      flash "error", event.error
+      ds.cameraEnabled = true
+    else if event.data.error?
+      flash "info", event.data.error
+    else if event.data.reload?
+      flash "info", "Reloading..."
+      window.location.reload(true)
 , false
-
-#XXX will this work for iframe?
-if window.parent.location.href != window.location.href
-  console.log window.parent?
-  window.parent.postMessage('camera', 'file://')
 
 $("nav a").on 'click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
