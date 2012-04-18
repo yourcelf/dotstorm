@@ -28,6 +28,7 @@ input[type=text]
 
 nav.tabs, ul.tablinks
   font-size: 20px
+  height: 24px
   background: tabbackground
   a
     border: 1px solid transparent
@@ -38,6 +39,16 @@ nav.tabs, ul.tablinks
     &.active
       background: bodybackground
       color: black
+  a.home
+    margin: 0
+    padding: 0
+    float: left
+    position: relative
+    display: inline-block
+    width: 32px
+    height: 24px
+
+   
 
 ul.tablinks, ul.tabs
   margin: 0
@@ -54,8 +65,6 @@ ul.tabs
   li.active
     display: block
 
-.cta, .cta-blue, .cta-green, .cta-yellow
-  z-index: 0 
 a:link.cta, a:visited.cta, a.cta
   color: white
 .cta-thin
@@ -71,14 +80,13 @@ a:link.cta, a:visited.cta, a.cta
   float: right
   color: white
   span.users
-    display: block
-    z-index: 2
-    width: 3em;
+    display: inline-block
+    width: 2.5em;
     height: 2.5em;
     text-align: right
     position: relative
     top: 3px
-    margin-right: 1em
+    right: 1em
     cursor: pointer
     img
       vertical-align: middle
@@ -258,7 +266,7 @@ a:link.cta, a:visited.cta, a.cta
 .smallIdea
   cursor: pointer
   overflow: hidden
-  position: relative
+  //position: relative
   width: 118px
   height: 118px
   margin: 1px
@@ -271,6 +279,10 @@ a:link.cta, a:visited.cta, a.cta
   .border
     width: 100%
     height: 100%
+  .votes
+    position: absolute
+    top: 0
+    right: 0
   .tags
     position: absolute
     bottom: 5px 
@@ -284,11 +296,6 @@ a:link.cta, a:visited.cta, a.cta
     left: 0
     width: 100%
     height: 100%
-    z-index: 3
-  .votes
-    position: absolute
-    top: 0
-    right: 0
 
 .tag-links
   margin-bottom: 0.5em
@@ -334,7 +341,6 @@ a:link.cta, a:visited.cta, a.cta
     -moz-user-select: text
     -o-user-select: text
     user-select: text
-
   .smallIdea
     &.active
       -webkit-transform: rotate(-2deg)
@@ -344,20 +350,37 @@ a:link.cta, a:visited.cta, a.cta
       transform: rotate(-2deg)
       opacity: 0.7
       z-index: 10
+
     .border
       width: 118px
       height: 118px
     &.hovered
-      outline: 3px solid orange
-    &.leftside .border
-      border-left: 6px solid orange
-      width: 112px
-    &.rightside .border
-      width: 111px
-      border-right: 6px solid orange
+      outline: 1em solid #999
+    &.leftside
+      -webkit-box-shadow: -2em 0 1em orange
+      -khtml-box-shadow: -2em 0 1em orange
+      -moz-box-shadow: -2em 0 1em orange
+      -o-box-shadow: -2em 0 1em orange
+      box-shadow: -2em 0 1em orange
+      //border-left: 6px solid orange
+      //width: 112px
+    &.rightside
+      -webkit-box-shadow: 2em 0 1em orange
+      -khtml-box-shadow: 2em 0 1em orange
+      -moz-box-shadow: 2em 0 1em orange
+      -o-box-shadow: 2em 0 1em orange
+      box-shadow: 2em 0 1em orange
+      //width: 111px
+      //border-right: 6px solid orange
 
 .vote-widget
   display: inline-block
+  width: 4em
+  text-align: right
+  height: 32px
+  a.upvote
+    display: inline-block
+    height: 5em
   img
     float: left
   .vote-count
@@ -371,21 +394,17 @@ a:link.cta, a:visited.cta, a.cta
     border-radius: 32px
     color: white
     font-weight: bold
+    -webkit-box-shadow: inset 0px 0px 10px white
+    -khtml-box-shadow: inset 0px 0px 10px white
+    -moz-box-shadow: inset 0px 0px 10px white
+    -o-box-shadow: inset 0px 0px 10px white
     box-shadow: inset 0px 0px 10px white
     &.active
+      -webkit-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      -khtml-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      -moz-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      -o-box-shadow: 0px 0px 5px red, 0px 0px 5px red
       box-shadow: 0px 0px 5px red, 0px 0px 5px red
-
-.tagOverlay
-  overflow: hidden
-  .shadow
-    overflow: auto
-    background-color: rgba(0, 0, 0, 0.5)
-    position: fixed
-    z-index: 10
-    top: 0
-    left: 0
-    width: 100%
-    height: 100%
 
 .bigIdea
   overflow: hidden
@@ -401,6 +420,10 @@ a:link.cta, a:visited.cta, a.cta
     -webkit-box-sizing: border-box
     -moz-box-sizing: border-box
     box-sizing: border-box
+    -webkit-box-shadow: 0px 0px 50px white
+    -khtml-box-shadow: 0px 0px 50px white
+    -moz-box-shadow: 0px 0px 50px white
+    -o-box-shadow: 0px 0px 50px white
     box-shadow: 0px 0px 50px white
     position: relative
     margin-left: auto
@@ -408,6 +431,13 @@ a:link.cta, a:visited.cta, a.cta
     padding-top: 0.5em
     padding-bottom: 0.5em
     background: rgba(255, 255, 255, 0.8)
+    form
+      -webkit-user-select: text
+      -khtml-user-select: text
+      -moz-user-select: text
+      -o-user-select: text
+      user-select: text
+      
     .close
       cursor: pointer
       position: absolute

@@ -1,4 +1,6 @@
 nav.tabs
+  a.home(href='/')
+    img(src='/img/home.png', alt='Dotstorm home')
   a.show-ideas(href='/d/#{slug}/') Show ideas
   a.add(href='/d/#{slug}/add') Add idea +
 
@@ -62,6 +64,7 @@ script#dotstormShowIdeas(type='text/template')
     div#showIdeas
     div(style='clear: both;')
   div.tag-links
+    | <!--
     hr
     | Order by
     a.sort(href='?sort=drop', data-sort='drop') drop
@@ -70,6 +73,8 @@ script#dotstormShowIdeas(type='text/template')
     |, 
     a.sort(href='?sort=date', data-sort='date') date
     br
+    | -->
+ 
 
 script#dotstormSmallIdea(type='text/template')
   div.border
@@ -79,10 +84,10 @@ script#dotstormSmallIdea(type='text/template')
       div.text
         textarea(disabled='disabled')
           <%= description %>
-      div.dragger
       div.tags
         <%= tags %>
       div.votes
+      div.dragger
 
 script#dotstormSmallIdeaGroup(type='text/template')
   div.label.clickToEdit
@@ -128,11 +133,14 @@ script#dotstormTagOverlay(type='text/template')
   div.shadow
 
 script#dotstormVoteWidget(type='text/template')
-  <% if (!readOnly) { %>
-  a.upvote(href='', title='upvote')
-    <img src="/img/upvote<%= youVoted ? "-active" : "" %>.png" alt='vote' title="Vote!" />
-  <% } %>
-  <span class='vote-count<%= youVoted ? " active" : "" %>'><%= votes %></span>
+  | <% if (!readOnly) { %>
+  |   <a href='' class='upvote' href='' title='Toggle vote'>
+  |     <img src="/img/upvote<%= youVoted ? "-active" : "" %>.png" alt='vote' title="Vote!" />
+  | <% } %>
+  |     <span class='vote-count<%= youVoted ? " active" : "" %>'><%= votes %></span>
+  | <% if (!readOnly) { %>
+  |   </a>
+  | <% } %>
 
 script#usersWidget(type='text/template')
   <span class='users' title='Online: <%= ["You"].concat(_.map(users, function(u) { return u.name || "Anon" }).join(", ")).join(", ") %>'>

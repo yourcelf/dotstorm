@@ -35,7 +35,7 @@ class ds.Intro extends Backbone.View
     'submit #named': 'openNamed'
     'submit #random': 'openRandom'
   render: =>
-    flash "error", "Warning: this is pre-alpha software. Data is periodically deleted without warning."
+    flash "info", "Warning: this is pre-alpha software. Data is periodically deleted without warning."
     @$el.html @template()
     this
 
@@ -416,19 +416,12 @@ class ds.ShowIdeas extends Backbone.View
   #
   template: _.template $("#dotstormShowIdeas").html() or ""
   events:
-    'click .sizes a': 'resize'
     'click .add-link': 'softNav'
-    'click .sort': 'handleSort'
     'click .tag': 'toggleTag'
     'mousedown  .smallIdea': 'startDrag'
-    'mouseup    .smallIdea': 'stopDrag'
     'touchstart .smallIdea': 'startDrag'
+    'mouseup    .smallIdea': 'stopDrag'
     'touchend   .smallIdea': 'stopDrag'
-
-  sizes:
-    small: 78
-    medium: 118
-    large: 238
 
   initialize: (options) ->
     console.debug 'Dotstorm: NEW DOTSTORM'
@@ -448,59 +441,18 @@ class ds.ShowIdeas extends Backbone.View
       @renderTopic()
     @dotstorm.on "change:ideas", =>
       console.debug "Dotstorm: grouping changed"
-      @renderGroups()
-    @ideas.on "add", =>
-      console.debug "Dotstorm: idea added"
-      @renderGroups()
-    @ideas.on "sort", =>
-      console.debug "Dotstorm: sorted", @sort
-      @renderGroups()
-    @ideas.on "change:order", =>
-      console.debug "Dostorm: sorted", @sort
       if @orderChangeTimeout
         clearTimeout @orderChangeTimeout
       @orderChangeTimeout = setTimeout (=> @renderGroups()), 200
+    @ideas.on "add", =>
+      console.debug "Dotstorm: idea added"
+      @renderGroups()
+    @ideas.on "change:tags", =>
+      @renderTagCloud()
     $(window).on "mouseup", @stopDrag
 
   softNav: (event) =>
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
-    return false
-
-  setSort: (sort, options) =>
-    @sort = sort or getQueryStrParameterByName('sort')
-    switch @sort
-      when "date"
-        @ideas.comparator = (model) -> return model.get("created")
-      when "-date"
-        @ideas.comparator = (model) -> return -model.get("created")
-      when "votes"
-        @ideas.comparator = (model) -> return model.get("votes")?.length or 0
-      when "-votes"
-        @ideas.comparator = (model) -> return -(model.get("votes")?.length or 0)
-      when "-drop"
-        @ideas.comparator = (model) -> return -(model.get("order") or 0)
-      else
-        @ideas.comparator = (model) -> return model.get("order")
-    @ideas.sort()
-    @ideas.trigger "sort" unless options?.silent
-    @$(".sort").removeClass("active reverse")
-    if @sort?.substring(0, 1) == "-"
-      sort = @sort.substring(1)
-      reverse = true
-    else
-      sort = @sort
-      reverse = false
-    target = @$("a[data-sort=\"#{sort}\"]")
-    target.addClass("active")
-    if reverse then target.addClass("reverse")
-    if @sort?
-      ds.app.navigate window.location.pathname + "?sort=#{@sort}", trigger: false
-
-  handleSort: (event) =>
-    sort = $(event.currentTarget).attr("data-sort")
-    if @sort? and @sort == sort
-      sort = "-#{sort}"
-    @setSort sort
     return false
 
   sortGroups: (_model_ids, _prev) =>
@@ -584,13 +536,6 @@ class ds.ShowIdeas extends Backbone.View
     @filterByTag(@showTag)
     return false
   
-  resize: (event) =>
-    size = $(event.currentTarget).attr("data-size")
-    @$(".smallIdea").css
-      width: @sizes[size] + "px"
-      height: @sizes[size] + "px"
-    return false
-
   render: =>
     console.debug "Dotstorm: RENDER DOTSTORM"
     @$el.html @template
@@ -599,8 +544,9 @@ class ds.ShowIdeas extends Backbone.View
     @$el.addClass "sorting"
     @renderTagCloud()
     @renderTopic()
-    @setSort() #@renderGroups() -- triggered by sort
+    @renderGroups()
     @renderOverlay()
+    this
 
   renderTagCloud: =>
     tags = @getTags()
@@ -609,10 +555,11 @@ class ds.ShowIdeas extends Backbone.View
     for tag, count of tags
       if count > max
         max = count
-      else if count < min
+      if count < min
         min = count
     minPercent = 70
     maxPercent = 150
+    @$(".tag-links").html("")
     for tag, count of tags
       @$(".tag-links").append($("<a/>").attr({
           class: 'tag'
@@ -848,21 +795,26 @@ class ds.ShowIdeaBig extends Backbone.View
   template: _.template $("#dotstormBigIdea").html() or ""
   editorTemplate: _.template $("#dotstormInPlaceInput").html() or ""
   events:
-    'click .shadow': 'close'
-    'click .close': 'close'
-    'click .next': 'next'
-    'click .prev': 'prev'
-    'click .edit': 'edit'
+    'mousedown .shadow': 'close'
+    'touchstart .shadow': 'close'
 
-    'click .tags .clickToEdit': 'editTags'
+    'mousedown .close': 'close'
+    'touchstart .close': 'close'
+
+    'mousedown .next': 'next'
+    'touchstart .next': 'next'
+
+    'mousedown .prev': 'prev'
+    'touchstart .prev': 'prev'
+
+    'mousedown .edit': 'edit'
+    'touchstart .edit': 'edit'
+
     'submit .tags form': 'saveTags'
+    'click .tags .clickToEdit': 'editTags'
 
-    'click .description .clickToEdit': 'editDescription'
-    'submit .description form': 'saveDescription'
-
-    'click .cancel': 'cancel'
-
-    'click .note': 'nothing'
+    'mousedown .note': 'nothing'
+    'touchstart .note': 'nothing'
 
   initialize: (options) ->
     @model = options.model
@@ -909,13 +861,10 @@ class ds.ShowIdeaBig extends Backbone.View
   renderVotes: =>
     @$(".vote-widget").html new ds.VoteWidget(idea: @model, self: ds.users.self).render().el
 
-  cancel: (event) =>
-    @render()
-    return false
-
   close: (event) =>
-    event.stopPropagation()
-    event.preventDefault()
+    if event?
+      event.preventDefault()
+      event.stopPropagation()
     @trigger "close", this
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
@@ -923,7 +872,11 @@ class ds.ShowIdeaBig extends Backbone.View
     return false
 
   nothing: (event) =>
+    if event.tagName.lower() == "input"
+      return
+    flash "info", "stopped!"
     event.stopPropagation()
+    event.preventDefault()
     return false
 
   next: (event) =>
@@ -951,26 +904,15 @@ class ds.ShowIdeaBig extends Backbone.View
     return false
 
   saveTags: (event) =>
-    event.stopPropagation()
     @model.save {tags: @$(".tags input[type=text]").val()},
-      error: (model, err) => flash "error", err
-    return false
-
-  editDescription: (event) =>
-    event.stopPropagation()
-    @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("description") or ""
-    return false
-
-  saveDescription: (event) =>
-    event.stopPropagation()
-    @model.save {description: @$(".description textarea").val()},
       error: (model, err) => flash "error", err
     return false
 
 class ds.VoteWidget extends Backbone.View
   template: _.template $("#dotstormVoteWidget").html() or ""
   events:
-    'click .upvote': 'toggleVote'
+    'touchstart .upvote': 'toggleVote'
+    'mousedown .upvote': 'toggleVote'
   initialize: (options) ->
     @idea = options.idea
     @idea.on "change:votes", @render
@@ -1023,7 +965,8 @@ updateNavLinks = ->
 class ds.UsersView extends Backbone.View
   template: _.template $("#usersWidget").html() or ""
   events:
-    'click .users': 'toggle'
+    'mousedown .users': 'toggle'
+    'touchstart .users': 'toggle'
     'keyup .you input': 'changeName'
 
   initialize: (options) ->

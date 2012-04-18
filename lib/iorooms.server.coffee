@@ -79,8 +79,8 @@ attach = (route, io, store) ->
       users = getUsers(data.room, socket)
       unless users.others[socket.session.user_id]
         socket.broadcast.to(data.room).emit 'user_left',
-          user_id: session.user_id
-          name: session.name
+          user_id: socket.session.user_id
+          name: socket.session.name
 
     socket.on 'username', (data) ->
       socket.session.name = data.name
