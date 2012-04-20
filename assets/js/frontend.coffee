@@ -72,7 +72,7 @@ class ds.Topic extends Backbone.View
     @model.on "change", @render
 
   render: =>
-    console.debug "render topic"
+    #console.debug "render topic"
     @$el.html @template
       name: @model.get("name")
       topic: @model.get("topic") or "Click to edit topic..."
@@ -151,6 +151,7 @@ class ds.IdeaCanvas extends Backbone.View
     else
       @$("a.note-color:first").click()
     @redraw()
+    setTimeout (=> @delegateEvents()), 100
   
   redraw: () =>
     for action in @actions
@@ -431,7 +432,7 @@ class ds.ShowIdeas extends Backbone.View
     'mouseup     .smallIdea': 'stopDrag'
 
   initialize: (options) ->
-    console.debug 'Dotstorm: NEW DOTSTORM'
+    #console.debug 'Dotstorm: NEW DOTSTORM'
     @dotstorm = options.model
     # ID of a single note to show, popped out
     @showId = options.showId
@@ -441,21 +442,20 @@ class ds.ShowIdeas extends Backbone.View
     @smallIdeaViews = {}
 
     @dotstorm.on "change:topic", =>
-      console.debug "Dotstorm: topic changed"
+      #console.debug "Dotstorm: topic changed"
       @renderTopic()
     @dotstorm.on "change:name", =>
-      console.debug "Dotstorm: topic changed"
+      #console.debug "Dotstorm: topic changed"
       @renderTopic()
     @dotstorm.on "change:ideas", =>
-      console.debug "Dotstorm: grouping changed"
+      #console.debug "Dotstorm: grouping changed"
       # This double-calls... but ok!
       @renderGroups()
     @ideas.on "add", =>
-      console.debug "Dotstorm: idea added"
+      #console.debug "Dotstorm: idea added"
       @renderGroups()
     @ideas.on "change:tags", =>
       @renderTagCloud()
-    $(window).on "mouseup", @stopDrag
 
   softNav: (event) =>
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
@@ -543,7 +543,7 @@ class ds.ShowIdeas extends Backbone.View
     return false
   
   render: =>
-    console.debug "Dotstorm: RENDER DOTSTORM"
+    #console.debug "Dotstorm: RENDER DOTSTORM"
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
@@ -552,9 +552,10 @@ class ds.ShowIdeas extends Backbone.View
     @renderTopic()
     @renderGroups()
     @renderOverlay()
-    #$("#app").on "touchmove", (event) -> event.preventDefault()
-    #$("#app").on "touchmove", (event) => 
-    #    @iosScrollBlock = setTimeout (-> event.preventDefault()), 100)
+    $(window).on "mouseup", @stopDrag
+    $(".smallIdea").on "touchmove", (event) -> event.preventDefault()
+    # iOS needs this.  Argh.
+    setTimeout (=> @delegateEvents()), 100
     this
 
   renderTagCloud: =>
@@ -582,7 +583,7 @@ class ds.ShowIdeas extends Backbone.View
     @$(".topic").html new ds.Topic(model: @dotstorm).render().el
 
   renderGroups: =>
-    console.debug "render groups"
+    #console.debug "render groups"
     @$("#showIdeas").html("")
     if @ideas.length == 0
       @$("#showIdeas").html "To get started, edit the topic or name above, and then add an idea!"
@@ -647,7 +648,7 @@ class ds.ShowIdeas extends Backbone.View
 
   startDrag: (event) =>
     event.preventDefault()
-    event.preventDefault()
+    event.stopPropagation()
     active = $(event.currentTarget)
     active.addClass("active")
     @dragState = {
@@ -681,8 +682,6 @@ class ds.ShowIdeas extends Backbone.View
     return false
 
   continueDrag: (event) =>
-    event.preventDefault()
-    event.stopPropagation()
     if @dragState?
       @dragState.lastPos = @getPosition(event)
       @moveNote()
@@ -690,7 +689,6 @@ class ds.ShowIdeas extends Backbone.View
 
   stopDrag: (event) =>
     event.preventDefault()
-    event.stopPropagation()
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
 
@@ -766,7 +764,7 @@ class ds.ShowIdeaSmall extends Backbone.View
     @model.on "change:photo", @render
 
   render: =>
-    console.debug "render small", @model.id
+    #console.debug "render small", @model.id
     args = _.extend
       tags: ""
       description: ""
@@ -837,7 +835,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.on "change:photo", @render
 
   render: =>
-    console.debug "render big"
+    #console.debug "render big"
     args = _.extend {
       tags: ""
       description: ""
@@ -934,7 +932,7 @@ class ds.VoteWidget extends Backbone.View
       @undelegateEvents()
 
   render: =>
-    console.debug "render votewidget", @idea.id
+    #console.debug "render votewidget", @idea.id
     @$el.addClass("vote-widget")
     votes = @idea.get("votes") or []
     @$el.html @template
@@ -998,7 +996,6 @@ class ds.UsersView extends Backbone.View
     return false
 
   removeUser: (user) =>
-    #TODO: something smarter when we have actual users.
     delete @users[user.user_id]
     @render()
 
@@ -1148,7 +1145,7 @@ ds.socket.on 'connect', ->
   ds.client = new Client(ds.socket)
   Backbone.history.start pushState: true
   ds.socket.on 'users', (data) ->
-    console.debug "users", data
+    #console.debug "users", data
     ds.users = new ds.UsersView
       users: data
       url: "#{window.location.protocol}//#{window.location.host}/d/#{ds.model.get("slug")}/"
@@ -1162,7 +1159,7 @@ ds.socket.on 'connect', ->
     ds.users?.setUser(user)
 
   ds.socket.on 'backbone', (data) ->
-    console.debug 'backbone sync', data
+    #console.debug 'backbone sync', data
     switch data.signature.collectionName
       when "Idea"
         switch data.signature.method
@@ -1187,7 +1184,7 @@ ds.socket.on 'connect', ->
             ds.model.set data.model
 
   ds.socket.on 'trigger', (data) ->
-    console.debug 'trigger', data
+    #console.debug 'trigger', data
     switch data.collectionName
       when "Idea"
         ds.ideas.get(data.id).trigger data.event
