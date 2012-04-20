@@ -75,9 +75,11 @@ start = (options) ->
       if signature.collectionName == "Idea" and signature.method != "read"
         delete json.drawing
       socket.emit signature.event, json
-    rebroadcast = ->
+    rebroadcast = (room_name) ->
       # Only works for models, not collections.
-      socket.broadcast.to(model.dotstorm_id).emit "backbone", { signature, model: model.toJSON() }
+      logger.debug "rebroadcast #{room_name}", model.toJSON()
+      if room_name?
+        socket.broadcast.to(room_name).emit "backbone", { signature, model: model.toJSON() }
     errorOut = (error) -> socket.emit signature.event, error: error
     switch signature.collectionName
       when "Idea"
@@ -88,42 +90,29 @@ start = (options) ->
                 errorOut(err)
               else
                 respond()
-                rebroadcast()
+                rebroadcast(model.get "dotstorm_id")
           when "update"
             thumbnails.drawingThumbs model, (err) ->
               if err?
                 errorOut(err)
               else
                 respond()
-                rebroadcast()
+                rebroadcast(model.get "dotstorm_id")
           when "delete"
             thumbnails.remove model, (err) ->
               if err?
                 errorOut(err)
               else
                 respond()
-                rebroadcast()
+                rebroadcast(model.get "dotstorm_id")
           when "read" then respond()
-      when "IdeaGroup"
-        switch signature.method
-          when "create"
-            respond()
-            rebroadcast()
-          when "update"
-            respond()
-            rebroadcast()
-          when "delete"
-            respond()
-            rebroadcast()
-          when "read"
-            respond()
       when "Dotstorm"
         switch signature.method
           when "create"
             respond()
           when "update"
             respond()
-            rebroadcast()
+            rebroadcast(model.id)
           when "delete"
             respond()
           when "read"

@@ -61,6 +61,7 @@ attach = (route, io, store) ->
     socketSessionMap[socket.id] = socket.session
 
     socket.on 'join', (data) ->
+      logger.debug "join", data
       unless data.room? and socket.session?
         socket.emit "error", error: "Room not specified or session not found"
         return
@@ -72,6 +73,7 @@ attach = (route, io, store) ->
         socket.broadcast.to(data.room).emit 'user_joined', users.self
 
     socket.on 'leave', (data) ->
+      logger.debug "leave", data
       unless data.room? and socket.session?
         socket.emit "error", error: "Room not specified or sessionID not found"
         return
