@@ -419,10 +419,16 @@ class ds.ShowIdeas extends Backbone.View
   events:
     'click .add-link': 'softNav'
     'click .tag': 'toggleTag'
-    'mousedown  .smallIdea': 'startDrag'
-    'touchstart .smallIdea': 'startDrag'
-    'mouseup    .smallIdea': 'stopDrag'
-    'touchend   .smallIdea': 'stopDrag'
+
+    'touchstart  .smallIdea': 'startDrag'
+    'mousedown   .smallIdea': 'startDrag'
+
+    'touchmove   .smallIdea': 'continueDrag'
+    'mousemove   .smallIdea': 'continueDrag'
+
+    'touchend    .smallIdea': 'stopDrag'
+    'touchcancel .smallIdea': 'stopDrag'
+    'mouseup     .smallIdea': 'stopDrag'
 
   initialize: (options) ->
     console.debug 'Dotstorm: NEW DOTSTORM'
@@ -546,6 +552,9 @@ class ds.ShowIdeas extends Backbone.View
     @renderTopic()
     @renderGroups()
     @renderOverlay()
+    #$("#app").on "touchmove", (event) -> event.preventDefault()
+    #$("#app").on "touchmove", (event) => 
+    #    @iosScrollBlock = setTimeout (-> event.preventDefault()), 100)
     this
 
   renderTagCloud: =>
@@ -593,6 +602,7 @@ class ds.ShowIdeas extends Backbone.View
             groupView.render()
         else
           @$("#showIdeas").append @getIdeaView(entity).el
+    @$("#showIdeas").append("<div style='clear: both;'></div>")
 
   getIdeaView: (idea) =>
     unless @smallIdeaViews[idea.id]
@@ -637,7 +647,7 @@ class ds.ShowIdeas extends Backbone.View
 
   startDrag: (event) =>
     event.preventDefault()
-    event.stopPropagation()
+    event.preventDefault()
     active = $(event.currentTarget)
     active.addClass("active")
     @dragState = {
@@ -664,6 +674,8 @@ class ds.ShowIdeas extends Backbone.View
       @dragState.noteDims.push(dims)
     @dragState.active.before(@dragState.placeholder)
     @moveNote()
+    # Add window as a listener, so if we drag too fast, we still pull the note
+    # along. Remove this again in @stopDrag.
     $(window).on "mousemove", @continueDrag
     $(window).on "touchmove", @continueDrag
     return false
@@ -874,7 +886,6 @@ class ds.ShowIdeaBig extends Backbone.View
   nothing: (event) =>
     if event.tagName.lower() == "input"
       return
-    flash "info", "stopped!"
     event.stopPropagation()
     event.preventDefault()
     return false
@@ -1201,9 +1212,6 @@ window.addEventListener 'message', (event) ->
 $("nav a").on 'click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false
-# Prevent page scrolling on iOS
-$(window).on "touchmove", (e) -> e.preventDefault()
-
 
 # Debug:
 do ->
