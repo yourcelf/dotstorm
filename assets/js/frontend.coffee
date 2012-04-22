@@ -151,6 +151,7 @@ class ds.IdeaCanvas extends Backbone.View
     else
       @$("a.note-color:first").click()
     @redraw()
+    # iOS needs this.  Argh.
     setTimeout (=> @delegateEvents()), 100
   
   redraw: () =>
