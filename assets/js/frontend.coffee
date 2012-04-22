@@ -862,6 +862,11 @@ class ds.ShowIdeaBig extends Backbone.View
       [width, height] = fillSquare(@$(".canvasHolder"), @$(".note"), 600, 200)
       @$(".text").css "font-size", (height / 10) + "px"
       @$(".note").css "max-width", width + "px"
+      # Hack for mobile lack of position:fixed
+      @$(".shadow").css
+        position: "absolute"
+        top: $("html,body").scrollTop() + 'px'
+        minHeight: window.innerHeight
     @$(".canvasHolder img").on "load", resize
     resize()
     @renderVotes()
