@@ -30,13 +30,13 @@ start = (options) ->
       store: sessionStore
 
   app.configure 'development', ->
-    app.use express.static __dirname + '/../static'
+    app.use express.static __dirname + '/../assets'
     app.use express.errorHandler { dumpExceptions: true, showStack: true }
     app.get '/test', (req, res) ->
       res.render 'test', layout: false
 
   app.configure 'production', ->
-    app.use express.static __dirname + '/../static', { maxAge: 1000*60*60*24 }
+    app.use express.static __dirname + '/../assets', { maxAge: 1000*60*60*24 }
 
   app.set 'view engine', 'jade'
 
