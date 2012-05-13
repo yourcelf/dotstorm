@@ -1,4 +1,4 @@
-models   = require '../assets/js/models'
+models   = require '../assets/js/dotstorm/models'
 h        = require './helper'
 fs       = require 'fs'
 path     = require 'path'

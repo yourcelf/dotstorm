@@ -1,4 +1,4 @@
-models = require '../assets/js/models'
+models = require '../assets/js/dotstorm/models'
 thumbnails = require './ideacanvas2image'
 
 attach = (channel, io) ->

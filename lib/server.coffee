@@ -43,7 +43,11 @@ start = (options) ->
   app.get '/', (req, res) ->
     res.render 'dotstorm', title: "DotStorm", slug: "", initial: {}
 
-  # /d/:slug/:action
+  # /d/:slug without trainling slash
+  app.get /^\/d\/([^/]+)$/, (req, res) ->
+    res.redirect "/d/#{req.params[0]}/"
+
+  # /d/:slug/:action (action optional)
   app.get /\/d\/([^/]+)(\/.*)?/, (req, res) ->
     #XXX load initial data when a slug is given....
     res.render 'dotstorm', title: "DotStorm", slug: req.params[0], initial: {}

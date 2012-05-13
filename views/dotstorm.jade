@@ -10,9 +10,9 @@ div#app
 script#dotstormTopic(type='text/template')
   div#dotstorm
     div.nameEdit
-      h1.clickToEdit <%= name %>
+      h1.clickToEdit <%= name || "[add name]" %>
     div.topicEdit
-      div.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
+      span.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
 
 script#dotstormInPlaceInput(type='text/template')
   form.editInPlace

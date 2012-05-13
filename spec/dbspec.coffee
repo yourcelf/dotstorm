@@ -1,6 +1,6 @@
 Backbone = require 'backbone'
 _        = require 'underscore'
-models   = require '../assets/js/models'
+models   = require '../assets/js/dotstorm/models'
 h        = require './helper'
 
 describe "Vanilla MongoDB test", ->

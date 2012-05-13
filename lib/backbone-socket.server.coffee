@@ -1,4 +1,4 @@
-models = require '../assets/js/models'
+models = require '../assets/js/dotstorm/models'
 logger = require './logging'
 events = require 'events'
 Backbone = require 'backbone'

@@ -1,5 +1,3 @@
-# Be sure to import this first.
-
 if typeof require != "undefined"
   root = module.exports
   Backbone = require 'backbone'
@@ -64,7 +62,6 @@ class Dotstorm extends Backbone.Model
   slugify: (name) -> return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
 
   validate: (attrs) ->
-    if not attrs.name then return "Missing a name."
     if attrs.slug?.length < 4 then return "Name must be 4 or more characters."
     if not attrs.created? then @set "created", new Date().getTime(), silent: true
     @set "modified", new Date().getTime(), silent: true

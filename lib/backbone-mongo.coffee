@@ -3,7 +3,7 @@ mongo    = require 'mongodb'
 logger   = require './logging'
 events   = require 'events'
 _        = require 'underscore'
-models   = require '../assets/js/models'
+models   = require '../assets/js/dotstorm/models'
 
 _connection = null
 
