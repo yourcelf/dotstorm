@@ -424,13 +424,19 @@ class ds.ShowIdeas extends Backbone.View
 
     'touchstart  .smallIdea': 'startDrag'
     'mousedown   .smallIdea': 'startDrag'
-
     'touchmove   .smallIdea': 'continueDrag'
     'mousemove   .smallIdea': 'continueDrag'
-
     'touchend    .smallIdea': 'stopDrag'
     'touchcancel .smallIdea': 'stopDrag'
     'mouseup     .smallIdea': 'stopDrag'
+
+    'touchstart      .group': 'startDragGroup'
+    'mousedown       .group': 'startDragGroup'
+    'touchmove       .group': 'continueDragGroup'
+    'mousemove       .group': 'continueDragGroup'
+    'touchend        .group': 'stopDragGroup'
+    'mouseup         .group': 'stopDragGroup'
+
 
   initialize: (options) ->
     #console.debug 'Dotstorm: NEW DOTSTORM'
@@ -634,34 +640,50 @@ class ds.ShowIdeas extends Backbone.View
       position: "absolute"
       left: pos.x + @dragState.mouseOffset.x + "px"
       top: pos.y + @dragState.mouseOffset.y + "px"
-    for dim in @dragState.noteDims
-      if dim.el[0] == @dragState.active[0]
+    ph = @dragState.placeholderDims
+    inPlaceHolder = ph.x1 < pos.x < ph.x2 and ph.y1 < pos.y < ph.y2
+    # Skip drop targets if were inside the placeholder. 
+    inIdea = false
+    $(".smallIdea, .group").removeClass("hovered leftside rightside")
+    for dim in @dragState.noteDims.concat(@dragState.groupDims)
+      if dim.el[0] == @dragState.active[0] or inPlaceHolder
         continue
-      dim.el.removeClass("hovered leftside rightside")
       if dim.top < pos.y < dim.top + dim.height
         if dim.left < pos.x < dim.left + dim.width * 0.2
           dim.el.addClass("leftside")
+          return false
         if dim.left + dim.width * 0.2 < pos.x < dim.left + dim.width * 0.8
           dim.el.addClass("hovered")
+          return false
         if dim.left + dim.width * 0.8 < pos.x < dim.left + dim.width
           dim.el.addClass("rightside")
+          return false
     return false
 
+  startDragGroup: (event) => return @startDrag(event)
   startDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
     active = $(event.currentTarget)
+    activeOffset = active.offset()
+    activeWidth = active.outerWidth(true)
+    activeHeight = active.outerHeight(true)
     active.addClass("active")
     @dragState = {
       startTime: new Date().getTime()
       active: active
       offset: active.position()
       noteDims: []
+      groupDims: []
       placeholder: $("<div></div>").css
         float: "left"
-        width: active.outerWidth(true) + "px"
-        height: active.outerHeight(true) + "px"
-      dropTagrets: []
+        width: activeWidth + "px"
+        height: activeHeight + "px"
+      placeholderDims:
+        x1: activeOffset.left
+        y1: activeOffset.top
+        x2: activeOffset.left + activeWidth
+        y2: activeOffset.top + activeHeight
     }
     @dragState.lastPos = @dragState.startPos = @getPosition(event)
     @dragState.mouseOffset =
@@ -674,6 +696,13 @@ class ds.ShowIdeas extends Backbone.View
       dims.height = $n.height()
       dims.el = $n
       @dragState.noteDims.push(dims)
+    for group in @$(".group")
+      $g = $(group)
+      dims = $g.offset()
+      dims.width = $g.outerWidth(true)
+      dims.height = $g.outerHeight(true)
+      dims.el = $g
+      @dragState.groupDims.push(dims)
     @dragState.active.before(@dragState.placeholder)
     @moveNote()
     # Add window as a listener, so if we drag too fast, we still pull the note
@@ -682,13 +711,14 @@ class ds.ShowIdeas extends Backbone.View
     $(window).on "touchmove", @continueDrag
     return false
 
+  continueDragGroup: (event) => return @continueDrag(event)
   continueDrag: (event) =>
     if @dragState?
       @dragState.lastPos = @getPosition(event)
       @moveNote()
     return false
 
-  stopDrag: (event) =>
+  clearDragUI: (event) =>
     event.preventDefault()
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
@@ -696,37 +726,66 @@ class ds.ShowIdeas extends Backbone.View
     # reset drag UI...
     @dragState?.placeholder?.remove()
     unless @dragState? and @dragState.active?
-      return
+      return false
     @dragState.active.removeClass("active")
     @dragState.active.css
       position: "relative"
       left: 0
       top: 0
-
+    
     # Check for drop targets.
-    sourceId = @dragState.active.attr("data-id")
-    leftside = @$(".leftside")
-    rightside = @$(".rightside")
-    hovered = @$(".hovered")
-    @$(".smallIdea").removeClass("leftside rightside hovered")
+    dropTarget =
+      leftside: @$(".leftside")[0]
+      rightside: @$(".rightside")[0]
+      hovered: @$(".hovered")[0]
+      sourceId: @dragState.active.attr("data-id")
+      sourceIsGroup: false
 
-    if @checkForClick()
-      @showBig @ideas.get(sourceId)
+    if not dropTarget.sourceId?
+      dropTarget.sourceId = @dragState.active.find(".smallIdea:first").attr("data-id")
+      dropTarget.sourceIsGroup = true
+
+    droppable = dropTarget.hovered or dropTarget.leftside or dropTarget.rightside
+    if droppable?
+      dropTarget.targetId = droppable.getAttribute("data-id")
+      dropTarget.targetIsGroup = false
+      if not dropTarget.targetId
+        dropTarget.targetId = $(droppable).find(".smallIdea:first").attr("data-id")
+        dropTarget.targetIsGroup = true
+
+    @$(".smallIdea, .group").removeClass("leftside rightside hovered")
+    return dropTarget
+
+  stopDragGroup: (event) => @stopDrag(event)
+  stopDrag: (event) =>
+    dropTarget = @clearDragUI(event)
+    unless dropTarget
+      return
+
+    if (not dropTarget.sourceIsGroup) and @checkForClick()
+      @showBig @ideas.get(dropTarget.sourceId)
       @dragState = null
       return
 
-    droppable = hovered[0] or leftside[0] or rightside[0]
-    if droppable?
-      targetId = droppable.getAttribute("data-id")
-      if leftside[0]?
-        @dotstorm.putLeftOf(sourceId, targetId)
-      else if rightside[0]?
-        @dotstorm.putRightOf(sourceId, targetId)
+    if dropTarget.targetId? or dropTarget.groupTargetId?
+      if dropTarget.hovered
+        @dotstorm.combine(
+          dropTarget.sourceId,
+          dropTarget.sourceIsGroup,
+          dropTarget.targetId,
+          dropTarget.targetIsGroup,
+          false
+        )
       else
-        @dotstorm.groupify(sourceId, targetId)
+        @dotstorm.move(
+          dropTarget.sourceId,
+          dropTarget.sourceIsGroup,
+          dropTarget.targetId,
+          dropTarget.targetIsGroup,
+          dropTarget.rightside?
+        )
       @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
-      @dotstorm.trigger "change:ideas"
-    else
+    else if (not dropTarget.sourceIsGroup)
       # Are we being dragged out of our current group?
       groupParent = @dragState.active.parents(".group:first")
       if groupParent[0]?
@@ -737,9 +796,9 @@ class ds.ShowIdeas extends Backbone.View
         unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
           # We've been dragged out.
           if pos.x > dims.left + dims.width * 0.5
-            @dotstorm.ungroup(sourceId, true)
+            @dotstorm.ungroup(dropTarget.sourceId, true)
           else
-            @dotstorm.ungroup(sourceId)
+            @dotstorm.ungroup(dropTarget.sourceId)
           @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
     @dragState = null
     return false

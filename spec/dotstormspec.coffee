@@ -9,10 +9,10 @@ describe "Dotstorm idea order", ->
     ideas = ['1', '2', {ideas: ['3', '4']}, '5', '6', {ideas: ['7', '8']}]
     dotstorm.set(ideas: ideas)
     expect(dotstorm.get "ideas").toEqual(ideas)
-    expect(dotstorm.getGroupPos '1').toEqual({list: ideas, pos: 0, group: undefined})
-    expect(dotstorm.getGroupPos '2').toEqual({list: ideas, pos: 1, group: undefined})
-    expect(dotstorm.getGroupPos '3').toEqual({list: ['3', '4'], pos: 0, group: ideas})
-    expect(dotstorm.getGroupPos '4').toEqual({list: ['3', '4'], pos: 1, group: ideas})
+    expect(dotstorm.getGroupPos '1').toEqual({list: ideas, pos: 0, parent: undefined, groupPos: undefined})
+    expect(dotstorm.getGroupPos '2').toEqual({list: ideas, pos: 1, parent: undefined, groupPos: undefined})
+    expect(dotstorm.getGroupPos '3').toEqual({list: ['3', '4'], pos: 0, parent: ideas, groupPos: 2})
+    expect(dotstorm.getGroupPos '4').toEqual({list: ['3', '4'], pos: 1, parent: ideas, groupPos: 2})
 
   it "adds IDs", ->
     dotstorm.addIdea "1"
@@ -94,3 +94,80 @@ describe "Dotstorm idea order", ->
     expect(dotstorm.get "ideas").toEqual(['1', '2', {ideas: ['3']}, '4'])
     dotstorm.ungroup('3')
     expect(dotstorm.get "ideas").toEqual(['1', '2', '3', '4'])
+
+  it "moves groups", ->
+    dotstorm.set "ideas", [
+      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
+    ]
+    dotstorm.putGroupLeftOf('2', '1')
+    expect(dotstorm.get "ideas").toEqual [
+      {ideas: ['2', '3']}, '1', {ideas: ['4', '5']}, '6'
+    ]
+    dotstorm.putGroupRightOf('3', '6')
+    expect(dotstorm.get "ideas").toEqual [
+      '1', {ideas: ['4', '5']}, '6', {ideas: ['2', '3']}
+    ]
+    dotstorm.putGroupLeftOf('2', '5')
+    expect(dotstorm.get "ideas").toEqual [
+      '1', {ideas: ['4', '2', '3', '5']}, '6'
+    ]
+    dotstorm.combineGroups('4', '1')
+    expect(dotstorm.get "ideas").toEqual [
+      {ideas: ['4', '2', '3', '5', '1']}, '6'
+    ]
+    dotstorm.combineGroups('4', '6', true)
+    expect(dotstorm.get "ideas").toEqual [
+      {ideas: ['6', '4', '2', '3', '5', '1']}
+    ]
+
+    # Combine groups.
+    dotstorm.set "ideas", [
+      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
+    ]
+    dotstorm.combineGroups('2', '4')
+    expect(dotstorm.get "ideas").toEqual [
+      '1', {ideas: ['2', '3', '4', '5']}, '6'
+    ]
+
+    # Move a group to a target (left side), groupifying.
+    dotstorm.set "ideas", [
+      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
+    ]
+    dotstorm.combineGroups('4', '1')
+    expect(dotstorm.get "ideas").toEqual [
+      {ideas: ['4', '5', '1']}, {ideas: ['2', '3']}, '6'
+    ]
+
+    # Move a group to a target (right side), groupifying.
+    dotstorm.set "ideas", [
+      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
+    ]
+    dotstorm.combineGroups('4', '1')
+    expect(dotstorm.get "ideas").toEqual [
+      {ideas: ['4', '5', '1']}, {ideas: ['2', '3']}, '6'
+    ]
+ 
+  it "moves things before and after groups", ->
+    dotstorm.set "ideas", [
+      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
+    ]
+    dotstorm.putGroupLeftOfGroup('4', '2')
+    expect(dotstorm.get "ideas").toEqual [
+      '1', {ideas: ['4', '5']}, {ideas: ['2', '3']}, '6'
+    ]
+    dotstorm.putGroupRightOfGroup('4', '2')
+    expect(dotstorm.get "ideas").toEqual [
+      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
+    ]
+
+    dotstorm.putLeftOfGroup('6', '4')
+    expect(dotstorm.get "ideas").toEqual [
+      '1', {ideas: ['2', '3']}, '6', {ideas: ['4', '5']}
+    ]
+
+    dotstorm.putRightOfGroup('1', '4')
+    expect(dotstorm.get "ideas").toEqual [
+      {ideas: ['2', '3']}, '6', {ideas: ['4', '5']}, '1'
+    ]
+
+
