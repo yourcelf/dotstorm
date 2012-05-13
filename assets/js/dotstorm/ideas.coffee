@@ -16,7 +16,8 @@ class ds.Intro extends Backbone.View
   openNamed: (event) =>
     name = @$("#id_join").val()
     if name != ''
-      ds.app.open Dotstorm.prototype.slugify(name), name, =>
+      slug = Dotstorm.prototype.slugify(name)
+      ds.app.open slug, name, =>
         ds.app.navigate "/d/#{slug}/"
         ds.app.dotstormShowIdeas(slug)
     return false
