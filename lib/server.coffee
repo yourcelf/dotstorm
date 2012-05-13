@@ -57,8 +57,7 @@ start = (options) ->
   app.listen options.port
 
   # Socket sessions
-  io = socketio.listen(app)
-  io.set 'log level', 0
+  io = socketio.listen(app, "log level": 0)
 
   # binds to '/io'
   channel = '/io'

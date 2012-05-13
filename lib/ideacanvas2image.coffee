@@ -171,14 +171,26 @@ photoThumbs = (idea, photoData, callback) ->
       logger.debug("skipping photo; already exists")
 
 
-remove = (model) ->
+remove = (model, callback) ->
+  dirs = []
   for url in [model.getThumbnailURL('small'), model.getPhotoURL('small')]
-    dir = BASE_PATH + path.dirname(url)
+    dirs.push BASE_PATH + path.dirname(url)
+
+  error = null
+  count = dirs.length
+  for dir in dirs
     do (dir) ->
       logger.debug "removing #{dir} and all contents"
       clearDir dir, (err) ->
-        if (err) then logger.error(err)
+        if err?
+          logger.error(err)
+          error = err
         fs.rmdir dir, (err) ->
-          if (err) then logger.error(err)
+          if err?
+            logger.error(err)
+            error = err
+          count -= 1
+          if count == 0
+            callback(error)
 
 module.exports = { drawingThumbs, photoThumbs, remove }

@@ -1,58 +1,57 @@
-Backbone = require 'backbone'
-_        = require 'underscore'
+expect   = require 'expect.js'
 models   = require '../assets/js/dotstorm/models'
 h        = require './helper'
+mocha    = require 'mocha'
 
 describe "Vanilla MongoDB test", ->
-  it "persists and retrieves data", ->
+  it "persists and retrieves data", (done) ->
     mongodb = require 'mongodb'
     client = new mongodb.Db 'test', new mongodb.Server("127.0.0.1", 27017, {})
     test = (err, coll) ->
       coll.insert {a:2}, (err, docs) ->
         coll.count (err, count) ->
-          expect(count).toEqual(1)
+          expect(count).to.be(1)
         coll.find().toArray (err, results) ->
-          expect(results.length).toEqual(1)
-          expect(results[0].a).toEqual(2)
+          expect(results.length).to.be(1)
+          expect(results[0].a).to.be(2)
           for result in results
             coll.remove result
           client.close()
+          done()
     client.open (err, p_client) ->
       client.collection 'test_insert', test
 
 describe "MongoDB backbone connector", ->
-  server = global.server
-  mahId = undefined
+  before ->
+    @server = h.startServer()
+    @mahId = undefined
+  after ->
+    @server.app.close()
 
-  beforeEach ->
-    @addMatchers
-      fail: (expected) ->
-        @message = -> expected
-        return false
-
-  it "executes synchronously", -> h.executeSync("db")
-
-  it "initializes the server", ->
-    waitsFor (-> server.getDb()? ), "db connection", 1000
+  it "initializes the server", (done) ->
+    h.waitsFor =>
+      if @server.getDb()?
+        done()
+        return true
 
   for [Coll, Model] in [[models.DotstormList, models.Dotstorm]]
     it "saves a model", (done) ->
       d = new Model
         name: "my happy storm"
       d.save {},
-        success: (m) ->
-          mahId = m.id
+        success: (m) =>
+          @mahId = m.id
           done()
         error: (model, error) ->
           expect().fail(error)
           done()
 
     it "retrieves the model", (done) ->
-      expect(mahId).toBeDefined()
-      d = new Model _id: mahId
+      expect(@mahId).to.not.be(undefined)
+      d = new Model _id: @mahId
       d.fetch
         success: (model) ->
-          expect(model.get("name")).toEqual("my happy storm")
+          expect(model.get("name")).to.eql("my happy storm")
           done()
         error: (model, error) ->
           expect().fail(error)
@@ -62,7 +61,7 @@ describe "MongoDB backbone connector", ->
       d = new Coll
       d.fetch
         success: (items) ->
-          expect(items.length).toBe(1)
+          expect(items.length).to.be(1)
           done()
         error: (model, error) ->
           expect().fail(error)
@@ -86,9 +85,7 @@ describe "MongoDB backbone connector", ->
       d = new Coll
       d.fetch
         success: (items) ->
-          expect(items.models.length).toBe(0)
+          expect(items.models.length).to.be(0)
           done()
         error: (model, error) ->
           expect().fail(error)
-
-  it "done executing synchronously", -> h.doneExecutingSync()

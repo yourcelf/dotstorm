@@ -7,7 +7,7 @@
         "email": "cfd@media.mit.edu"
     },
     "scripts": {
-        "test": "mocha --compilers coffee:coffee-script spec/*"
+        "test": "mocha --compilers coffee:coffee-script --globals css,js spec/*.spec.coffee"
     },
     "engines": {
         "node": ">=0.6"
