@@ -35,10 +35,10 @@ class Idea extends Backbone.Model
     return
 
   getThumbnailURL: (size) =>
-    return "/uploads/idea/#{@.id}/drawing/#{size}#{@get "imageVersion"}.png"
+    return "/uploads/idea/#{@id}/drawing/#{size}#{@get "imageVersion"}.png"
 
   getPhotoURL: (size) =>
-    return "/uploads/idea/#{@.id}/photo/#{size}#{@get "photoVersion"}.png"
+    return "/uploads/idea/#{@id}/photo/#{size}#{@get "photoVersion"}.png"
 
   cleanTag: (tag) => return tag.replace(/[^-\w\s]/g, '').trim()
   cleanTags: (tags) => @getTags(tags).join(", ")

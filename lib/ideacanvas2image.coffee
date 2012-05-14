@@ -92,7 +92,7 @@ canvas2thumbnails = (canvas, thumbnails, callback) ->
 draw = (idea, callback) ->
   # Render the drawing instructions contained in the idea to a canvas.
   logger.debug "drawing #{idea.id}"
-  dims = idea.get("dims")
+  dims = idea.DIMS
   canvas = new Canvas dims.x, dims.y
   ctx = canvas.getContext('2d')
   ctx.lineCap = 'round'
@@ -137,28 +137,28 @@ shrink = (buffer, thumbs, callback) ->
 drawingThumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
   if idea.get("background")? and idea.get("drawing")?
-    path.exists BASE_PATH + idea.getThumbnailURL('small'), (exists) ->
+    path.exists BASE_PATH + idea.drawingURLs.small, (exists) ->
       unless exists
-        clearDir BASE_PATH + path.dirname(idea.getThumbnailURL('small')), (err) ->
+        clearDir path.dirname(BASE_PATH + idea.drawingURLs.small), (err) ->
           if (err) then return callback?(err)
           canvas = draw(idea)
           buffer = canvas.toBuffer()
           thumbs = []
           for name, size of sizes
-            thumbs.push [BASE_PATH + idea.getThumbnailURL(name), size[0], size[1]]
+            thumbs.push [BASE_PATH + idea.drawingURLs[name], size[0], size[1]]
           shrink buffer, thumbs, (err) ->
             if err then callback?(err) else callback?(null)
       else
         callback?(null)
-        logger.debug("skipping thumbnail; already exists")
+        logger.debug("skipping thumbnail; already URexists")
   else
     callback?(null)
     logger.debug("skipping thumbnail; empty model")
 
 photoThumbs = (idea, photoData, callback) ->
-  path.exists BASE_PATH + idea.getPhotoURL('small'), (exists) ->
+  path.exists BASE_PATH + idea.photoURLs.small, (exists) ->
     unless exists
-      clearDir BASE_PATH + path.dirname(idea.getPhotoURL('small')), (err) ->
+      clearDir path.dirname(BASE_PATH + idea.photoURLs.small), (err) ->
         if (err) then return callback?(err)
         buffer = new Buffer(photoData, 'base64').toString('binary')
         thumbs = []
@@ -173,8 +173,9 @@ photoThumbs = (idea, photoData, callback) ->
 
 remove = (model, callback) ->
   dirs = []
-  for url in [model.getThumbnailURL('small'), model.getPhotoURL('small')]
-    dirs.push BASE_PATH + path.dirname(url)
+  for url in [model.drawingURLs?.small, model.photoURLs?.small]
+    if url?
+      dirs.push BASE_PATH + path.dirname(url)
 
   error = null
   count = dirs.length
