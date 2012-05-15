@@ -137,47 +137,52 @@ shrink = (buffer, thumbs, callback) ->
 drawingThumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
   if idea.get("background")? and idea.get("drawing")?
-    path.exists BASE_PATH + idea.drawingURLs.small, (exists) ->
-      unless exists
-        clearDir path.dirname(BASE_PATH + idea.drawingURLs.small), (err) ->
+    path.exists idea.getDrawingPath("small"), (exists) ->
+      if exists
+        callback?(null)
+        logger.debug("skipping thumbnail; already exists")
+      else
+        clearDir path.dirname(idea.getDrawingPath("small")), (err) ->
           if (err) then return callback?(err)
           canvas = draw(idea)
           buffer = canvas.toBuffer()
           thumbs = []
           for name, size of sizes
-            thumbs.push [BASE_PATH + idea.drawingURLs[name], size[0], size[1]]
+            thumbs.push [idea.getDrawingPath(name), size[0], size[1]]
           shrink buffer, thumbs, (err) ->
-            if err then callback?(err) else callback?(null)
-      else
-        callback?(null)
-        logger.debug("skipping thumbnail; already URexists")
+            if err?
+              callback?(err)
+            else
+              callback?(null)
   else
     callback?(null)
     logger.debug("skipping thumbnail; empty model")
 
 photoThumbs = (idea, photoData, callback) ->
-  path.exists BASE_PATH + idea.photoURLs.small, (exists) ->
-    unless exists
-      clearDir path.dirname(BASE_PATH + idea.photoURLs.small), (err) ->
+  unless idea.photoVersion?
+    return callback?("missing photo version")
+  path.exists idea.getPhotoPath("small"), (exists) ->
+    if exists
+      callback?(null)
+      logger.debug("skipping photo; already exists")
+    else
+      clearDir path.dirname(idea.getPhotoPath("small")), (err) ->
         if (err) then return callback?(err)
         buffer = new Buffer(photoData, 'base64').toString('binary')
         thumbs = []
         for name, size of sizes
-          thumbs.push [BASE_PATH + idea.getPhotoURL(name), size[0], size[1]]
+          thumbs.push [idea.getPhotoPath(name), size[0], size[1]]
         shrink buffer, thumbs, (err) ->
-          if err then callback?(err) else callback?(null)
-    else
-      callback?(null)
-      logger.debug("skipping photo; already exists")
-
+          if err?
+            callback?(err)
+          else
+            callback?(null)
 
 remove = (model, callback) ->
   dirs = []
-  for url in [model.drawingURLs?.small, model.photoURLs?.small]
-    if url?
-      dirs.push BASE_PATH + path.dirname(url)
-  console.log dirs
-  return callback()
+  for file in [model.getDrawingPath("small"), model.getPhotoPath("small")]
+    if file?
+      dirs.push path.dirname(file)
 
   error = null
   count = dirs.length

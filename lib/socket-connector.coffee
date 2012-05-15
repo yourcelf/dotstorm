@@ -105,16 +105,23 @@ attach = (channel, io) ->
 
     socket.on 'uploadPhoto', (data) ->
       models.Idea.findOneLight {_id: data.idea._id}, (err, idea) ->
-        thumbnails.photoThumbs idea, data.imageData, (err) ->
-          if err? then logger.error(err)
-          if data.event?
-            if err? then return socket.emit(data.event, error: err)
+        idea.photoVersion ||= 0
+        idea.photoVersion += 1
+        idea.save (err) ->
+          if err?
+            logger.error(err)
+            socket.emit(data.event, error: err)
+          else
+            thumbnails.photoThumbs idea, data.imageData, (err) ->
+              if err? then logger.error(err)
+              if data.event?
+                if err? then return socket.emit(data.event, error: err)
 
-            socket.emit data.event, {}
-            socket.broadcast.to(idea.dotstorm_id).emit("trigger", {
-              collectionName: "Idea"
-              id: idea.id
-              event: "change:photo"
-            })
+                socket.emit data.event, {}
+                socket.broadcast.to(idea.dotstorm_id).emit("trigger", {
+                  collectionName: "Idea"
+                  id: idea.id
+                  event: "change:photo"
+                })
 
 module.exports = { attach }

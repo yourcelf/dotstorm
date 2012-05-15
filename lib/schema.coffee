@@ -85,9 +85,13 @@ IdeaSchema.statics.findLight = (constraint, cb) ->
 Idea = mongoose.model("Idea", IdeaSchema)
 Idea.prototype.DIMS = { x: 600, y: 600 }
 Idea.prototype.getDrawingPath = (size) ->
-  return thumbnails.BASE_PATH + @drawingURLs[size]
+  if @drawingURLs[size]?
+    return thumbnails.BASE_PATH + @drawingURLs[size]
+  return null
 Idea.prototype.getPhotoPath = (size) ->
-  return thumbnails.BASE_PATH + @photoURLs[size]
+  if @photoURLs[size]?
+    return thumbnails.BASE_PATH + @photoURLs[size]
+  return null
 
 IdeaGroupSchema = new Schema
   label: { type: String, trim: true }
