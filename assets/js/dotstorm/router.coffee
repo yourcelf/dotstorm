@@ -45,7 +45,7 @@ class ds.Router extends Backbone.Router
     @open slug, "", ->
       console.log slug
       view = new ds.EditIdea
-        idea: new Idea
+        idea: new ds.Idea
         dotstorm: ds.model
         cameraEnabled: ds.cameraEnabled
       if ds.cameraEnabled
@@ -84,12 +84,12 @@ class ds.Router extends Backbone.Router
 
     $("nav a.show-ideas").attr("href", "/d/#{slug}/")
     $("nav a.add").attr("href", "/d/#{slug}/add")
-    coll = new DotstormList
+    coll = new ds.DotstormList
     coll.fetch
       query: { slug }
       success: (coll) ->
         if coll.length == 0
-          new Dotstorm().save { name, slug },
+          new ds.Dotstorm().save { name, slug },
             success: (model) ->
               flash "info", "Created!  Click things to change them."
               ds.joinRoom(model, true, callback)
@@ -108,7 +108,7 @@ ds.joinRoom = (newModel, isNew, callback) ->
   if ds.model?.id != newModel.id
     ds.client.join newModel.id
   ds.model = newModel
-  ds.ideas = new IdeaList
+  ds.ideas = new ds.IdeaList
   if isNew
     # Nothing else to fetch yet -- we're brand spanking new.
     return callback()

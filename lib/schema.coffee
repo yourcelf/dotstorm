@@ -2,7 +2,7 @@ mongoose   = require 'mongoose'
 Schema     = mongoose.Schema
 uuid       = require 'node-uuid'
 _          = require 'underscore'
-thumbnails = require './ideacanvas2image'
+thumbnails = require './thumbnails'
 
 VoterSchema = new Schema
   user: {type: Schema.ObjectId, ref: 'User' }
@@ -59,7 +59,7 @@ IdeaSchema.pre 'remove', (next) ->
       next(new Error(err))
     else
       next(null)
-IdeaSchema.virtual('photos')
+IdeaSchema.virtual('photoURLs')
   .get ->
     photos = {}
     if @photoVersion?
@@ -73,13 +73,21 @@ IdeaSchema.virtual('drawingURLs')
       for size in ["small", "medium", "large", "full"]
         thumbs[size] = "/uploads/idea/#{@id}/drawing/#{size}#{@imageVersion}.png"
     return thumbs
-IdeaSchema.virtual('taglist')
-  .get -> return @tags.join(", ")
-  .set (taglist) -> @set 'tags', taglist.split(/,\s*/)
+IdeaSchema.virtual('taglist').get(
+  -> return @tags.join(", ")
+).set(
+  (taglist) -> @set 'tags', taglist.split(/,\s*/)
+)
+IdeaSchema.statics.findOneLight = (constraint, cb) ->
+  return @findOne constraint, { "drawing": 0 }, cb
+IdeaSchema.statics.findLight = (constraint, cb) ->
+  return @find constraint, { "drawing": 0 }, cb
 Idea = mongoose.model("Idea", IdeaSchema)
-Idea.findOneLight = (constraint, cb) ->
-  return Idea.findOne constraint, { "drawing": 0 }, cb
 Idea.prototype.DIMS = { x: 600, y: 600 }
+Idea.prototype.getDrawingPath = (size) ->
+  return thumbnails.BASE_PATH + @drawingURLs[size]
+Idea.prototype.getPhotoPath = (size) ->
+  return thumbnails.BASE_PATH + @photoURLs[size]
 
 IdeaGroupSchema = new Schema
   label: { type: String, trim: true }

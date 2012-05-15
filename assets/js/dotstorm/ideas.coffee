@@ -16,7 +16,7 @@ class ds.Intro extends Backbone.View
   openNamed: (event) =>
     name = @$("#id_join").val()
     if name != ''
-      slug = Dotstorm.prototype.slugify(name)
+      slug = ds.Dotstorm.prototype.slugify(name)
       ds.app.open slug, name, =>
         ds.app.navigate "/d/#{slug}/"
         ds.app.dotstormShowIdeas(slug)
@@ -503,7 +503,7 @@ class ds.ShowIdeas extends Backbone.View
   filterByTag: (tag) =>
     if tag?
       ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}"
-      cleanedTag = Idea.prototype.cleanTag(tag)
+      cleanedTag = ds.Idea.prototype.cleanTag(tag)
       regex = new RegExp("(^|,)\\s*(#{cleanedTag})\\s*(,|$)")
       for noteDom in @$(".smallIdea")
         idea = @ideas.get noteDom.getAttribute('data-id')

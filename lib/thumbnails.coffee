@@ -176,6 +176,8 @@ remove = (model, callback) ->
   for url in [model.drawingURLs?.small, model.photoURLs?.small]
     if url?
       dirs.push BASE_PATH + path.dirname(url)
+  console.log dirs
+  return callback()
 
   error = null
   count = dirs.length
@@ -192,6 +194,11 @@ remove = (model, callback) ->
             error = err
           count -= 1
           if count == 0
-            callback(error)
+            # Remove parent dir
+            fs.rmdir path.dirname(dir), (err) ->
+              if err?
+                logger.error(err)
+                error = err
+              callback(error)
 
-module.exports = { drawingThumbs, photoThumbs, remove }
+module.exports = { drawingThumbs, photoThumbs, remove, BASE_PATH }

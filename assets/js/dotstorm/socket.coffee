@@ -27,7 +27,7 @@ ds.socket.on 'connect', ->
       when "Idea"
         switch data.signature.method
           when "create"
-            ds.ideas.add(new Idea(data.model))
+            ds.ideas.add(new ds.Idea(data.model))
           when "update"
             model = ds.ideas.get(data.model._id)
             if model?

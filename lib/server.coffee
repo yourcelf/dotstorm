@@ -1,17 +1,16 @@
 express     = require 'express'
 socketio    = require 'socket.io'
 RedisStore  = require('connect-redis')(express)
-Backbone    = require 'backbone'
 logger      = require './logging'
-Database    = require './backbone-mongo'
-thumbnails  = require './ideacanvas2image'
+mongoose    = require 'mongoose'
 
 # See Cakefile for options definitions and defaults
 start = (options) ->
   sessionStore = new RedisStore
 
-  db = null
-  Database.open options,success: (database) -> db = database
+  db = mongoose.connect(
+    "mongodb://#{options.dbhost}:#{options.dbport}/#{options.dbname}"
+  )
 
   app = express.createServer()
   
@@ -62,65 +61,13 @@ start = (options) ->
   # binds to '/io'
   channel = '/io'
   require('./iorooms.server').attach(channel, io, sessionStore)
-  require('./backbone-socket.server').attach(channel, io)
-  require('./imageupload').attach(channel, io)
+  require('./socket-connector').attach(channel, io)
   roomserver = io.of(channel)
 
   #
   # Events from backbone->mongo:
   #
-  Backbone.sync.on "backbone:error", (socket, signature, model, error) ->
-    socket.emit signature.event, {error: error}
 
-  Backbone.sync.on "backbone", (socket, signature, model) ->
-    respond = ->
-      json = model.toJSON()
-      if signature.collectionName == "Idea" and signature.method != "read"
-        delete json.drawing
-      socket.emit signature.event, json
-    rebroadcast = (room_name) ->
-      # Only works for models, not collections.
-      logger.debug "rebroadcast #{room_name}", model.toJSON()
-      if room_name?
-        socket.broadcast.to(room_name).emit "backbone", { signature, model: model.toJSON() }
-    errorOut = (error) -> socket.emit signature.event, error: error
-    switch signature.collectionName
-      when "Idea"
-        switch signature.method
-          when "create"
-            thumbnails.drawingThumbs model, (err) ->
-              if err?
-                errorOut(err)
-              else
-                respond()
-                rebroadcast(model.get "dotstorm_id")
-          when "update"
-            thumbnails.drawingThumbs model, (err) ->
-              if err?
-                errorOut(err)
-              else
-                respond()
-                rebroadcast(model.get "dotstorm_id")
-          when "delete"
-            thumbnails.remove model, (err) ->
-              if err?
-                errorOut(err)
-              else
-                respond()
-                rebroadcast(model.get "dotstorm_id")
-          when "read" then respond()
-      when "Dotstorm"
-        switch signature.method
-          when "create"
-            respond()
-          when "update"
-            respond()
-            rebroadcast(model.id)
-          when "delete"
-            respond()
-          when "read"
-            respond()
-
-  return { app, io, sessionStore, getDb: (-> db) }
+  return { app, io, sessionStore, db }
 
 module.exports = { start }

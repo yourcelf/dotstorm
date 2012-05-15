@@ -1,60 +1,16 @@
-if typeof require != "undefined"
-  root = module.exports
-  Backbone = require 'backbone'
-  _        = require 'underscore'
-else
-  root = this
-  Backbone = root.Backbone
-  _        = root._
-
-
 _.extend Backbone.Model.prototype, {
   # Use mongodb id attribute
   idAttribute: '_id'
 }
 
-class Idea extends Backbone.Model
+class ds.Idea extends Backbone.Model
   collectionName: 'Idea'
 
-  incImageVersion: =>
-    @set {imageVersion: (@get("imageVersion") or 0) + 1}, silent: true
+class ds.IdeaList extends Backbone.Collection
+  model: ds.Idea
+  collectionName: ds.Idea.prototype.collectionName
 
-  incPhotoVersion: =>
-    @set {photoVersion: (@get("photoVersion") or 0) + 1}, silent: true
-
-  validate: (attrs) =>
-    #XXX: Check if dotstorm ID references a non-read-only dotstorm...?
-    if not attrs.dotstorm_id? then return "Dotstorm ID missing."
-    if attrs.tags? and @get("tags") != attrs.tags
-      cleaned = @getTags(attrs.tags).join(", ")
-      if cleaned != attrs.tags
-        @set "tags", cleaned, silent: true
-    if not attrs.created?
-      @set "created", new Date().getTime(), silent: true
-    @set "modified", new Date().getTime(), silent: true
-    return
-
-  getThumbnailURL: (size) =>
-    return "/uploads/idea/#{@id}/drawing/#{size}#{@get "imageVersion"}.png"
-
-  getPhotoURL: (size) =>
-    return "/uploads/idea/#{@id}/photo/#{size}#{@get "photoVersion"}.png"
-
-  cleanTag: (tag) => return tag.replace(/[^-\w\s]/g, '').trim()
-  cleanTags: (tags) => @getTags(tags).join(", ")
-  getTags: (tags) =>
-    cleaned = []
-    for tag in (tags or @get("tags") or "").split(",")
-      clean = @cleanTag(tag)
-      if clean
-        cleaned.push(clean)
-    return cleaned
-
-class IdeaList extends Backbone.Collection
-  model: Idea
-  collectionName: Idea.prototype.collectionName
-
-class Dotstorm extends Backbone.Model
+class ds.Dotstorm extends Backbone.Model
   collectionName: 'Dotstorm'
   defaults:
     ideas: []
@@ -62,10 +18,8 @@ class Dotstorm extends Backbone.Model
   slugify: (name) -> return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
 
   validate: (attrs) ->
-    if attrs.slug?.length < 4 then return "Name must be 4 or more characters."
-    if not attrs.created? then @set "created", new Date().getTime(), silent: true
-    @set "modified", new Date().getTime(), silent: true
-    return
+    if attrs.slug?.length < 4
+      return "Name must be 4 or more characters."
 
   getGroup: (idea_id) =>
     for entity in @get("ideas")
@@ -273,22 +227,20 @@ class Dotstorm extends Backbone.Model
   orderChanged: (options) => @trigger "change:ideas" unless options?.silent
 
 
-class DotstormList extends Backbone.Collection
-  model: Dotstorm
-  collectionName: Dotstorm.prototype.collectionName
+class ds.DotstormList extends Backbone.Collection
+  model: ds.Dotstorm
+  collectionName: ds.Dotstorm.prototype.collectionName
 
 
 modelFromCollectionName = (collectionName, isCollection=false) ->
   if isCollection
     switch collectionName
-      when "Idea" then IdeaList
-      when "Dotstorm" then DotstormList
+      when "Idea" then ds.IdeaList
+      when "Dotstorm" then ds.DotstormList
       else null
   else
     switch collectionName
-      when "Idea" then Idea
-      when "Dotstorm" then Dotstorm
+      when "Idea" then ds.Idea
+      when "Dotstorm" then ds.Dotstorm
       else null
 
-exports = { Dotstorm, DotstormList, Idea, IdeaList, modelFromCollectionName }
-_.extend(root, exports)

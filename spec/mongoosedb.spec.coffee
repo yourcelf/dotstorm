@@ -3,24 +3,14 @@ mongoose = require 'mongoose'
 models   = require '../lib/schema'
 path     = require 'path'
 _        = require 'underscore'
-
-db = mongoose.connect("mongodb://localhost:27017/test")
-
-BASE = __dirname + '/../assets'
+h        = require './helper'
 
 describe "Mongoose connector", ->
-  it "clears the test db", (done) ->
-    count = 3
-    clear = (model) ->
-      model.remove {}, (err) ->
-        expect(err).to.be null
-        count -= 1
-        if count == 0
-          done()
+  before ->
+    mongoose.connect("mongodb://localhost:27017/test")
 
-    clear(models.Dotstorm)
-    clear(models.Idea)
-    clear(models.IdeaGroup)
+  it "clears the test db", (done) ->
+    h.clearDb(done)
 
   it "creates a dotstorm", (done) ->
     new models.Dotstorm({
@@ -58,7 +48,7 @@ describe "Mongoose connector", ->
       idea.save (err) ->
         expect(err).to.be null
         expect(idea.drawingURLs.small).to.be "/uploads/idea/#{idea._id}/drawing/small1.png"
-        expect(path.existsSync(BASE + idea.drawingURLs.small)).to.be true
+        expect(path.existsSync idea.getDrawingPath("small")).to.be true
         done()
 
   it "returns light ideas", (done) ->
@@ -77,15 +67,15 @@ describe "Mongoose connector", ->
 
   it "saves tags", (done) ->
     models.Idea.findOne {dotstorm_id: @dotstorm._id}, (err, idea) =>
+      expect(err).to.be null
       idea.set("taglist", "this, that, theother")
       expect(_.isEqual idea.tags, ["this", "that", "theother"]).to.be true
       done()
 
   it "removes thumbnails with idea", (done) ->
     models.Idea.findOne {dotstorm_id: @dotstorm._id}, (err, idea) =>
-      imgPath = BASE + idea.drawingURLs.small
-      expect(path.existsSync(imgPath)).to.be true
+      expect(path.existsSync idea.getDrawingPath("small")).to.be true
       idea.remove (err) =>
         expect(err).to.be null
-        expect(path.existsSync(imgPath)).to.be false
+        expect(path.existsSync idea.getDrawingPath("small")).to.be false
         done()
