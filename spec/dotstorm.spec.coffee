@@ -1,174 +1,145 @@
-models   = require '../assets/js/dotstorm/models'
-expect   = require 'expect.js'
+expect       = require 'expect.js'
+uuid         = require 'node-uuid'
 
-describe "Dotstorm idea order", ->
-  dotstorm = null
-  beforeEach ->
-    dotstorm = new models.Dotstorm name: "test.12345", slug: "test.12345"
+# Hack to get client code into node.
+coffee       = require 'coffee-script'
+fs           = require 'fs'
+_            = require 'underscore'
+Backbone     = require 'backbone'
+clientModels = ds = {}
+eval(coffee.compile(fs.readFileSync(__dirname + "/../assets/js/dotstorm/models.coffee").toString()))
 
-  it "gets id group positions", ->
-    ideas = ['1', '2', {ideas: ['3', '4']}, '5', '6', {ideas: ['7', '8']}]
-    dotstorm.set(ideas: ideas)
-    expect(dotstorm.get "ideas").to.eql(ideas)
-    expect(dotstorm.getGroupPos '1').to.eql({list: ideas, pos: 0, parent: undefined, groupPos: undefined})
-    expect(dotstorm.getGroupPos '2').to.eql({list: ideas, pos: 1, parent: undefined, groupPos: undefined})
-    expect(dotstorm.getGroupPos '3').to.eql({list: ['3', '4'], pos: 0, parent: ideas, groupPos: 2})
-    expect(dotstorm.getGroupPos '4').to.eql({list: ['3', '4'], pos: 1, parent: ideas, groupPos: 2})
 
-  it "adds IDs", ->
-    dotstorm.addIdea "1"
-    expect(dotstorm.get "ideas").to.eql ["1"]
+describe "Dotstorm idea reordering", ->
+  dotstorm = new clientModels.Dotstorm slug: 'test'
+  # idea IDs
+  a = 'a'
+  b = 'b'
+  c = 'c'
+  d = 'd'
+  # Create a group
+  g = (ids...) -> return {_id: uuid.v4(), ideas: ids}
 
-  it "removes IDs", ->
-    dotstorm.addIdea "1"
-    dotstorm.removeIdea "1"
-    expect(dotstorm.get "ideas").to.eql []
+  # Ensure groups are equal, excluding group ID's, which are random.
+  expectMatch = (map2) ->
+    map1 = dotstorm.get("groups")
+    expect(map1.length).to.be map2.length
+    for i in [0...map1.length]
+      expect(map1[i].ideas).to.eql map2[i].ideas
 
-  it "groups and ungroups", ->
-    ideas = ['1', '2', '3', '4', '5']
-    dotstorm.set(ideas: ideas)
-    dotstorm.groupify('2', '3')
-    expect(dotstorm.get "ideas").to.eql(['1', {ideas: ['2', '3']}, '4', '5'])
-    dotstorm.groupify('1', '3')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['2', '1', '3']}, '4', '5'])
-    dotstorm.groupify('4', '3', true)
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['2', '1', '3', '4']}, '5'])
+  it "generates a UUID", -> expect(dotstorm.uuid().length).to.be 36
+  it "expects the right matches", ->
+    dotstorm.set "groups", [g(a)]
+    expectMatch [g(a)]
+    expect(-> expectMatch [g(b)]).to.throwError()
+    expect(-> expectMatch [g(a,b)]).to.throwError()
+
+  it "adds ideas", ->
+    dotstorm.addIdea(new clientModels.Idea(_id: a))
+    expectMatch [g(a)]
+    # Should be idempotent
+    dotstorm.addIdea(new clientModels.Idea(_id: a))
+    expectMatch [g(a)]
+
+  it "removes ideas", ->
+    dotstorm.removeIdea(new clientModels.Idea(_id: a))
+    expectMatch []
+    # Should be idempotent
+    dotstorm.removeIdea(new clientModels.Idea(_id: a))
+    expectMatch []
+
+  it "moves idea adjacent group, left side", ->
+    dotstorm.set "groups", [g(a), g(b), g(c)]
+    dotstorm.move(0, 0, 2, null) # move a adjacent c
+    expectMatch [g(b), g(a), g(c)]
+    dotstorm.move(2, 0, 0, null) # move c adjacent b
+    expectMatch [g(c), g(b), g(a)]
+
+  it "moves idea adjacent group, right side", ->
+    dotstorm.set "groups", [g(a), g(b), g(c)]
+    dotstorm.move(0, 0, 2, null, 1)
+    expectMatch [g(b), g(c), g(a)]
+    dotstorm.move(2, 0, 0, null, 1)
+    expectMatch [g(b), g(a), g(c)]
+
+  it "moves idea out of group, left side", ->
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, 0, 1, null)
+    expectMatch [g(b), g(a), g(c, d)]
+
+  it "moves idea out of group, right side", ->
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, 0, 1, null, 1)
+    expectMatch [g(b), g(c, d), g(a)]
+
+  it "moves idea within group, left side", ->
+    dotstorm.set "groups", [g(a, b, c), g(d)]
+    dotstorm.move(0, 0, 0, 1)
+    expectMatch [g(a, b, c), g(d)]
+    dotstorm.move(0, 0, 0, 2)
+    expectMatch [g(b, a, c), g(d)]
+
+  it "moves idea within group, right side", ->
+    dotstorm.set "groups", [g(a, b, c), g(d)]
+    dotstorm.move(0, 0, 0, 1, 1)
+    expectMatch [g(b, a, c), g(d)]
+    dotstorm.move(0, 0, 0, 2, 1)
+    expectMatch [g(a, c, b), g(d)]
+
+  it "moves group adjacent group, left side", ->
+    dotstorm.set "groups", [g(a), g(b), g(c)]
+    dotstorm.move(0, null, 2, null)
+    expectMatch [g(b), g(a), g(c)]
+    dotstorm.move(2, null, 0, null)
+    expectMatch [g(c), g(b), g(a)]
+
+  it "moves group adjacent group, right side", ->
+    dotstorm.set "groups", [g(a), g(b), g(c)]
+    dotstorm.move(0, null, 2, null, 1)
+    expectMatch [g(b), g(c), g(a)]
+    dotstorm.move(2, null, 0, null, 1)
+    expectMatch [g(b), g(a), g(c)]
+
+  it "moves idea into group, left side", ->
+    dotstorm.set "groups", [g(a), g(b), g(c)]
+    dotstorm.move(0, 0, 1, 0)
+    expectMatch [g(a, b), g(c)]
+    dotstorm.move(1, 0, 0, 1)
+    expectMatch [g(a, c, b)]
+
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(1, 1, 0, 0)
+    expectMatch [g(d, a, b), g(c)]
     
-    # ungroup
-    dotstorm.ungroup('4')
-    expect(dotstorm.get "ideas").to.eql(['4', {ideas: ['2', '1', '3']}, '5'])
-    dotstorm.ungroup('2', true)
-    expect(dotstorm.get "ideas").to.eql(['4', {ideas: ['1', '3']}, '2', '5'])
+  it "moves idea into group, right side", ->
+    dotstorm.set "groups", [g(a), g(b), g(c)]
+    dotstorm.move(0, 0, 1, 0, 1)
+    expectMatch [g(b, a), g(c)]
+    dotstorm.move(1, 0, 0, 1, 1)
+    expectMatch [g(b, a, c)]
 
-  it "puts left and right of", ->
-    ideas = ['1', '2', {ideas: ['3', '4']}, '5']
-    dotstorm.set(ideas: ideas)
-    expect(dotstorm.get "ideas").to.eql(ideas)
+  it "moves group into group, left side", ->
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, null, 1, 0)
+    expectMatch [g(a, b, c, d)]
 
-    # left/right out of a group.
-    dotstorm.putLeftOf('2', '1')
-    expect(dotstorm.get "ideas").to.eql(['2', '1', {ideas: ['3', '4']}, '5'])
-    dotstorm.putRightOf('2', '1')
-    expect(dotstorm.get "ideas").to.eql(['1', '2', {ideas: ['3', '4']}, '5'])
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, null, 1, 1)
+    expectMatch [g(c, a, b, d)]
 
-    # move into a group.
-    dotstorm.putRightOf('2', '4')
-    expect(dotstorm.get "ideas").to.eql(['1', {ideas: ['3', '4', '2']}, '5'])
-    dotstorm.putLeftOf('1', '4')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1', '4', '2']}, '5'])
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(1, null, 0, 0)
+    expectMatch [g(c, d, a, b)]
 
-    # move out of a group
-    dotstorm.putRightOf('2', '5')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1', '4']}, '5', '2'])
-    dotstorm.putLeftOf('4', '5')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1']}, '4', '5', '2'])
+  it "moves group into group, right side", ->
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, null, 1, 0, 1)
+    expectMatch [g(c, a, b, d)]
 
-    # move out of group destroy group
-    dotstorm.putRightOf('1', '4')
-    dotstorm.putRightOf('3', '4')
-    expect(dotstorm.get "ideas").to.eql(['4', '3', '1', '5', '2'])
-    dotstorm.groupify('3', '1')
-    dotstorm.putLeftOf('3', '4')
-    dotstorm.putLeftOf('1', '4')
-    expect(dotstorm.get "ideas").to.eql(['3', '1', '4', '5', '2'])
-    dotstorm.groupify('4', '5')
-    dotstorm.putLeftOf('4', '1')
-    dotstorm.groupify('5', '4')
-    expect(dotstorm.get "ideas").to.eql(['3', {ideas: ['5', '4']}, '1', '2'])
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, null, 1, 1, 1)
+    expectMatch [g(c, d, a, b)]
 
-    # idempotent out of group
-    dotstorm.set("ideas", [{ideas: ['3', '1']}, '4', '5', '2'])
-    dotstorm.putRightOf('2', '5')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1']}, '4', '5', '2'])
-    dotstorm.putLeftOf('4', '5')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1']}, '4', '5', '2'])
-    
-    # idempotent in group
-    dotstorm.putLeftOf('3', '1')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1']}, '4', '5', '2'])
-    dotstorm.putRightOf('1', '3')
-    expect(dotstorm.get "ideas").to.eql([{ideas: ['3', '1']}, '4', '5', '2'])
-
-  it "removes empty groups", ->
-    dotstorm.set "ideas", ['1', {ideas: ['2', '3']}, '4']
-    dotstorm.ungroup('2')
-    expect(dotstorm.get "ideas").to.eql(['1', '2', {ideas: ['3']}, '4'])
-    dotstorm.ungroup('3')
-    expect(dotstorm.get "ideas").to.eql(['1', '2', '3', '4'])
-
-  it "moves groups", ->
-    dotstorm.set "ideas", [
-      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
-    ]
-    dotstorm.putGroupLeftOf('2', '1')
-    expect(dotstorm.get "ideas").to.eql [
-      {ideas: ['2', '3']}, '1', {ideas: ['4', '5']}, '6'
-    ]
-    dotstorm.putGroupRightOf('3', '6')
-    expect(dotstorm.get "ideas").to.eql [
-      '1', {ideas: ['4', '5']}, '6', {ideas: ['2', '3']}
-    ]
-    dotstorm.putGroupLeftOf('2', '5')
-    expect(dotstorm.get "ideas").to.eql [
-      '1', {ideas: ['4', '2', '3', '5']}, '6'
-    ]
-    dotstorm.combineGroups('4', '1')
-    expect(dotstorm.get "ideas").to.eql [
-      {ideas: ['4', '2', '3', '5', '1']}, '6'
-    ]
-    dotstorm.combineGroups('4', '6', true)
-    expect(dotstorm.get "ideas").to.eql [
-      {ideas: ['6', '4', '2', '3', '5', '1']}
-    ]
-
-    # Combine groups.
-    dotstorm.set "ideas", [
-      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
-    ]
-    dotstorm.combineGroups('2', '4')
-    expect(dotstorm.get "ideas").to.eql [
-      '1', {ideas: ['2', '3', '4', '5']}, '6'
-    ]
-
-    # Move a group to a target (left side), groupifying.
-    dotstorm.set "ideas", [
-      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
-    ]
-    dotstorm.combineGroups('4', '1')
-    expect(dotstorm.get "ideas").to.eql [
-      {ideas: ['4', '5', '1']}, {ideas: ['2', '3']}, '6'
-    ]
-
-    # Move a group to a target (right side), groupifying.
-    dotstorm.set "ideas", [
-      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
-    ]
-    dotstorm.combineGroups('4', '1')
-    expect(dotstorm.get "ideas").to.eql [
-      {ideas: ['4', '5', '1']}, {ideas: ['2', '3']}, '6'
-    ]
- 
-  it "moves things before and after groups", ->
-    dotstorm.set "ideas", [
-      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
-    ]
-    dotstorm.putGroupLeftOfGroup('4', '2')
-    expect(dotstorm.get "ideas").to.eql [
-      '1', {ideas: ['4', '5']}, {ideas: ['2', '3']}, '6'
-    ]
-    dotstorm.putGroupRightOfGroup('4', '2')
-    expect(dotstorm.get "ideas").to.eql [
-      '1', {ideas: ['2', '3']}, {ideas: ['4', '5']}, '6'
-    ]
-
-    dotstorm.putLeftOfGroup('6', '4')
-    expect(dotstorm.get "ideas").to.eql [
-      '1', {ideas: ['2', '3']}, '6', {ideas: ['4', '5']}
-    ]
-
-    dotstorm.putRightOfGroup('1', '4')
-    expect(dotstorm.get "ideas").to.eql [
-      {ideas: ['2', '3']}, '6', {ideas: ['4', '5']}, '1'
-    ]
-
-
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(1, null, 0, 0, 1)
+    expectMatch [g(a, c, d, b)]

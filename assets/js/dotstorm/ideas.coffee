@@ -17,18 +17,14 @@ class ds.Intro extends Backbone.View
     name = @$("#id_join").val()
     if name != ''
       slug = ds.Dotstorm.prototype.slugify(name)
-      ds.app.open slug, name, =>
-        ds.app.navigate "/d/#{slug}/"
-        ds.app.dotstormShowIdeas(slug)
+      @trigger "open", slug, name
     return false
 
   openRandom: (event) =>
     randomChar = =>
       @chars.substr parseInt(Math.random() * @chars.length), 1
     slug = (randomChar() for i in [0...12]).join("")
-    ds.app.open slug, "", =>
-        ds.app.navigate "/d/#{slug}/"
-        @dotstormShowIdeas(slug)
+    @trigger "open", slug, ""
 
     return false
 
@@ -99,31 +95,22 @@ class ds.IdeaCanvas extends Backbone.View
   tagName: "canvas"
   events:
     'mousedown':  'handleStart'
-    'mouseup':    'handleEnd'
-    'mousemove':  'handleDrag'
-
     'touchstart': 'handleStart'
+    'mouseup':    'handleEnd'
     'touchend':   'handleEnd'
+    'mousemove':  'handleDrag'
     'touchmove':  'handleDrag'
 
   initialize: (options) ->
     @idea = options.idea
     # don't listen for changes to @idea.. cuz we're busy drawing!
     @tool = "pencil"
-    if options.readOnly == true
-      @events = undefined
     $(window).on 'mouseup', @handleEnd
     @canvas = @$el
 
   render: =>
-    @ctxDims = @idea.get("dims") or {
-      x: 600
-      y: 600
-    }
-
-    @canvas.attr
-      width:  @ctxDims.x
-      height: @ctxDims.y
+    @ctxDims = @idea.get("dims") or { x: 600, y: 600 }
+    @canvas.attr { width: @ctxDims.x, height: @ctxDims.y }
 
     @ctx = @canvas[0].getContext('2d')
     @actions = @idea.get("drawing")?.slice() or []
@@ -135,7 +122,7 @@ class ds.IdeaCanvas extends Backbone.View
     # iOS needs this.  Argh.
     setTimeout (=> @delegateEvents()), 100
   
-  redraw: () =>
+  redraw: =>
     for action in @actions
       @drawAction(action)
 
@@ -221,12 +208,10 @@ class ds.EditIdea extends Backbone.View
   #
   template: _.template $("#dotstormAddIdea").html() or ""
   events:
-    'submit form':       'saveIdea'
-
-    'click .tablinks a': 'tabnav'
-    'click .tool': 'changeTool'
-    'touchstart .tool': 'changeTool'
-    'click .note-color': 'handleChangeBackgroundColor'
+    'submit            form': 'saveIdea'
+    'click            .tool': 'changeTool'
+    'touchstart       .tool': 'changeTool'
+    'click      .note-color': 'handleChangeBackgroundColor'
     'touchstart .note-color': 'handleChangeBackgroundColor'
 
   initialize: (options) ->
@@ -266,14 +251,6 @@ class ds.EditIdea extends Backbone.View
     resize()
     this
 
-  tabnav: (event) =>
-    link = @$(event.currentTarget)
-    tabgroup = link.parents(".tabgroup:first")
-    @$(".tab.active, .tablinks a.active", tabgroup).removeClass("active")
-    @$(link.attr("href"), tabgroup).addClass("active")
-    link.addClass("active")
-    return false
-
   setPhoto: (imageData) =>
     @photo = imageData
     @$(".image").html $("<img/>").attr(
@@ -282,13 +259,6 @@ class ds.EditIdea extends Backbone.View
 
   saveIdea: =>
     ideaIsNew = not @idea.id?
-    
-    # prepare attributes...
-    if (@idea.get("drawing") != @canvas.actions or
-          @idea.get("background") != @canvas.background)
-      @idea.incImageVersion()
-    if @photo?
-      @idea.incPhotoVersion()
     attrs = {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
@@ -298,25 +268,26 @@ class ds.EditIdea extends Backbone.View
       drawing: @canvas.actions
       editor: ds.users?.self?.user_id
     }
-    if ideaIsNew
-      attrs.creator = ds.users?.self?.user_id
-      attrs.order = ds.ideas.length
 
-    @idea.save attrs,
+    @idea.save(attrs, {
       success: (model) =>
         if ideaIsNew
-          @dotstorm.addIdea(model.id, silent: true)
-          @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
-        if ideaIsNew
+          @dotstorm.addIdea(model, silent: true)
+          @dotstorm.save null, {
+            error: (model, err) =>
+              console.error "error", err
+              flash "error", "Error saving: #{err}"
+          }
           ds.ideas.add(model)
-        finish = ->
-          ds.app.navigate "/d/#{ds.model.get("slug")}/#{model.id}", trigger: true
+
+        finish = =>
+          ds.app.navigate "/d/#{@dotstorm.get("slug")}/#{model.id}", trigger: true
         if @photo?
           # Upload photo
           responseHandle = "img#{new Date().getTime()}"
           flash "info", "Uploading photo..."
           ds.socket.emit "uploadPhoto",
-            idea: model.toJSON()
+            idea: { _id: model.id }
             imageData: @photo
             event: responseHandle
           ds.socket.once responseHandle, (data) =>
@@ -327,9 +298,10 @@ class ds.EditIdea extends Backbone.View
         else
           finish()
       error: (model, err) ->
-        console.error(err)
-        str = if err.error? then err.error else err
-        flash "error", "Error saving: #{str}"
+        console.error("error", err)
+        str = err.error?.message
+        flash "error", "Error saving: #{str}. See log for details."
+    })
 
     return false
 
@@ -354,6 +326,7 @@ class ds.EditIdea extends Backbone.View
   handleChangeBackgroundColor: (event) =>
     @changeBackgroundColor $(event.currentTarget).css("background-color")
     return false
+
   changeBackgroundColor: (color) =>
     @canvas.background = color
     @$(".canvasHolder").css "background", @canvas.background
@@ -368,6 +341,7 @@ class ds.ShowIdeaGroup extends Backbone.View
   initialize: (options) ->
     @group = options.group
     @ideaViews = options.ideaViews
+    @position = options.position
 
   editLabel: (event) =>
     $(event.currentTarget).replaceWith @editTemplate
@@ -386,22 +360,30 @@ class ds.ShowIdeaGroup extends Backbone.View
 
   render: =>
     @$el.html @template
+      showGroup: @ideaViews.length > 1
       label: @group.label
-    @$el.addClass("group")
+    if @ideaViews.length > 1
+      @$el.addClass("group")
+    @$el.attr({
+      "data-group-id": @group._id
+      "data-group-position": @position
+    })
     container = @$(".ideas")
-    for view in @ideaViews
+    _.each @ideaViews, (view, i) =>
       container.append view.el
+      view.$el.attr("data-idea-position", i)
+      view.render()
     this
 
-class ds.ShowIdeas extends Backbone.View
+class ds.Organizer extends Backbone.View
   #
   # Display a list of ideas, and provide UI for grouping them via
   # drag and drop.
   #
-  template: _.template $("#dotstormShowIdeas").html() or ""
+  template: _.template $("#dotstormOrganizer").html() or ""
   events:
-    'click .add-link': 'softNav'
-    'click .tag': 'toggleTag'
+    'click        .add-link': 'softNav'
+    'click             .tag': 'toggleTag'
 
     'touchstart  .smallIdea': 'startDrag'
     'mousedown   .smallIdea': 'startDrag'
@@ -435,7 +417,7 @@ class ds.ShowIdeas extends Backbone.View
     @dotstorm.on "change:name", =>
       #console.debug "Dotstorm: topic changed"
       @renderTopic()
-    @dotstorm.on "change:ideas", =>
+    @dotstorm.on "change:groups", =>
       #console.debug "Dotstorm: grouping changed"
       # This double-calls... but ok!
       @renderGroups()
@@ -449,28 +431,26 @@ class ds.ShowIdeas extends Backbone.View
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
     return false
 
-  sortGroups: (_model_ids, _prev) =>
+  sortGroups: =>
     # Recursively run through the grouped ideas referenced in the dotstorm sort
     # order, resolving the ids to models, and adding next/prev links to ideas.
-    _model_ids or _model_ids = @dotstorm.get("ideas")
-    groups = []
-    for id_or_obj in _model_ids
-      if id_or_obj.ideas?
-        ideas = @sortGroups(id_or_obj.ideas, _prev)
-        groups.push {
-          label: id_or_obj.label
-          ideas: ideas
-        }
-        _prev = ideas.prev
-      else
-        idea = @ideas.get(id_or_obj)
-        groups.push idea
-        if _prev?
-          idea.prev = _prev
-          idea.prev.next = idea
-        _prev = idea
-    groups.prev = _prev
-    return groups
+    groups = @dotstorm.get("groups")
+    prev = null
+    linkedGroups = []
+    for group in groups
+      desc = {
+        _id: group._id
+        label: group.label
+        ideas: []
+      }
+      for id in group.ideas
+        idea = @ideas.get(id)
+        idea.prev = prev
+        prev.next = idea if prev?
+        prev = idea
+        desc.ideas.push(idea)
+      linkedGroups.push(desc)
+    return linkedGroups
 
   showBig: (model) =>
     # For prev/next navigation, we assume that 'prev' and 'next' have been set
@@ -492,8 +472,7 @@ class ds.ShowIdeas extends Backbone.View
     tags = {}
     hasTags = false
     for idea in @ideas.models
-      taglist = idea.getTags()
-      for tag in taglist
+      for tag in idea.get("tags") or []
         hasTags = true
         tags[tag] = (tags[tag] or 0) + 1
     if hasTags
@@ -572,31 +551,31 @@ class ds.ShowIdeas extends Backbone.View
 
   renderGroups: =>
     #console.debug "render groups"
-    @$("#showIdeas").html("")
+    @$("#organizer").html("")
     if @ideas.length == 0
-      @$("#showIdeas").html "To get started, edit the topic or name above, and then add an idea!"
+      @$("#organizer").html "To get started, edit the topic or name above, and then add an idea!"
     else
       group_order = @sortGroups()
-      for entity in group_order
-        if entity.ideas?
-          groupView = new ds.ShowIdeaGroup
-            group: entity
-            ideaViews: (@getIdeaView(idea) for idea in entity.ideas)
-          @$("#showIdeas").append groupView.el
+      _.each group_order, (group, i) =>
+        groupView = new ds.ShowIdeaGroup
+          position: i
+          group: group
+          ideaViews: (@getIdeaView(idea) for idea in group.ideas)
+        @$("#organizer").append groupView.el
+        groupView.render()
+        groupView.on "change:label", (group) =>
+          @dotstorm.get("groups")[i].label = group.label
+          @dotstorm.save null,
+            error: (model, err) =>
+              console.error("error", err)
+              flash "error", "Error saving: #{err}"
           groupView.render()
-          groupView.on "change:label", (group) =>
-            @dotstorm.setLabelFor(group.ideas[0].id, group.label)
-            @dotstorm.save null,
-              error: (err) => flash "error", "Error saving: #{err}"
-            groupView.render()
-        else
-          @$("#showIdeas").append @getIdeaView(entity).el
-    @$("#showIdeas").append("<div style='clear: both;'></div>")
+
+    @$("#organizer").append("<div style='clear: both;'></div>")
 
   getIdeaView: (idea) =>
     unless @smallIdeaViews[idea.id]
       view = new ds.ShowIdeaSmall(model: idea)
-      view.render()
       @smallIdeaViews[idea.id] = view
     return @smallIdeaViews[idea.id]
 
@@ -699,6 +678,17 @@ class ds.ShowIdeas extends Backbone.View
       @moveNote()
     return false
 
+
+  getGroupPosition: ($el) ->
+    # Get the group position of the draggable entity (either a group or an
+    # idea).  Returns [groupPos, ideaPos or null]
+    if $el.hasClass("group")
+      return [parseInt($el.attr("data-group-position")), null]
+    return [
+      parseInt($el.parents("[data-group-position]").attr("data-group-position"))
+      parseInt($el.attr("data-idea-position"))
+    ]
+
   clearDragUI: (event) =>
     event.preventDefault()
     $(window).off "mousemove", @continueDrag
@@ -714,73 +704,68 @@ class ds.ShowIdeas extends Backbone.View
       left: 0
       top: 0
     
-    # Check for drop targets.
-    dropTarget =
-      leftside: @$(".leftside")[0]
-      rightside: @$(".rightside")[0]
-      hovered: @$(".hovered")[0]
-      sourceId: @dragState.active.attr("data-id")
-      sourceIsGroup: false
+    drop =
+      source: @dragState.active
+      target: @$(".leftside, .hovered, .rightside")
+    drop.rightside = drop.target.hasClass("rightside")
 
-    if not dropTarget.sourceId?
-      dropTarget.sourceId = @dragState.active.find(".smallIdea:first").attr("data-id")
-      dropTarget.sourceIsGroup = true
+    [drop.sourceGroupPos, drop.sourceIdeaPos] = @getGroupPosition(drop.source)
+    if drop.target[0]?
+      [drop.destGroupPos, drop.destIdeaPos] = @getGroupPosition(drop.target)
+      if @dotstorm.get("groups")[drop.destGroupPos].ideas.length == 1 and not drop.target.hasClass("hovered")
+        drop.destIdeaPos = null
+      else if not drop.destIdeaPos and drop.target.hasClass("hovered")
+        drop.destIdeaPos = parseInt(drop.target.find("[data-idea-position]:first").attr("[data-idea-position]"))
 
-    droppable = dropTarget.hovered or dropTarget.leftside or dropTarget.rightside
-    if droppable?
-      dropTarget.targetId = droppable.getAttribute("data-id")
-      dropTarget.targetIsGroup = false
-      if not dropTarget.targetId
-        dropTarget.targetId = $(droppable).find(".smallIdea:first").attr("data-id")
-        dropTarget.targetIsGroup = true
-
-    @$(".smallIdea, .group").removeClass("leftside rightside hovered")
-    return dropTarget
+    else
+      drop.destGroupPos = null
+      drop.destIdeaPos = null
+    drop.target.removeClass("leftside rightside hovered")
+    return drop
 
   stopDragGroup: (event) => @stopDrag(event)
   stopDrag: (event) =>
-    dropTarget = @clearDragUI(event)
-    unless dropTarget
+    drop = @clearDragUI(event)
+    unless drop
       return
 
-    if (not dropTarget.sourceIsGroup) and @checkForClick()
-      @showBig @ideas.get(dropTarget.sourceId)
-      @dragState = null
-      return
-
-    if dropTarget.targetId? or dropTarget.groupTargetId?
-      if dropTarget.hovered
-        @dotstorm.combine(
-          dropTarget.sourceId,
-          dropTarget.sourceIsGroup,
-          dropTarget.targetId,
-          dropTarget.targetIsGroup,
-          false
-        )
-      else
-        @dotstorm.move(
-          dropTarget.sourceId,
-          dropTarget.sourceIsGroup,
-          dropTarget.targetId,
-          dropTarget.targetIsGroup,
-          dropTarget.rightside?
-        )
-      @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
-    else if (not dropTarget.sourceIsGroup)
-      # Are we being dragged out of our current group?
-      groupParent = @dragState.active.parents(".group:first")
-      if groupParent[0]?
-        pos = @dragState.lastPos
-        dims = groupParent.offset()
-        dims.width = groupParent.width()
-        dims.height = groupParent.height()
-        unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
-          # We've been dragged out.
-          if pos.x > dims.left + dims.width * 0.5
-            @dotstorm.ungroup(dropTarget.sourceId, true)
-          else
-            @dotstorm.ungroup(dropTarget.sourceId)
-          @dotstorm.save null, error: (err) => flash "error", "Error saving: #{err}"
+    if not drop.target[0]
+      if drop.sourceIdeaPos? and @checkForClick()
+        @showBig(@ideas.get(drop.source.attr("data-id")))
+        return false
+      else if drop.sourceIdeaPos?
+        # Are we being dragged out of our current group?
+        groupParent = drop.source.parents(".group:first")
+        if groupParent[0]?
+          pos = @dragState.lastPos
+          dims = groupParent.offset()
+          dims.width = groupParent.width()
+          dims.height = groupParent.height()
+          unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
+            @dotstorm.move(
+              drop.sourceGroupPos, drop.sourceIdeaPos,
+              drop.sourceGroupPos, null,
+              1
+            )
+            @dotstorm.trigger("change:groups")
+            @dotstorm.save null, {
+              error: (model, err) =>
+                console.error("error", err)
+                flash "error", "Error saving: #{err}"
+            }
+    else
+      # We have a drop target.  Move!
+      @dotstorm.move(
+        drop.sourceGroupPos, drop.sourceIdeaPos,
+        drop.destGroupPos, drop.destIdeaPos,
+        if drop.rightside then 1 else 0
+      )
+      @dotstorm.trigger("change:groups")
+      @dotstorm.save null, {
+        error: (model, err) =>
+          console.error("error", err)
+          flash "error", "Error saving: #{err}"
+      }
     @dragState = null
     return false
 
@@ -805,9 +790,8 @@ class ds.ShowIdeaSmall extends Backbone.View
     @model.on "change:photo", @render
 
   render: =>
-    #console.debug "render small", @model.id
     args = _.extend
-      tags: ""
+      tags: []
       description: ""
     , @model.toJSON()
     @$el.html @template args
@@ -816,23 +800,23 @@ class ds.ShowIdeaSmall extends Backbone.View
     @$el.css backgroundColor: @model.get("background")
     resize = =>
       @$(".text").css "fontSize", (@$(".canvasHolder").height() / 10) + "px"
-    resize()
-    if @model.get("imageVersion")?
+    if @model.get("drawingURLs")[@size]?
       drawing = $("<img/>").attr
-        src: @model.getThumbnailURL(@size)
+        src: @model.get("drawingURLs")[@size]
         alt: "Loading..."
       drawing.on "load", ->
         drawing.attr "alt", "drawing thumbnail"
         resize()
       @$(".canvas").html drawing
-    if @model.get("photoVersion")?
+    if @model.get("photoURLs")[@size]?
       photo = $("<img/>").attr
-        src: @model.getPhotoURL(@size)
+        src: @model.get("photoURLs")[@size]
         alt: "Loading..."
       photo.on "load", ->
         photo.attr "alt", "photo thumbnail"
       @$(".image").html photo
     @renderVotes()
+    resize()
 
   renderVotes: =>
     @$(".votes").html new ds.VoteWidget({
@@ -876,7 +860,7 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.on "change:photo", @render
 
   render: =>
-    #console.debug "render big"
+    #console.debug "render big", @model.get "imageVersion"
     args = _.extend {
       tags: ""
       description: ""
@@ -886,15 +870,15 @@ class ds.ShowIdeaBig extends Backbone.View
     @$el.html @template args
     @$el.addClass("bigIdea")
     @$(".canvasHolder").css backgroundColor: @model.get("background")
-    if @model.get("imageVersion")?
+    if @model.get("drawingURLs")?.full
       drawing = $("<img/>").attr
-        src: @model.getThumbnailURL("full")
+        src: @model.get("drawingURLs").full
         alt: "Loading..."
       drawing.on "load", -> drawing.attr "alt", "drawing thumbnail"
       @$(".canvas").html drawing
-    if @model.get("photoVersion")?
+    if @model.get("photoURLs")?.full
       photo = $("<img/>").attr
-        src: @model.getPhotoURL("full")
+        src: @model.get("photoURLs").full
         alt: "Loading..."
       photo.on "load", -> photo.attr "alt", "photo thumbnail"
       @$(".image").html photo
@@ -960,7 +944,9 @@ class ds.ShowIdeaBig extends Backbone.View
 
   saveTags: (event) =>
     @model.save {tags: @$(".tags input[type=text]").val()},
-      error: (model, err) => flash "error", err
+      error: (model, err) =>
+        console.error "error", err
+        flash "error", err
     return false
 
 class ds.VoteWidget extends Backbone.View
@@ -1002,5 +988,6 @@ class ds.VoteWidget extends Backbone.View
         votes.splice(pos, 1)
       @idea.save {votes: votes},
         error: (model, err) =>
+          console.error "error", err
           flash "error", "Error saving vote: #{err}"
     return false

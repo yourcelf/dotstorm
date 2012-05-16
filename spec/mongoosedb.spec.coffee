@@ -6,10 +6,11 @@ _        = require 'underscore'
 h        = require './helper'
 
 describe "Mongoose connector", ->
-  before ->
+  before (done) ->
     mongoose.connect("mongodb://localhost:27017/test")
+    h.clearDb(done)
 
-  it "clears the test db", (done) ->
+  after (done) ->
     h.clearDb(done)
 
   it "creates a dotstorm", (done) ->

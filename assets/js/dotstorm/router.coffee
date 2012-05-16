@@ -24,12 +24,18 @@ class ds.Router extends Backbone.Router
     else
       @updateNavLinks(false)
       @secondrun = true
-    $("#app").html new ds.Intro().render().el
+    intro = new ds.Intro()
+    intro.on "open", (slug, name) =>
+      @open slug, name, =>
+        @navigate "/d/#{slug}/"
+        @dotstormShowIdeas(slug)
+    $("#app").html intro.el
+    intro.render()
 
   dotstormShowIdeas: (slug, id, tag) =>
     @updateNavLinks(true, "show-ideas")
     @open slug, "", =>
-      $("#app").html new ds.ShowIdeas({
+      $("#app").html new ds.Organizer({
         model: ds.model
         ideas: ds.ideas
         showId: id
@@ -43,7 +49,6 @@ class ds.Router extends Backbone.Router
   dotstormAddIdea: (slug) =>
     @updateNavLinks(true, "add")
     @open slug, "", ->
-      console.log slug
       view = new ds.EditIdea
         idea: new ds.Idea
         dotstorm: ds.model
@@ -94,12 +99,15 @@ class ds.Router extends Backbone.Router
               flash "info", "Created!  Click things to change them."
               ds.joinRoom(model, true, callback)
             error: (model, err) ->
+              console.log "error", err
               flash "error", err
         else if coll.length == 1
           ds.joinRoom(coll.models[0], false, callback)
         else
           flash "error", "Ouch. Something broke. Sorry."
-      error: (coll, res) => flash "error", res.error
+      error: (coll, res) =>
+        console.log "error", res
+        flash "error", res.error
     return false
 
 ds.joinRoom = (newModel, isNew, callback) ->
@@ -113,7 +121,9 @@ ds.joinRoom = (newModel, isNew, callback) ->
     # Nothing else to fetch yet -- we're brand spanking new.
     return callback()
   ds.ideas.fetch
-    error: (coll, err) -> flash "error", "Error fetching #{attr}."
+    error: (coll, err) ->
+      console.log "error", err
+      flash "error", "Error fetching #{attr}."
     success: (coll) -> callback?()
     query: {dotstorm_id: ds.model.id}
     fields: {drawing: 0}

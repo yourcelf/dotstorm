@@ -6,13 +6,16 @@ models     = require '../lib/schema'
 BASE_DIR = __dirname + "/../assets"
 
 describe "Canvas to image from idea", ->
-  before ->
+  before (done) ->
     @mahId = undefined
     @server = h.startServer()
-  after ->
-    @server.app.close()
+    done()
 
-  it "creates an idea", (done) ->
+  after (done) ->
+    @server.app.close()
+    done()
+
+  it "creates idea", (done) ->
     idea = new models.Idea
       dotstorm_id: "aaaaaaaaaaaaaaaaaaaaaaaa"
       background: "#ffffdd"
@@ -23,10 +26,9 @@ describe "Canvas to image from idea", ->
     idea.save (err) =>
       @mahId = idea._id
       expect(err).to.be null
-      h.waitsFor =>
-        if path.existsSync idea.getDrawingPath("small")
-          done()
-          return true
+      expect(path.existsSync idea.getDrawingPath("small")).to.be true
+      done()
+      return true
 
   it "removes the idea", (done) ->
     models.Idea.findOne {_id: @mahId}, (err, idea) ->

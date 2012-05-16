@@ -13,216 +13,110 @@ class ds.IdeaList extends Backbone.Collection
 class ds.Dotstorm extends Backbone.Model
   collectionName: 'Dotstorm'
   defaults:
-    ideas: []
-
+    groups: []
   slugify: (name) -> return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
+  uuid: (a) =>
+    # Generate a uuid: https://gist.github.com/982883
+    if a
+      return (a^Math.random() * 16 >> a / 4).toString(16)
+    else
+      return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, @uuid)
+
 
   validate: (attrs) ->
     if attrs.slug?.length < 4
       return "Name must be 4 or more characters."
 
-  getGroup: (idea_id) =>
-    for entity in @get("ideas")
-      if entity.ideas? and _.contains entity.ideas, idea_id
-        return entity
+  indexOfIdeaId: (idea_id, _list, _parent, _group_pos) =>
+    groups = @get("groups") or []
+    pos = i = -1
+    for i in [0...groups.length]
+      pos = _.indexOf groups[i].ideas, idea_id
+      if pos != -1
+        return [i, pos]
     return null
 
-  getGroupPos: (idea_id, _list, _parent, _group_pos) =>
-    # Return the list containing the ID, and the position within the list.
-    unless _list? then _list = @get("ideas")
-    for i in [0..._list.length]
-      entity = _list[i]
-      if entity == idea_id
-        return { list: _list, pos: i, parent: _parent, groupPos: _group_pos }
-      else if entity.ideas?
-        pos = @getGroupPos(idea_id, entity.ideas, _list, i)
-        if pos
-          return pos
-    return null
-
-
-  setLabelFor: (idea_id, label, options) =>
-    @getGroup(idea_id).label = label
-
-  #
-  # Moving notes around
-  #
-  putLeftOf: (source, target, options) =>
-    @move(source, false, target, false, false, options)
-  putRightOf: (source, target, options) =>
-    @move(source, false, target, false, true, options)
-  putLeftOfGroup: (source, target, options) =>
-    @move(source, false, target, true, false, options)
-  putRightOfGroup: (source, target, options) =>
-    @move(source, false, target, true, true, options)
-  #
-  # Moving groups around
-  #
-  putGroupLeftOf: (source, target, options) =>
-    @move(source, true, target, false, false, options)
-  putGroupRightOf: (source, target, options) =>
-    @move(source, true, target, false, true, options)
-  putGroupLeftOfGroup: (source, target, options) =>
-    @move(source, true, target, true, false, options)
-  putGroupRightOfGroup: (source, target, options) =>
-    @move(source, true, target, true, true, options)
-
-  #
-  # All-in-one moving
-  #
-  move: (source, sourceGroup, target, targetGroup, rightSide, options) =>
-    if sourceGroup
-      if targetGroup
-        @_popGroupAfterGroup(source, target, rightSide, options)
-      else
-        @_popGroupTo(source, target, rightSide, options)
-    else
-      if targetGroup
-        @_popAfterGroup(source, target, rightSide, options)
-      else
-        @_popTo(source, target, rightSide, options)
-
-  #
-  # Grouping notes
-  #
-  groupify: (id1, id2, right_side, options) =>
-    # Remove id1 from its original position.
-    id1Pos = @getGroupPos(id1)
-    id1Pos.list.splice(id1Pos.pos, 1)
-    if id1Pos.parent? and id1Pos.list.length == 0
-      id1Pos.parent.splice(id1Pos.groupPos, 1)
-
-    # Find id2, and add id2 to it.
-    groupPos = @getGroupPos(id2)
-    if groupPos.parent?
-      if right_side
-        groupPos.list.splice(groupPos.pos + 1, 0, id1)
-      else
-        groupPos.list.splice(groupPos.pos + 0, 0, id1)
-    else
-      # Add a new group in the position of id2.
-      if right_side
-        newGroup = { ideas: [id2, id1] }
-      else
-        newGroup = { ideas: [id1, id2] }
-      groupPos.list.splice(groupPos.pos, 1, newGroup)
-      # Remove id1 from its original position.
-    @orderChanged(options)
-
-  ungroup: (idea_id, right_side, options) =>
-    groupPos = @getGroupPos(idea_id)
-    if groupPos.parent?
-      # Remove idea_id from the group.
-      groupPos.list.splice(groupPos.pos, 1)
-      for i in [0...groupPos.parent.length]
-        # Add idea_id back in.
-        if groupPos.parent[i].ideas == groupPos.list
-          # Is the group empty?  Replace it.
-          if groupPos.list.length == 0
-            groupPos.parent.splice(i, 1, idea_id)
-          else if right_side
-            # Not empty?  Insert on the right...
-            groupPos.parent.splice(i + 1, 0, idea_id)
-          else
-            # ... or the left.
-            groupPos.parent.splice(i, 0, idea_id)
-          @orderChanged(options)
-          return
-
-  #
-  # Grouping groups
-  #
-  combineGroups: (source_id, target_id, right_side, options) =>
-    source_pos = @getGroupPos(source_id)
-    target_pos = @getGroupPos(target_id)
-    if target_pos.parent?
-      if right_side
-        @putGroupRightOf(source_id, target_id, options)
-      else
-        @putGroupLeftOf(source_id, target_id, options)
-    else
-      if right_side
-        # 1. Move the group right of the target.
-        @putGroupRightOf(source_id, target_id, options)
-        # 2. Move the target into the group.
-        @putLeftOf(target_id, source_id, options)
-      else
-        # 1. Move the group left of the target.
-        @putGroupLeftOf(source_id, target_id, options)
-        # 2. Move the target into the group.
-        @putRightOf(target_id, source_pos.list[source_pos.list.length - 1], options)
-
-  #
-  # All-in-one grouping
-  #
-  combine: (source, sourceGroup, target, targetGroup, rightSide, options) =>
-    if sourceGroup
-      @combineGroups(source, target, rightSide, options)
-    else
-      @groupify(source, target, rightSide, options)
-  
   #
   # Adding and removing ideas
   #
 
-  addIdea: (idea_id, options) =>
-    groupPos = @getGroupPos(idea_id)
-    unless groupPos?
-      ideas = @get("ideas")
-      ideas.push(idea_id)
-      @set("ideas", ideas, options)
+  addIdea: (idea, options) => @addIdeaId idea.id, options
+  addIdeaId: (idea_id, options) =>
+    unless @indexOfIdeaId(idea_id)?
+      groups = @get("groups") or []
+      groups.push({_id: @uuid(), ideas: [idea_id]})
+      @set("groups", groups, options)
 
-  removeIdea: (idea_id, options) =>
-    groupPos = @getGroupPos(idea_id)
-    if groupPos?
-      groupPos.list.splice(groupPos.pos, 1)
+  removeIdea: (idea, options) => @removeIdeaId(idea.id, options)
+  removeIdeaId: (idea_id, options) =>
+    pos = @indexOfIdeaId(idea_id)
+    if pos?
+      groups = @get("groups")
+      if groups[pos[0]].ideas.length == 1
+        groups.splice(pos[0], 1)
+      else
+        groups[pos[0]].ideas.splice(pos[1], 1)
       @orderChanged(options)
 
   #
-  # Helpers
-  #
-  _popTo: (source_id, target_id, right_side, options) =>
-    # Remove source.
-    sourcePos = @getGroupPos(source_id)
-    sourcePos.list.splice(sourcePos.pos, 1)
-    # Purge empty groups.
-    if sourcePos.parent? and sourcePos.list.length == 0
-      sourcePos.parent.splice(sourcePos.groupPos, 1)
-    targetPos = @getGroupPos(target_id)
-    offset = if right_side then 1 else 0
-    targetPos.list.splice(targetPos.pos + offset, 0, source_id)
-    @orderChanged(options)
-
-  _popGroupTo: (source_id, target_id, right_side, options) =>
-    sourcePos = @getGroupPos(source_id)
-    group = sourcePos.parent.splice(sourcePos.groupPos, 1)[0]
-    targetPos = @getGroupPos(target_id)
-    offset = if right_side then 1 else 0
-    if targetPos.parent?
-      targetLabel = targetPos.parent[targetPos.groupPos].label
-      if group.label and not targetLabel
-        targetPos.parent[targetPos.groupPos].label = group.label
-      spliceArgs = [targetPos.pos + offset, 0].concat(group.ideas)
-      targetPos.list.splice.apply(targetPos.list, spliceArgs)
+  # Moving ideas within/between/into groups.
+  # 
+  # Takes 4 arguments:
+  #   sourceGroupPos: the source group position
+  #   sourceIdeaPos: the position of the idea within the source group, or null
+  #                  if the whole group is being moved.
+  #   destGroupPos: the position of the group at the destination.
+  #   destIdeaPos: the position of the idea within the group into which to
+  #                interpolate the source idea(s); or null, if we intend to 
+  #                drop the source idea(s) adjacent the destination group.
+  #   offset: positional offset. 0 for left side, 1 for right side.
+  move: (sourceGroupPos, sourceIdeaPos, destGroupPos, destIdeaPos, offset=0) =>
+    groups = @get("groups")
+    finish = =>
+      @orderChanged()
+      @set("groups", groups)
+    if sourceIdeaPos == null
+      # MOVING A GROUP: Source is a whole group.
+      # Ignore move if we're moving a group to itself.
+      unless destGroupPos == sourceGroupPos
+        # Source is a whole group.
+        source = groups.splice(sourceGroupPos, 1)[0]
+        destGroupOffset = if destGroupPos < sourceGroupPos then 0 else -1
+        if destIdeaPos == null
+          # Dest is adjacent the target group.
+          groups.splice(destGroupPos + destGroupOffset + offset, 0, source)
+        else
+          # Dest is inside a target group.
+          dest = groups[destGroupPos + destGroupOffset]
+          dest.ideas.splice.apply(dest.ideas,
+            [destIdeaPos + offset, 0].concat(source.ideas))
+          if source.label? and not dest.label?
+            dest.label = source.label
+        return finish()
     else
-      targetPos.list.splice(targetPos.pos + offset, 0, group)
-    @orderChanged(options)
-
-  _popAfterGroup: (source_id, target_id, right_side, options) =>
-    sourcePos = @getGroupPos(source_id)
-    sourcePos.list.splice(sourcePos.pos, 1)
-    targetPos = @getGroupPos(target_id)
-    offset = if right_side then 1 else 0
-    targetPos.parent.splice(targetPos.groupPos + offset, 0, source_id)
-    @orderChanged(options)
-
-  _popGroupAfterGroup: (source_id, target_id, right_side, options) =>
-    sourcePos = @getGroupPos(source_id)
-    group = sourcePos.parent.splice(sourcePos.groupPos, 1)[0]
-    targetPos = @getGroupPos(target_id)
-    offset = if right_side then 1 else 0
-    targetPos.parent.splice(targetPos.groupPos + offset, 0, group)
-    @orderChanged(options)
+      # MOVING AN IDEA: Source is a member of a group.
+      if sourceGroupPos == destGroupPos and destIdeaPos != null
+        group = groups[sourceGroupPos]
+        destOffset = if destIdeaPos < sourceIdeaPos then 0 else -1
+        idea = group.ideas.splice(sourceIdeaPos, 1)[0]
+        group.ideas.splice(destIdeaPos + destOffset + offset, 0, idea)
+      else
+        # Moving between groups.
+        source = groups[sourceGroupPos].ideas.splice(sourceIdeaPos, 1)[0]
+        if groups[sourceGroupPos].ideas.length == 0
+          groups.splice(sourceGroupPos, 1)
+          destGroupOffset = if destGroupPos < sourceGroupPos then 0 else -1
+        else
+          destGroupOffset = 0
+        destGroup = groups[destGroupPos + destGroupOffset]
+        if destIdeaPos == null
+          # Dest is adjacent the target group.
+          newGroup = {_id: @uuid(), ideas: [source]}
+          groups.splice(destGroupPos + destGroupOffset + offset, 0, newGroup)
+        else
+          # Dest is within the target group.
+          destGroup.ideas.splice(destIdeaPos + offset, 0, source)
+      return finish()
 
   orderChanged: (options) => @trigger "change:ideas" unless options?.silent
 
@@ -230,7 +124,6 @@ class ds.Dotstorm extends Backbone.Model
 class ds.DotstormList extends Backbone.Collection
   model: ds.Dotstorm
   collectionName: ds.Dotstorm.prototype.collectionName
-
 
 modelFromCollectionName = (collectionName, isCollection=false) ->
   if isCollection

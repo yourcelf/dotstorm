@@ -4,6 +4,11 @@ uuid       = require 'node-uuid'
 _          = require 'underscore'
 thumbnails = require './thumbnails'
 
+#
+# Ideas
+#
+
+# Voter: embedded in Idea.
 VoterSchema = new Schema
   user: {type: Schema.ObjectId, ref: 'User' }
   session_id: { type: String }
@@ -14,13 +19,14 @@ VoterSchema.pre 'save', (next) ->
     next()
 Voter = mongoose.model("Voter", VoterSchema)
 
+# Idea
 IdeaSchema = new Schema
   author: { type: Schema.ObjectId, ref: 'User' }
   votes: [VoterSchema]
   dotstorm_id: { type: Schema.ObjectId, required: true }
   imageVersion: { type: Number }
   photoVersion: { type: Number }
-  background: { type: String, match: /^#[a-f0-9]{6}$/ }
+  background: { type: String }
   description: { type: String }
   tags: [{
     type: String
@@ -33,8 +39,7 @@ IdeaSchema = new Schema
     type: [Schema.Types.Mixed]
     set: (v) ->
       unless (not v) or _.isEqual v, @drawing
-        @imageVersion ||= 0
-        @imageVersion++
+        @set "imageVersion", (@imageVersion or 0) + 1
         @updateThumbnails = true
       return v
 IdeaSchema.pre 'save', (next) ->
@@ -59,17 +64,15 @@ IdeaSchema.pre 'remove', (next) ->
       next(new Error(err))
     else
       next(null)
-IdeaSchema.virtual('photoURLs')
-  .get ->
+IdeaSchema.virtual('photoURLs').get ->
     photos = {}
     if @photoVersion?
       for size in ["small", "medium", "large", "full"]
         photos[size] = "/uploads/idea/#{@id}/photo/#{size}#{@photoVersion}.png"
     return photos
-IdeaSchema.virtual('drawingURLs')
-  .get ->
+IdeaSchema.virtual('drawingURLs').get ->
     thumbs = {}
-    if @drawing.length
+    if @imageVersion?
       for size in ["small", "medium", "large", "full"]
         thumbs[size] = "/uploads/idea/#{@id}/drawing/#{size}#{@imageVersion}.png"
     return thumbs
@@ -92,12 +95,25 @@ Idea.prototype.getPhotoPath = (size) ->
   if @photoURLs[size]?
     return thumbnails.BASE_PATH + @photoURLs[size]
   return null
+Idea.prototype.serialize = ->
+  json = @toJSON()
+  json.drawingURLs = @drawingURLs
+  json.photoURLs = @photoURLs
+  json.taglist = @taglist
+  return json
 
+#
+# Dotstorms
+#
+
+# Idea Group: for sorting/ordering of ideas; embedded in dotstorm.
 IdeaGroupSchema = new Schema
+  _id: { type: String }
   label: { type: String, trim: true }
   ideas: [{type: Schema.ObjectId, ref: 'Idea'}]
 IdeaGroup = mongoose.model("IdeaGroup", IdeaGroupSchema)
 
+# Dotstorm
 DotstormSchema = new Schema
   slug:
     type: String
@@ -105,6 +121,7 @@ DotstormSchema = new Schema
     unique: true
     trim: true
     match: /[-a-zA-Z0-9]+/
+  embed_slug: {type: String, required: true, default: uuid.v4}
   name: { type: String, required: false, trim: true }
   description: { type: String, required: false, trim: true }
   groups: [IdeaGroupSchema]
@@ -113,5 +130,7 @@ Dotstorm.withLightIdeas = (constraint, cb) ->
   return Dotstorm.findOne(constraint).populate(
     'groups.ideas', { 'drawing': 0 }
   ).run cb
+Dotstorm.prototype.serialize = ->
+  return @toJSON()
 
 module.exports = { Dotstorm, IdeaGroup, Idea }

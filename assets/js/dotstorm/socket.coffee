@@ -22,7 +22,7 @@ ds.socket.on 'connect', ->
     ds.users?.setUser(user)
 
   ds.socket.on 'backbone', (data) ->
-    #console.debug 'backbone sync', data
+    console.debug 'backbone sync', data
     switch data.signature.collectionName
       when "Idea"
         switch data.signature.method

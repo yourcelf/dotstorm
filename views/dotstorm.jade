@@ -57,24 +57,13 @@ script#dotstormAddIdea(type='text/template')
       input.cta.cta-blue.cta-thin(type='submit', value='Share &raquo;', style='float: right')
     div(style='clear: both;')
 
-script#dotstormShowIdeas(type='text/template')
+script#dotstormOrganizer(type='text/template')
   div.front-matter
     div.topic
   div.idea-browser
-    div#showIdeas
+    div#organizer
     div(style='clear: both;')
   div.tag-links
-    | <!--
-    hr
-    | Order by
-    a.sort(href='?sort=drop', data-sort='drop') drop
-    |, 
-    a.sort(href='?sort=votes', data-sort='votes') votes
-    |, 
-    a.sort(href='?sort=date', data-sort='date') date
-    br
-    | -->
- 
 
 script#dotstormSmallIdea(type='text/template')
   div.border
@@ -90,8 +79,11 @@ script#dotstormSmallIdea(type='text/template')
       div.dragger
 
 script#dotstormSmallIdeaGroup(type='text/template')
-  div.label.clickToEdit
-    <%= label || "[Click to add label]" %>
+  <% if (showGroup) { %>
+  div
+    span.label.clickToEdit
+      <%= label || "[Click to add label]" %>
+  <% } %>
   div.ideas
 
 script#dotstormSmallIdeaGroupEditLabel(type='text/template')

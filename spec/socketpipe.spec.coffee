@@ -18,7 +18,6 @@ describe "socket pipeline", ->
 
   after (done) ->
     @server.app.close()
-    done()
     h.clearDb(done)
 
   it "visits the front page", (done) ->

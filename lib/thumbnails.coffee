@@ -1,4 +1,3 @@
-Backbone = require 'backbone'
 Canvas   = require 'canvas'
 fs       = require 'fs'
 path     = require 'path'

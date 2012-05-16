@@ -16,8 +16,11 @@ attach = (channel, io) ->
     # - ensure that someone reading a dotstorm is allowed to.
 
     socket.on 'backbone', (data) ->
-      errorOut = (error) -> socket.emit(data.signature.event, error: error)
-      respond = (model) -> socket.emit(data.signature.event, model)
+      errorOut = (error) ->
+        logger.error(error)
+        socket.emit(data.signature.event, error: error)
+      respond = (model) ->
+        socket.emit(data.signature.event, model)
       rebroadcast = (room, model) ->
         if room?
           socket.broadcast.to(room).emit "backbone", {
@@ -35,22 +38,22 @@ attach = (channel, io) ->
               idea = new models.Idea(data.model)
               idea.save (err) ->
                 if err? then return errorOut(err)
-                json = idea.toJSON()
+                json = idea.serialize()
                 delete json.drawing
-                respond(idea)
-                rebroadcast(idea.dotstorm_id, idea)
+                respond(json)
+                rebroadcast(idea.dotstorm_id, json)
             when "update"
               models.Idea.findOne {_id: data.model._id}, (err, doc) ->
                 if err? then return errorOut(err)
-                for key in ["description", "background", "tags"
+                for key in ["description", "background", "tags", "taglist",
                             "drawing", "votes"]
                   if data.model[key]?
                     doc.set key, data.model[key]
                 doc.save (err) ->
                   if err? then return errorOut(err)
-                  json = doc.toJSON()
+                  json = doc.serialize()
                   delete json.drawing
-                  respond(data.signature.event, json)
+                  respond(json)
                   rebroadcast(doc.dotstorm_id, json)
             when "delete"
               models.Idea.findOne {_id: data.model._id}, (err, doc) ->
@@ -60,16 +63,25 @@ attach = (channel, io) ->
                   respond(json)
                   rebroadcast(doc.dotstorm_id, json)
             when "read"
-              query = data.signature.query or data.model
+              if data.signature.query?
+                query = data.signature.query
+              else if data.model?
+                query = data.model
+                # Remove virtuals before querying...
+                delete query.drawingURLs
+                delete query.photoURLs
+                delete query.taglist
+              else
+                query = {}
               if data.signature.isCollection
                 method = models.Idea.findLight
               else
                 method = models.Idea.findOne
               method.call(models.Idea, query, (err, res) ->
                   if data.signature.isCollection
-                    respond(res or [])
+                    respond (m.serialize() for m in (res or []))
                   else
-                    respond(res or {})
+                    respond (res?.serialize() or {})
               )
 
         when "Dotstorm"
@@ -87,7 +99,7 @@ attach = (channel, io) ->
                     doc.set key, data.model[key]
                 doc.save (err) ->
                   if err? then return errorOut(err)
-                  respond(data.signature.event, doc)
+                  respond(data.signature.event, doc.serialize())
                   rebroadcast(doc._id, doc)
             when "delete"
               models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->

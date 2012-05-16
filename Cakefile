@@ -1,5 +1,3 @@
-fs      = require 'fs'
-jasmine = require 'jasmine-node'
 config  = require './lib/config'
 
 # You can override the configured defaults for port and host with flags.
