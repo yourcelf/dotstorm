@@ -31,30 +31,39 @@ attach = (channel, io) ->
             model: model
           }
 
+      saveIdeaAndRespond = (doc) ->
+        for key in ["dotstorm_id", "description", "background", "tags",
+                    "taglist", "drawing", "votes", "photoData"]
+          if data.model[key]?
+            doc[key] = data.model[key]
+        doc.save (err) ->
+          if (err) then return errorOut(err)
+          json = doc.serialize()
+          console.log json
+          delete json.drawing
+          respond(json)
+          rebroadcast(doc.dotstorm_id, json)
+
+      saveDotstormAndRespond = (doc) ->
+        for key in ["slug", "name", "topic", "groups"]
+          if data.model[key]?
+            doc.set key, data.model[key]
+        doc.save (err) ->
+          if err? then return errorOut(err)
+          respond(doc.serialize())
+          rebroadcast(doc._id, doc)
+
       switch data.signature.collectionName
         when "Idea"
           switch data.signature.method
             when "create"
-              idea = new models.Idea(data.model)
-              idea.save (err) ->
-                if err? then return errorOut(err)
-                json = idea.serialize()
-                delete json.drawing
-                respond(json)
-                rebroadcast(idea.dotstorm_id, json)
+              console.log "create", data.signature
+              doc = new models.Idea()
+              saveIdeaAndRespond(doc)
             when "update"
               models.Idea.findOne {_id: data.model._id}, (err, doc) ->
                 if err? then return errorOut(err)
-                for key in ["description", "background", "tags", "taglist",
-                            "drawing", "votes"]
-                  if data.model[key]?
-                    doc.set key, data.model[key]
-                doc.save (err) ->
-                  if err? then return errorOut(err)
-                  json = doc.serialize()
-                  delete json.drawing
-                  respond(json)
-                  rebroadcast(doc.dotstorm_id, json)
+                saveIdeaAndRespond(doc)
             when "delete"
               models.Idea.findOne {_id: data.model._id}, (err, doc) ->
                 doc.remove (err) ->
@@ -74,10 +83,10 @@ attach = (channel, io) ->
               else
                 query = {}
               if data.signature.isCollection
-                method = models.Idea.findLight
+                method = "findLight"
               else
-                method = models.Idea.findOne
-              method.call(models.Idea, query, (err, res) ->
+                method = "findOne"
+              models.Idea[method](query, (err, res) ->
                   if data.signature.isCollection
                     respond (m.serialize() for m in (res or []))
                   else
@@ -87,20 +96,11 @@ attach = (channel, io) ->
         when "Dotstorm"
           switch data.signature.method
             when "create"
-              dotstorm = new models.Dotstorm(data.model)
-              dotstorm.save (err) ->
-                if err? then return errorOut(err)
-                respond(dotstorm)
-                rebroadcast(dotstorm.dotstorm_id, dotstorm)
+              dotstorm = new models.Dotstorm()
+              saveDotstormAndRespond(dotstorm)
             when "update"
               models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
-                for key in ["slug", "name", "description", "groups"]
-                  if data.model[key]?
-                    doc.set key, data.model[key]
-                doc.save (err) ->
-                  if err? then return errorOut(err)
-                  respond(data.signature.event, doc.serialize())
-                  rebroadcast(doc._id, doc)
+                saveDotstormAndRespond(doc)
             when "delete"
               models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
                 doc.remove (err) ->
@@ -114,26 +114,5 @@ attach = (channel, io) ->
                   respond(docs or [])
                 else
                   respond(docs?[0] or {})
-
-    socket.on 'uploadPhoto', (data) ->
-      models.Idea.findOneLight {_id: data.idea._id}, (err, idea) ->
-        idea.photoVersion ||= 0
-        idea.photoVersion += 1
-        idea.save (err) ->
-          if err?
-            logger.error(err)
-            socket.emit(data.event, error: err)
-          else
-            thumbnails.photoThumbs idea, data.imageData, (err) ->
-              if err? then logger.error(err)
-              if data.event?
-                if err? then return socket.emit(data.event, error: err)
-
-                socket.emit data.event, {}
-                socket.broadcast.to(idea.dotstorm_id).emit("trigger", {
-                  collectionName: "Idea"
-                  id: idea.id
-                  event: "change:photo"
-                })
 
 module.exports = { attach }

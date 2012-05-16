@@ -24,10 +24,30 @@ IdeaSchema = new Schema
   author: { type: Schema.ObjectId, ref: 'User' }
   votes: [VoterSchema]
   dotstorm_id: { type: Schema.ObjectId, required: true }
-  imageVersion: { type: Number }
-  photoVersion: { type: Number }
-  background: { type: String }
-  description: { type: String }
+  imageVersion: {
+    type: Number
+    set: (v) ->
+      if v != @imageVersion then @_updateThumbnails = true
+      return v
+  }
+  photoVersion: {
+    type: Number
+    set: (v) ->
+      if v != @photoVersion then @incImageVersion()
+      return v
+  }
+  background: {
+    type: String
+    set: (v) ->
+      if v != @background then @incImageVersion()
+      return v
+  }
+  description: {
+    type: String
+    set: (v) ->
+      if v != @description then @incImageVersion()
+      return v
+  }
   tags: [{
     type: String
     set: (v) ->
@@ -38,18 +58,35 @@ IdeaSchema = new Schema
   drawing:
     type: [Schema.Types.Mixed]
     set: (v) ->
-      unless (not v) or _.isEqual v, @drawing
-        @set "imageVersion", (@imageVersion or 0) + 1
-        @updateThumbnails = true
+      unless (not v) or _.isEqual(v, @drawing) then @incImageVersion()
       return v
 IdeaSchema.pre 'save', (next) ->
+  # Update timestamps
   unless @created
     @set 'created', new Date().getTime()
   @set 'modified', new Date().getTime()
-  if @updateThumbnails
-    delete @updateThumbnails
+  next()
+IdeaSchema.pre 'save', (next) ->
+  # Save photos.
+  if @photoData
+    console.log "photo data!"
+    @photoVersion = (@get("photoVersion") or 0) + 1
+    thumbnails.photoThumbs this, @photoData, (err) =>
+      if err?
+        next(new Error(err))
+      else
+        delete @photoData
+        @incImageVersion()
+        next(null)
+  else
+    console.log "no photo data!"
+    next(null)
+IdeaSchema.pre 'save', (next) ->
+  # Assemble drawings and thumbnails.
+  if @_updateThumbnails
+    delete @_updateThumbnails
     unless @background
-      next new Error("Can't draw drawing without background")
+      next(new Error("Can't draw drawing without background"))
     else
       thumbnails.drawingThumbs this, (err) ->
         if err?
@@ -86,6 +123,8 @@ IdeaSchema.statics.findOneLight = (constraint, cb) ->
 IdeaSchema.statics.findLight = (constraint, cb) ->
   return @find constraint, { "drawing": 0 }, cb
 Idea = mongoose.model("Idea", IdeaSchema)
+Idea.prototype.incImageVersion = ->
+  @set "imageVersion", (@imageVersion or 0) + 1
 Idea.prototype.DIMS = { x: 600, y: 600 }
 Idea.prototype.getDrawingPath = (size) ->
   if @drawingURLs[size]?
@@ -123,7 +162,7 @@ DotstormSchema = new Schema
     match: /[-a-zA-Z0-9]+/
   embed_slug: {type: String, required: true, default: uuid.v4}
   name: { type: String, required: false, trim: true }
-  description: { type: String, required: false, trim: true }
+  topic: { type: String, required: false, trim: true }
   groups: [IdeaGroupSchema]
 Dotstorm = mongoose.model("Dotstorm", DotstormSchema)
 Dotstorm.withLightIdeas = (constraint, cb) ->

@@ -53,6 +53,7 @@ class ds.Topic extends Backbone.View
     @$el.html @template
       name: @model.get("name")
       topic: @model.get("topic") or "Click to edit topic..."
+      embed_slug: @model.get("embed_slug")
       url: window.location.href
     this
 
@@ -229,31 +230,31 @@ class ds.EditIdea extends Backbone.View
     @changeBackgroundColor @idea.get("background") or @$(".note-color:first").css("background-color")
     @noteTextarea = @$("#id_description")
     @$(".canvas").append(@canvas.el)
-    if @idea.get("photoVersion")?
+    if @idea.get("photoURLs")?.full
       photo = $("<img/>").attr(
-        src: @idea.getPhotoURL("full")
+        src: @idea.get("photoURLs").full
         alt: "Loading..."
       ).css("width", "100%")
       photo.on "load", -> photo.attr "alt", "photo thumbnail"
-      @$(".image").html photo
+      @$(".photo").html photo
 
     @canvas.render()
     @tool = 'pencil'
     #
     # Canvas size voodoo
     #
-    canvasHolder = @$(".canvasHolder")
-    resize = =>
-      [width, height] = fillSquare(canvasHolder, @$el, 600, 160)
-      @$el.css "min-width", width + "px"
-      @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
-    $(window).on "resize", resize
-    resize()
+    $(window).on "resize", @resize
+    @resize()
     this
+
+  resize: =>
+    [width, height] = fillSquare(@$(".canvasHolder"), @$el, 600, 160)
+    @$el.css "min-width", width + "px"
+    @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
 
   setPhoto: (imageData) =>
     @photo = imageData
-    @$(".image").html $("<img/>").attr(
+    @$(".photo").html $("<img/>").attr(
       "src", "data:image/jpg;base64," + @photo
     ).css({width: "100%"})
 
@@ -267,10 +268,12 @@ class ds.EditIdea extends Backbone.View
       dims: @canvas.ctxDims
       drawing: @canvas.actions
       editor: ds.users?.self?.user_id
+      photoData: @photo
     }
 
     @idea.save(attrs, {
       success: (model) =>
+        console.log "success??"
         if ideaIsNew
           @dotstorm.addIdea(model, silent: true)
           @dotstorm.save null, {
@@ -279,24 +282,7 @@ class ds.EditIdea extends Backbone.View
               flash "error", "Error saving: #{err}"
           }
           ds.ideas.add(model)
-
-        finish = =>
-          ds.app.navigate "/d/#{@dotstorm.get("slug")}/#{model.id}", trigger: true
-        if @photo?
-          # Upload photo
-          responseHandle = "img#{new Date().getTime()}"
-          flash "info", "Uploading photo..."
-          ds.socket.emit "uploadPhoto",
-            idea: { _id: model.id }
-            imageData: @photo
-            event: responseHandle
-          ds.socket.once responseHandle, (data) =>
-            if data.error?
-              flash "error", "Error uploading image: #{data.error}"
-            @idea.save(null) # trigger reloads now that image is done.
-            finish()
-        else
-          finish()
+        ds.app.navigate "/d/#{@dotstorm.get("slug")}/#{model.id}", trigger: true
       error: (model, err) ->
         console.error("error", err)
         str = err.error?.message
@@ -344,16 +330,22 @@ class ds.ShowIdeaGroup extends Backbone.View
     @position = options.position
 
   editLabel: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     $(event.currentTarget).replaceWith @editTemplate
       label: @group.label or ""
     @$("input[type=text]").select()
     return false
 
   cancelEdit: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     @render()
     return false
   
   saveLabel: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     @group.label = @$("input[type=text]").val()
     @trigger "change:label", @group
     return false
@@ -362,6 +354,7 @@ class ds.ShowIdeaGroup extends Backbone.View
     @$el.html @template
       showGroup: @ideaViews.length > 1
       label: @group.label
+      group_id: @group._id
     if @ideaViews.length > 1
       @$el.addClass("group")
     @$el.attr({
@@ -369,6 +362,7 @@ class ds.ShowIdeaGroup extends Backbone.View
       "data-group-position": @position
     })
     container = @$(".ideas")
+    container.css("height", "100%")
     _.each @ideaViews, (view, i) =>
       container.append view.el
       view.$el.attr("data-idea-position", i)
@@ -797,26 +791,7 @@ class ds.ShowIdeaSmall extends Backbone.View
     @$el.html @template args
     @$el.attr("data-id", @model.id)
     @$el.addClass("smallIdea")
-    @$el.css backgroundColor: @model.get("background")
-    resize = =>
-      @$(".text").css "fontSize", (@$(".canvasHolder").height() / 10) + "px"
-    if @model.get("drawingURLs")[@size]?
-      drawing = $("<img/>").attr
-        src: @model.get("drawingURLs")[@size]
-        alt: "Loading..."
-      drawing.on "load", ->
-        drawing.attr "alt", "drawing thumbnail"
-        resize()
-      @$(".canvas").html drawing
-    if @model.get("photoURLs")[@size]?
-      photo = $("<img/>").attr
-        src: @model.get("photoURLs")[@size]
-        alt: "Loading..."
-      photo.on "load", ->
-        photo.attr "alt", "photo thumbnail"
-      @$(".image").html photo
     @renderVotes()
-    resize()
 
   renderVotes: =>
     @$(".votes").html new ds.VoteWidget({
@@ -869,24 +844,11 @@ class ds.ShowIdeaBig extends Backbone.View
     }, @model.toJSON()
     @$el.html @template args
     @$el.addClass("bigIdea")
-    @$(".canvasHolder").css backgroundColor: @model.get("background")
-    if @model.get("drawingURLs")?.full
-      drawing = $("<img/>").attr
-        src: @model.get("drawingURLs").full
-        alt: "Loading..."
-      drawing.on "load", -> drawing.attr "alt", "drawing thumbnail"
-      @$(".canvas").html drawing
-    if @model.get("photoURLs")?.full
-      photo = $("<img/>").attr
-        src: @model.get("photoURLs").full
-        alt: "Loading..."
-      photo.on "load", -> photo.attr "alt", "photo thumbnail"
-      @$(".image").html photo
     resize = =>
       [width, height] = fillSquare(@$(".canvasHolder"), @$(".note"), 600, 200)
       @$(".text").css "font-size", (height / 10) + "px"
       @$(".note").css "max-width", width + "px"
-      # Hack for mobile lack of position:fixed
+      # Hack for mobile lack of position:fixed.  Not working yet...
       @$(".shadow").css
         position: "absolute"
         top: $("html,body").scrollTop() + 'px'
@@ -894,7 +856,6 @@ class ds.ShowIdeaBig extends Backbone.View
     @$(".canvasHolder img").on "load", resize
     resize()
     @renderVotes()
-
     $(window).on "resize", resize
     this
 

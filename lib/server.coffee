@@ -1,8 +1,9 @@
 express     = require 'express'
 socketio    = require 'socket.io'
 RedisStore  = require('connect-redis')(express)
-logger      = require './logging'
 mongoose    = require 'mongoose'
+logger      = require './logging'
+models      = require './schema'
 
 # See Cakefile for options definitions and defaults
 start = (options) ->
@@ -42,14 +43,43 @@ start = (options) ->
   app.get '/', (req, res) ->
     res.render 'dotstorm', title: "DotStorm", slug: "", initial: {}
 
-  # /d/:slug without trainling slash
-  app.get /^\/d\/([^/]+)$/, (req, res) ->
-    res.redirect "/d/#{req.params[0]}/"
+  # /d/:slug without trainling slash: redirect to slash.
+  app.get /^\/d\/([^/]+)$/, (req, res) -> res.redirect "/d/#{req.params[0]}/"
 
   # /d/:slug/:action (action optional)
   app.get /\/d\/([^/]+)(\/.*)?/, (req, res) ->
     #XXX load initial data when a slug is given....
     res.render 'dotstorm', title: "DotStorm", slug: req.params[0], initial: {}
+
+  # Embed read-only dostorm using embed slug.
+  app.get '/e/:embed_slug', (req, res) ->
+    constraint = embed_slug: req.params.embed_slug
+    models.Dotstorm.withLightIdeas constraint, (err, doc) ->
+      if doc == null
+        res.send("Not found", 404)
+      else
+        res.render 'embed', {
+          title: doc.name or "DotStorm"
+          dotstorm: doc
+          group_id: null
+          layout: false
+        }
+
+  # Embed group using group id.
+  app.get '/g/:group_id', (req, res) ->
+    constraint = "groups._id": req.params.group_id
+    models.Dotstorm.withLightIdeas constraint, (err, doc) ->
+      if doc == null
+        res.send("Not found", 404)
+      else
+        res.render 'embed', {
+          title: doc.name or "DotStorm"
+          dotstorm: doc
+          group_id: req.params.group_id
+          layout: false
+        }
+
+  # /g/:group_id : embed group
 
   require('./auth').route(app, options.host)
 

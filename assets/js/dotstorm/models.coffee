@@ -44,7 +44,7 @@ class ds.Dotstorm extends Backbone.Model
   addIdeaId: (idea_id, options) =>
     unless @indexOfIdeaId(idea_id)?
       groups = @get("groups") or []
-      groups.push({_id: @uuid(), ideas: [idea_id]})
+      groups.splice(0, 0, {_id: @uuid(), ideas: [idea_id]})
       @set("groups", groups, options)
 
   removeIdea: (idea, options) => @removeIdeaId(idea.id, options)

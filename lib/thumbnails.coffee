@@ -9,7 +9,7 @@ BASE_PATH = __dirname + "/../assets"
 sizes =
   # Sizes allow for 1px border, and fit well on mobile screens (240px, 480px)
   small: [78, 78]
-  medium: [138, 138]
+  medium: [118, 118]
   large: [238, 238]
   full: [640, 640]
 
@@ -88,32 +88,70 @@ canvas2thumbnails = (canvas, thumbnails, callback) ->
           if count == 0
             callback?(null)
 
-draw = (idea, callback) ->
+drawIdeaToCanvas = (idea, callback) ->
   # Render the drawing instructions contained in the idea to a canvas.
   logger.debug "drawing #{idea.id}"
   dims = idea.DIMS
   canvas = new Canvas dims.x, dims.y
   ctx = canvas.getContext('2d')
-  ctx.lineCap = 'round'
-  lastTool = null
-  for [tool, x1, y1, x2, y2] in idea.get("drawing")
-    if tool != lastTool
-      switch tool
-        when "pencil"
-          ctx.lineWidth = 8
-          ctx.strokeStyle = '#000000'
-        when "eraser"
-          ctx.lineWidth = 32
-          ctx.strokeStyle = idea.get("background")
-      lastTool = tool
-    ctx.beginPath()
-    if x1?
-      ctx.moveTo x1, y1
-    else
-      ctx.moveTo x2, y2
-    ctx.lineTo x2, y2
-    ctx.stroke()
-  return canvas
+  
+  # Draw background
+  ctx.fillStyle = idea.get("background")
+  ctx.fillRect(0, 0, dims.x, dims.y)
+  ctx.fillStyle = "#000000"
+
+  drawOverlay = ->
+    # Draw lines
+    ctx.lineCap = 'round'
+    lastTool = null
+    for [tool, x1, y1, x2, y2] in idea.get("drawing")
+      if tool != lastTool
+        switch tool
+          when "pencil"
+            ctx.lineWidth = 8
+            ctx.strokeStyle = '#000000'
+          when "eraser"
+            ctx.lineWidth = 32
+            ctx.strokeStyle = idea.get("background")
+        lastTool = tool
+      ctx.beginPath()
+      if x1?
+        ctx.moveTo x1, y1
+      else
+        ctx.moveTo x2, y2
+      ctx.lineTo x2, y2
+      ctx.stroke()
+
+    # Draw description
+    totalLines = 10
+    ctx.font = (dims.y / totalLines) + "px Arial"
+    lineNum = 0
+    for line in idea.get("description").split("\n")
+      lineNum += 1
+      words = line.split(" ")
+      x = 0
+      for word in words
+        word = word + " "
+        width = ctx.measureText(word).width
+        if x + width > dims.x
+          x = 0
+          lineNum += 1
+        ctx.fillText(word, x, (dims.y / totalLines) * lineNum)
+        x += width
+    callback(canvas)
+
+  # Draw image....
+  photoPath = idea.getPhotoPath("full")
+  if photoPath?
+    fs.readFile photoPath, (err, buffer) ->
+      if (err) then throw err
+      img = new Canvas.Image
+      img.src = buffer
+      # Note: assuming 3x4 aspect ratio.
+      ctx.drawImage(img, 0, 1/4 * dims.y, dims.x, 3/4 * dims.y)
+      drawOverlay()
+  else
+    drawOverlay()
 
 shrink = (buffer, thumbs, callback) ->
   # Given a binary image buffer, and a list of paths and sizes:
@@ -135,15 +173,14 @@ shrink = (buffer, thumbs, callback) ->
 
 drawingThumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
-  if idea.get("background")? and idea.get("drawing")?
-    path.exists idea.getDrawingPath("small"), (exists) ->
-      if exists
-        callback?(null)
-        logger.debug("skipping thumbnail; already exists")
-      else
-        clearDir path.dirname(idea.getDrawingPath("small")), (err) ->
-          if (err) then return callback?(err)
-          canvas = draw(idea)
+  path.exists idea.getDrawingPath("small"), (exists) ->
+    if exists
+      callback?(null)
+      logger.debug("skipping thumbnail; already exists")
+    else
+      clearDir path.dirname(idea.getDrawingPath("small")), (err) ->
+        if (err) then return callback?(err)
+        drawIdeaToCanvas idea, (canvas) ->
           buffer = canvas.toBuffer()
           thumbs = []
           for name, size of sizes
@@ -153,9 +190,6 @@ drawingThumbs = (idea, callback) ->
               callback?(err)
             else
               callback?(null)
-  else
-    callback?(null)
-    logger.debug("skipping thumbnail; empty model")
 
 photoThumbs = (idea, photoData, callback) ->
   unless idea.photoVersion?

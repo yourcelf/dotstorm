@@ -1,0 +1,36 @@
+doctype 5
+html(lang="en")
+  head
+    meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
+    meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    meta(name="apple-mobile-web-app-capable", content="yes")
+
+    link(rel='shortcut icon', href="/favicon.ico")
+    title= title
+    !=css('normalize')
+    !=css('embed')
+
+  body
+    div#dotstormEmbed
+      if (!group_id)
+        div#title
+          if dotstorm.name
+            h1= dotstorm.name
+          if dotstorm.topic
+            div.topic= dotstorm.topic
+      div#ideas
+        each group in dotstorm.groups
+          if !group_id || group._id == group_id
+            div(class=(group.ideas.length > 1 ? 'group' : ''))
+              if group.ideas.length > 1 && group.label
+                span.label= group.label
+              div.ideas
+                each idea in group.ideas
+                  div.smallIdea
+                    div.canvasHolder
+                      div.canvas
+                        img(src=idea.drawingURLs.medium, alt=idea.description)
+                      div.tags= idea.tags.join(", ")
+                      div.votes
+                        if idea.votes.length
+                          span.vote-count= idea.votes.length

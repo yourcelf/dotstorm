@@ -188,6 +188,10 @@ a:link.cta, a:visited.cta, a.cta
     clear: both
   margin-bottom: 1em
   border-bottom: 1px solid #ddd
+  .embed
+    position: absolute
+    right: 1em
+    top: 3em
 
 .canvasHolder
   -webkit-box-sizing: border-box
@@ -195,9 +199,9 @@ a:link.cta, a:visited.cta, a.cta
   -ie-box-sizing: border-box
   box-sizing: border-box
   position: relative
-  height: 118px
-  width: 118px
-  .image
+  width: 100%
+  height: 100%
+  .photo
     position: absolute
     bottom: 0
     left: 0
@@ -273,6 +277,9 @@ a:link.cta, a:visited.cta, a.cta
   &.reverse:before
     content: "↓"
 
+#embed
+  .smallIdea
+    cursor: auto
 .smallIdea
   cursor: pointer
   overflow: hidden
@@ -286,9 +293,6 @@ a:link.cta, a:visited.cta, a.cta
   .canvas img
     max-width: 100%
     max-height: 100%
-  .border
-    width: 100%
-    height: 100%
   .votes
     position: absolute
     top: 0
@@ -322,12 +326,17 @@ a:link.cta, a:visited.cta, a.cta
   position: relative
 
   .group
+    position: relative
     display: inline-block
     text-align: center
     float: left
     border: 1px solid #999
     background: rgba(200, 220, 200, 0.5)
     padding: 1em
+    .embed
+      position: absolute
+      right: 0
+      top: 0
 
 .front-matter
   .tag-links
@@ -345,6 +354,13 @@ a:link.cta, a:visited.cta, a.cta
     -moz-user-select: none
     -o-user-select: none
     user-select: none
+  .add-link
+    float: left
+    z-index: 1
+    position: relative
+    margin-right: 0.5em
+    padding-top: 20px
+    padding-bottom: 20px
   input
     -webkit-user-select: text
     -khtml-user-select: text
@@ -415,6 +431,7 @@ a:link.cta, a:visited.cta, a.cta
 .bigIdea
   overflow: hidden
   .shadow
+    z-index: 1
     overflow: auto
     background-color: rgba(0, 0, 0, 0.5)
     position: fixed
