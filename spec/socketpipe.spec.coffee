@@ -71,29 +71,32 @@ describe "socket pipeline", ->
     });")
     h.waitsFor =>
       if @browser.evaluate("window.ideaUpdateSuccess")
+        startingVersion = @idea.imageVersion
         models.Idea.findOne {_id: @idea._id}, (err, doc) =>
           @idea = doc
           expect(doc.description).to.be 'updated'
           expect(path.existsSync @idea.getDrawingPath('small')).to.be true
-          expect(parseInt(@idea.imageVersion)).to.eql 1
+          expect(parseInt(@idea.imageVersion) > startingVersion).to.be true
           done()
         return true
 
   it "uploads a photo", (done) ->
-    @browser.evaluate("
-        ds.socket.once('testPhotoUpload', function() {
-          window.photoUploaded = true; 
-        });
-        ds.socket.emit('uploadPhoto', {
-          idea: { _id: '#{@idea._id}' },
-          event: 'testPhotoUpload',
-          imageData: '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBAQFBAYFBQYJBgUGCQsIBgYICwwKCgsKCgwQDAwMDAwMEAwODxAPDgwTExQUExMcGxsbHCAgICAgICAgICD/2wBDAQcHBw0MDRgQEBgaFREVGiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICD/wAARCAFKABsDAREAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAECBAMI/8QAFxABAQEBAAAAAAAAAAAAAAAAABESE//EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwD6pAAAAAAABAAAASgUCgUEAAABAAAASgUCgUAAAAGQAAAKBQKBQQAAAEAAABAAAASgUCgUEAAABAAAASgUCgUEAAABAAAAQAAAEoFAoFBAAAAQAAAEoFAoFAAAABkAAACgUCgUEAAABAAAAQAAAEoFAoFBAAAAQAAAEoFAoFBAAAAQAAAEAAAB47A2BsDYOboB0A6AdAc3QDoB0A6A5tgbA2BsGQAAAf/Z'
+    @browser.evaluate("new ds.Idea({
+          _id: '#{@idea._id}',
+          photoData: '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBAQFBAYFBQYJBgUGCQsIBgYICwwKCgsKCgwQDAwMDAwMEAwODxAPDgwTExQUExMcGxsbHCAgICAgICAgICD/2wBDAQcHBw0MDRgQEBgaFREVGiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICD/wAARCAFKABsDAREAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAECBAMI/8QAFxABAQEBAAAAAAAAAAAAAAAAABESE//EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwD6pAAAAAAABAAAASgUCgUEAAABAAAASgUCgUAAAAGQAAAKBQKBQQAAAEAAABAAAASgUCgUEAAABAAAASgUCgUEAAABAAAAQAAAEoFAoFBAAAAQAAAEoFAoFAAAABkAAACgUCgUEAAABAAAAQAAAEoFAoFBAAAAQAAAEoFAoFBAAAAQAAAEAAAB47A2BsDYOboB0A6AdAc3QDoB0A6A5tgbA2BsGQAAAf/Z'
+        }).save(null, {
+          success: function(model) {
+            window.ideaWithPhoto = model;   
+          }
         });
       ")
     h.waitsFor =>
-      if @browser.evaluate("window.photoUploaded")
+      model = @browser.evaluate("window.ideaWithPhoto")
+      if model?
         models.Idea.findOne {_id: @idea.id}, (err, doc) =>
           expect(path.existsSync doc.getPhotoPath('small')).to.be true
+          expect(doc.photoVersion > 0).to.be true
+          expect(doc.photoData).to.be undefined
           done()
         return true
 

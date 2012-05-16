@@ -39,7 +39,6 @@ attach = (channel, io) ->
         doc.save (err) ->
           if (err) then return errorOut(err)
           json = doc.serialize()
-          console.log json
           delete json.drawing
           respond(json)
           rebroadcast(doc.dotstorm_id, json)
@@ -57,7 +56,6 @@ attach = (channel, io) ->
         when "Idea"
           switch data.signature.method
             when "create"
-              console.log "create", data.signature
               doc = new models.Idea()
               saveIdeaAndRespond(doc)
             when "update"

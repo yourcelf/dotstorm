@@ -29,6 +29,7 @@ describe "Mongoose connector", ->
       idea = new models.Idea({
         dotstorm_id: dotstorm._id
         description: "open to creative possibility"
+        background: "#ffffdd"
       })
       idea.save (err) ->
         expect(err).to.be null
@@ -38,7 +39,6 @@ describe "Mongoose connector", ->
           models.Idea.findOne {}, (err, idea) ->
             expect(err).to.be null
             expect(idea.description).to.be "open to creative possibility"
-            expect(idea.drawingURLs).to.eql {}
             done()
 
   it "creates a drawing", (done) ->
@@ -48,7 +48,7 @@ describe "Mongoose connector", ->
       idea.background = "#ffffff"
       idea.save (err) ->
         expect(err).to.be null
-        expect(idea.drawingURLs.small).to.be "/uploads/idea/#{idea._id}/drawing/small1.png"
+        expect(idea.drawingURLs.small).to.be "/uploads/idea/#{idea._id}/drawing/small#{idea.imageVersion}.png"
         expect(path.existsSync idea.getDrawingPath("small")).to.be true
         done()
 

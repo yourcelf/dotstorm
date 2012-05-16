@@ -69,7 +69,6 @@ IdeaSchema.pre 'save', (next) ->
 IdeaSchema.pre 'save', (next) ->
   # Save photos.
   if @photoData
-    console.log "photo data!"
     @photoVersion = (@get("photoVersion") or 0) + 1
     thumbnails.photoThumbs this, @photoData, (err) =>
       if err?
@@ -79,7 +78,6 @@ IdeaSchema.pre 'save', (next) ->
         @incImageVersion()
         next(null)
   else
-    console.log "no photo data!"
     next(null)
 IdeaSchema.pre 'save', (next) ->
   # Assemble drawings and thumbnails.
