@@ -63,7 +63,7 @@ script#dotstormOrganizer(type='text/template')
     div.topic
   div.idea-browser
     div.add-link-block
-      a.cta.cta-blue.add-link(href='/d/#{slug}/add') + Add
+      <a href='/d/<%= slug %>/add' class='cta cta-blue add-link'>+ Add</a>
     span#organizer
     div(style='clear: both;')
   div.tag-links
