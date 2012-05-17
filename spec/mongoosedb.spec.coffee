@@ -71,6 +71,13 @@ describe "Mongoose connector", ->
       expect(err).to.be null
       idea.set("taglist", "this, that, theother")
       expect(_.isEqual idea.tags, ["this", "that", "theother"]).to.be true
+      tagset = ["one", "two", "three"]
+      idea.set("tags", tagset)
+      expect(_.isEqual idea.tags, tagset).to.be true
+      idea.save (err) ->
+        expect(err).to.be null
+        models.Idea.findOne _id: idea._id, (err, doc) ->
+          expect(_.isEqual tagset, doc.tags).to.be true
       done()
 
   it "removes thumbnails with idea", (done) ->

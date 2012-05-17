@@ -33,9 +33,11 @@ attach = (channel, io) ->
 
       saveIdeaAndRespond = (doc) ->
         for key in ["dotstorm_id", "description", "background", "tags",
-                    "taglist", "drawing", "votes", "photoData"]
+                    "drawing", "votes", "photoData"]
           if data.model[key]?
             doc[key] = data.model[key]
+        if not data.model.tags? and data.model.taglist?
+          doc.taglist = data.model.taglist
         doc.save (err) ->
           if (err) then return errorOut(err)
           json = doc.serialize()

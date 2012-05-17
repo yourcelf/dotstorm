@@ -5,6 +5,14 @@ _.extend Backbone.Model.prototype, {
 
 class ds.Idea extends Backbone.Model
   collectionName: 'Idea'
+  cleanTags: (commaStr) ->
+    rawtags = commaStr.split(/,\s*/)
+    clean = []
+    for tag in rawtags
+      clean.push($.trim(tag.replace(/[^-\w\s]/g, '')))
+    return clean
+
+
 
 class ds.IdeaList extends Backbone.Collection
   model: ds.Idea

@@ -99,6 +99,26 @@ describe "socket pipeline", ->
           expect(doc.photoData).to.be undefined
           done()
         return true
+      
+  it "saves tags", (done) ->
+    @browser.evaluate("new ds.Idea({_id: '#{@idea._id}'}).fetch({
+        success: function(model) {
+          model.save({'tags': ['one', 'two', 'three']}, {
+            success: function(model) {
+              window.taggedModel = model;
+            }
+          });
+        }
+      });
+    ")
+    h.waitsFor =>
+      model = @browser.evaluate("window.taggedModel")
+      if model?
+        expect(model.get("tags")).to.eql ["one", "two", "three"]
+        models.Idea.findOne {_id: @idea.id}, (err, doc) =>
+          expect(_.isEqual doc.tags, ["one", "two", "three"]).to.be true
+        done()
+        return true
 
   it "reads an idea", (done) ->
     @browser.evaluate("new ds.Idea({

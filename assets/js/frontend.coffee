@@ -1,6 +1,5 @@
 #= require lib/jquery
 #= require lib/jquery.cookie
-#= require lib/jquery.masonry.min
 #= require lib/underscore
 #= require lib/underscore-autoescape
 #= require lib/backbone

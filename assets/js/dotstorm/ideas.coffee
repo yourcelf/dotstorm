@@ -508,15 +508,14 @@ class ds.Organizer extends Backbone.View
   filterByTag: (tag) =>
     if tag?
       ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}"
-      cleanedTag = ds.Idea.prototype.cleanTag(tag)
-      regex = new RegExp("(^|,)\\s*(#{cleanedTag})\\s*(,|$)")
+      console.log tag
+      cleanedTag = $.trim(tag)
       for noteDom in @$(".smallIdea")
         idea = @ideas.get noteDom.getAttribute('data-id')
-        match = regex.exec(idea.get("tags"))
-        if not match?
-          $(noteDom).addClass("fade")
-        else
+        if _.contains (idea.get("tags") or []), cleanedTag
           $(noteDom).removeClass("fade")
+        else
+          $(noteDom).addClass("fade")
       @$("a.tag").removeClass("active").addClass("inactive")
       @$("a.tag[data-tag=\"#{cleanedTag}\"]").addClass("active").removeClass("inactive")
     else
@@ -870,7 +869,7 @@ class ds.ShowIdeaBig extends Backbone.View
   render: =>
     #console.debug "render big", @model.get "imageVersion"
     args = _.extend {
-      tags: ""
+      tags: []
       description: ""
       hasNext: @model.showNext?
       hasPrev: @model.showPrev?
@@ -906,11 +905,8 @@ class ds.ShowIdeaBig extends Backbone.View
     return false
 
   nothing: (event) =>
-    if event.tagName.lower() == "input"
-      return
     event.stopPropagation()
-    event.preventDefault()
-    return false
+    #event.preventDefault()
 
   next: (event) =>
     event.stopPropagation()
@@ -933,14 +929,19 @@ class ds.ShowIdeaBig extends Backbone.View
 
   editTags: (event) =>
     event.stopPropagation()
-    @$(event.currentTarget).replaceWith @editorTemplate text: @model.get("tags") or ""
+    @$(event.currentTarget).replaceWith @editorTemplate
+      text: (@model.get("tags") or []).join(", ")
     return false
 
   saveTags: (event) =>
-    @model.save {tags: @$(".tags input[type=text]").val()},
+    val = @$(".tags input[type=text]").val()
+    @model.save {tags: @model.cleanTags(val)}, {
+      success: (model) =>
+        console.log model.get("tags")
       error: (model, err) =>
         console.error "error", err
         flash "error", err
+    }
     return false
 
 class ds.VoteWidget extends Backbone.View

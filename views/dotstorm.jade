@@ -116,7 +116,7 @@ script#dotstormBigIdea(type='text/template')
           div.tags
             b tags:&nbsp;
             span.clickToEdit
-              <%= $.trim(tags) || "[Click to add]"%>
+              <%= tags.join(", ") || "[Click to add]"%>
       div(style='clear: both;')
 
 script#dotstormTagOverlay(type='text/template')
