@@ -263,14 +263,13 @@ class ds.EditIdea extends Backbone.View
     attrs = {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
-      tags: $("#id_tags").val()
+      tags: @idea.cleanTags($("#id_tags").val())
       background: @canvas.background
       dims: @canvas.ctxDims
       drawing: @canvas.actions
       editor: ds.users?.self?.user_id
       photoData: @photo
     }
-
     @idea.save(attrs, {
       success: (model) =>
         if ideaIsNew
@@ -287,7 +286,6 @@ class ds.EditIdea extends Backbone.View
         str = err.error?.message
         flash "error", "Error saving: #{str}. See log for details."
     })
-
     return false
 
   changeTool: (event) =>
@@ -508,7 +506,6 @@ class ds.Organizer extends Backbone.View
   filterByTag: (tag) =>
     if tag?
       ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}"
-      console.log tag
       cleanedTag = $.trim(tag)
       for noteDom in @$(".smallIdea")
         idea = @ideas.get noteDom.getAttribute('data-id')
@@ -938,7 +935,6 @@ class ds.ShowIdeaBig extends Backbone.View
     val = @$(".tags input[type=text]").val()
     @model.save {tags: @model.cleanTags(val)}, {
       success: (model) =>
-        console.log model.get("tags")
       error: (model, err) =>
         console.error "error", err
         flash "error", err
