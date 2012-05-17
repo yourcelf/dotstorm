@@ -12,7 +12,7 @@ module.exports =
   startServer: (opts) ->
     return server.start(_.extend {}, config, opts)
   waitsFor: (callback) ->
-    interval = setInterval (-> if callback() then clearInterval interval), 100
+    interval = setInterval (-> if callback() then clearInterval interval), 10
   clearDb: (callback) ->
     # Recursive function to delete all documents for the given models, calling
     # mongoose 'remove' hooks to ensure that images, etc. are deleted too.

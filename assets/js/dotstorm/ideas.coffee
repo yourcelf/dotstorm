@@ -273,7 +273,6 @@ class ds.EditIdea extends Backbone.View
 
     @idea.save(attrs, {
       success: (model) =>
-        console.log "success??"
         if ideaIsNew
           @dotstorm.addIdea(model, silent: true)
           @dotstorm.save null, {
@@ -324,28 +323,32 @@ class ds.ShowIdeaGroup extends Backbone.View
     'click   .label': 'editLabel'
     'click  .cancel': 'cancelEdit'
     'submit    form': 'saveLabel'
+
   initialize: (options) ->
     @group = options.group
     @ideaViews = options.ideaViews
     @position = options.position
 
   editLabel: (event) =>
-    event.stopPropagation()
-    event.preventDefault()
-    $(event.currentTarget).replaceWith @editTemplate
-      label: @group.label or ""
-    @$("input[type=text]").select()
-    return false
+    unless @editing
+      event.stopPropagation()
+      event.preventDefault()
+      @editing = true
+      $(event.currentTarget).html @editTemplate
+        label: @group.label or ""
+      @$("input[type=text]").select()
 
   cancelEdit: (event) =>
     event.stopPropagation()
     event.preventDefault()
+    @editing = false
     @render()
     return false
   
   saveLabel: (event) =>
     event.stopPropagation()
     event.preventDefault()
+    @editing = false
     @group.label = @$("input[type=text]").val()
     @trigger "change:label", @group
     return false
@@ -355,6 +358,7 @@ class ds.ShowIdeaGroup extends Backbone.View
       showGroup: @ideaViews.length > 1
       label: @group.label
       group_id: @group._id
+    @$el.addClass("masonry")
     if @ideaViews.length > 1
       @$el.addClass("group")
     @$el.attr({
@@ -376,23 +380,30 @@ class ds.Organizer extends Backbone.View
   #
   template: _.template $("#dotstormOrganizer").html() or ""
   events:
-    'click        .add-link': 'softNav'
-    'click             .tag': 'toggleTag'
+    'click         .add-link': 'softNav'
+    'click              .tag': 'toggleTag'
+                
+    'touchstart   .labelMask': 'nothing'
+    'mouseDown    .labelMask': 'nothing'
+    'touchstart            a': 'nothing'
+    'mousedown             a': 'nothing'
+    'touchstart .clickToEdit': 'nothing'
+    'mousedown  .clickToEdit': 'nothing'
 
-    'touchstart  .smallIdea': 'startDrag'
-    'mousedown   .smallIdea': 'startDrag'
-    'touchmove   .smallIdea': 'continueDrag'
-    'mousemove   .smallIdea': 'continueDrag'
-    'touchend    .smallIdea': 'stopDrag'
-    'touchcancel .smallIdea': 'stopDrag'
-    'mouseup     .smallIdea': 'stopDrag'
-
-    'touchstart      .group': 'startDragGroup'
-    'mousedown       .group': 'startDragGroup'
-    'touchmove       .group': 'continueDragGroup'
-    'mousemove       .group': 'continueDragGroup'
-    'touchend        .group': 'stopDragGroup'
-    'mouseup         .group': 'stopDragGroup'
+    'touchstart   .smallIdea': 'startDrag'
+    'mousedown    .smallIdea': 'startDrag'
+    'touchmove    .smallIdea': 'continueDrag'
+    'mousemove    .smallIdea': 'continueDrag'
+    'touchend     .smallIdea': 'stopDrag'
+    'touchcancel  .smallIdea': 'stopDrag'
+    'mouseup      .smallIdea': 'stopDrag'
+                 
+    'touchstart       .group': 'startDragGroup'
+    'mousedown        .group': 'startDragGroup'
+    'touchmove        .group': 'continueDragGroup'
+    'mousemove        .group': 'continueDragGroup'
+    'touchend         .group': 'stopDragGroup'
+    'mouseup          .group': 'stopDragGroup'
 
 
   initialize: (options) ->
@@ -423,6 +434,10 @@ class ds.Organizer extends Backbone.View
 
   softNav: (event) =>
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
+    return false
+
+  nothing: (event) =>
+    event.stopPropagation()
     return false
 
   sortGroups: =>
@@ -630,9 +645,10 @@ class ds.Organizer extends Backbone.View
       noteDims: []
       groupDims: []
       placeholder: $("<div></div>").css
+        display: "inline-block"
         float: "left"
-        width: activeWidth + "px"
-        height: activeHeight + "px"
+        width: (activeWidth) + "px"
+        height: (activeHeight) + "px"
       placeholderDims:
         x1: activeOffset.left
         y1: activeOffset.top
@@ -820,8 +836,8 @@ class ds.ShowIdeaBig extends Backbone.View
     'mousedown .edit': 'edit'
     'touchstart .edit': 'edit'
 
-    'submit .tags form': 'saveTags'
     'click .tags .clickToEdit': 'editTags'
+    'submit .tags form': 'saveTags'
 
     'mousedown .note': 'nothing'
     'touchstart .note': 'nothing'

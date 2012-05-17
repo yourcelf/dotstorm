@@ -9,6 +9,7 @@ background-rgba(r, g, b, a)
 
 // Main
 
+smallIdeaMargin = 14px
 
 bodybackground = url("../img/frenchstucco.png") repeat
 tabbackground = url("../img/dark_dotted.png") repeat
@@ -16,11 +17,18 @@ tabbackground = url("../img/dark_dotted.png") repeat
 body
   position: relative
   background: bodybackground
+  background-position: 0px -32px
 body,textarea
   font-family: "Droid Sans",Helvetica,sans-serif
 
 a:link, a:visited
   color: #00e
+a:link.cta, a:visited.cta, a.cta
+  color: white
+.cta-thin
+  line-height: 1.5em
+  height: 1.5em
+
 
 input[type=text]
   border: 1px solid gray
@@ -47,33 +55,6 @@ nav.tabs, ul.tablinks
     display: inline-block
     width: 32px
     height: 24px
-
-   
-
-ul.tablinks, ul.tabs
-  margin: 0
-  padding: 0
-  li
-    display: inline-block
-    padding-left: 0.5
-    padding-right: 0.5
-    margin: 0
-    
-ul.tabs
-  li
-    display: none
-  li.active
-    display: block
-
-a:link.cta, a:visited.cta, a.cta
-  color: white
-.cta-thin
-  line-height: 1.5em
-  height: 1.5em
-
-#foot
-  clear: both
-  display: none
 
 #auth
   position: relative
@@ -122,7 +103,6 @@ a:link.cta, a:visited.cta, a.cta
 @media only screen and (min-width: 480px)
   #auth .invite 
     display: block
-    
 
 #flash
   z-index: 100
@@ -160,6 +140,10 @@ a:link.cta, a:visited.cta, a.cta
   margin-left: auto
   margin-right: auto
 
+/*
+  Editing
+*/
+
 .clickToEdit
   border: 1px inset transparent
 .clickToEdit:hover
@@ -180,6 +164,10 @@ a:link.cta, a:visited.cta, a.cta
   input
     max-width: 60%
 
+/*
+  Browser
+*/
+
 #dotstorm
   h1
     display: inline-block
@@ -192,45 +180,6 @@ a:link.cta, a:visited.cta, a.cta
     position: absolute
     right: 1em
     top: 3em
-
-.canvasHolder
-  -webkit-box-sizing: border-box
-  -moz-box-sizing: border-box
-  -ie-box-sizing: border-box
-  box-sizing: border-box
-  position: relative
-  width: 100%
-  height: 100%
-  .photo
-    position: absolute
-    bottom: 0
-    left: 0
-    width: 100%
-    img
-      width: 100%
-  .canvas
-    position: relative
-    width: 100%
-    height: 100%
-  .text, .text textarea, .text textarea[disabled=disabled]
-    position: absolute
-    top: 0
-    left: 0
-    margin: 0
-    padding: 0
-    width: 100%
-    height: 100%
-    white-space: pre-wrap
-    color: black
-    font-family: Arial
-    line-height: 1em
-    width: 100%
-    height: 100%
-    border: none 
-    background: transparent
-    text-align: left
-    overflow: hidden
-    resize: none
 
 #addIdea
   min-width: 240px
@@ -270,103 +219,144 @@ a:link.cta, a:visited.cta, a.cta
   input[type=text]
     max-width: 160px
 
-.sort.active
-  font-weight: bold
-  &:before
-    content: "↑"
-  &.reverse:before
-    content: "↓"
-
-#embed
-  .smallIdea
-    cursor: auto
-.smallIdea
-  cursor: pointer
-  overflow: hidden
-  //position: relative
-  width: 118px
-  height: 118px
-  margin: 1px
-  float: left
-  &.fade
-    opacity: 0.2
-  .canvas img
-    max-width: 100%
-    max-height: 100%
-  .votes
-    position: absolute
-    top: 0
-    right: 0
-  .tags
-    position: absolute
-    bottom: 5px 
-    left: 0
-    background-color: rgba(0, 0, 0, 0.5)
-    color: white
-    font-size: 12px
-  .dragger
-    position: absolute
-    top: 0
-    left: 0
+  .canvasHolder
+    -webkit-box-sizing: border-box
+    -moz-box-sizing: border-box
+    -ie-box-sizing: border-box
+    box-sizing: border-box
+    position: relative
     width: 100%
     height: 100%
-
-.tag-links
-  margin-bottom: 0.5em
-  border-bottom: 1px solid #eee
-  a.tag
-    &, &:link, &:visited
-      margin-right: 0.5em
-      &.active
-        font-weight: bold
-      &.inactive
-        color: #999
-
-#organizer
-  position: relative
-
-  .group
-    position: relative
-    display: inline-block
-    text-align: center
-    float: left
-    border: 1px solid #999
-    background: rgba(200, 220, 200, 0.5)
-    padding: 1em
-    .embed
+    .photo
       position: absolute
-      right: 0
+      bottom: 0
+      left: 0
+      width: 100%
+      img
+        width: 100%
+    .canvas
+      position: relative
+      width: 100%
+      height: 100%
+    .text, .text textarea, .text textarea[disabled=disabled]
+      position: absolute
       top: 0
-
-.front-matter
-  .tag-links
-    display: none
-    max-width: 200px
-    float: right
-@media only screen and (min-width: 300px)
-  .front-matter .tag-links
-    display: block
+      left: 0
+      margin: 0
+      padding: 0
+      width: 100%
+      height: 100%
+      white-space: pre-wrap
+      color: black
+      font-family: Arial
+      line-height: 1em
+      width: 100%
+      height: 100%
+      border: none 
+      background: transparent
+      text-align: left
+      overflow: hidden
+      resize: none
 
 .idea-browser
+  position: relative
   &, *
     -webkit-user-select: none
     -khtml-user-select: none
     -moz-user-select: none
     -o-user-select: none
     user-select: none
-  .add-link
-    float: left
-    z-index: 1
-    position: relative
-    margin-right: 0.5em
-    padding-top: 20px
-    padding-bottom: 20px
   input
     -webkit-user-select: text
     -khtml-user-select: text
     -moz-user-select: text
     -o-user-select: text
     user-select: text
+
+  .add-link-block
+    float: left
+    width: 150px
+    height: 150px
+    text-align: center
+    display: inline-block
+    .add-link
+      -webkit-box-sizing: content-box
+      -moz-box-sizing: content-box
+      box-sizing: content-box
+      z-index: 1
+      position: relative
+      margin-right: 0.5em
+      padding-top: 20px
+      padding-bottom: 20px
+      margin-left: auto
+      margin-right: auto
+      margin-top: 50px
+
+  // All ideas are in masonry's.
+  .masonry
+    float: left
+    margin-top: smallIdeaMargin
+    position: relative
+    display: inline-block
+    border: 1px solid transparent
+    text-align: center
+    padding-top: 10px
+    padding-bottom: 10px
+    .labelHolder
+      height: 27px
+      input[type=text]
+        width: 200px
+      form
+        display: inline
+    .embed
+      position: absolute
+      right: 0
+      top: 0
+      text-decoration: none
+      font-size: 24px
+    &.group
+      .smallIdea:first-child
+        margin-left: 10px
+      .smallIdea:last-child
+        margin-right: 10px
+      margin-left: smallIdeaMargin - 10px
+      margin-right: smallIdeaMargin - 10px
+      border-color: #333
+      background: rgba(200, 220, 200, 0.5)
+
+  .smallIdea
+    margin-left: smallIdeaMargin
+    margin-right: smallIdeaMargin
+    float: left
+    cursor: pointer
+    overflow: hidden
+    position: relative
+    width: 120px
+    height: 120px
+    &.fade /* for tag fading.. */
+      opacity: 0.2
+    img
+      border: 1px solid #ccc
+      max-width: 100%
+      max-height: 100%
+    .votes
+      position: absolute
+      top: 0
+      right: 0
+    .tags
+      position: absolute
+      bottom: 5px 
+      left: 0
+      background-color: rgba(0, 0, 0, 0.5)
+      color: white
+      font-size: 12px
+    .dragger
+      position: absolute
+      top: 0
+      left: 0
+      width: 100%
+      height: 100%
+
   .smallIdea, .group
     &.active
       -webkit-transform: rotate(-2deg)
@@ -516,13 +506,16 @@ a:link.cta, a:visited.cta, a.cta
         vertical-align: middle
       padding-bottom: 0.5em
 
-#size
-  // Debug sizes
-  display: none
-  position: fixed
-  bottom: 0
-  right: 0
-  background: rgba(255, 255, 255, 0.8)
-  padding: 0.5em
-  z-index: 100
-
+/*
+  Tag links
+*/
+.tag-links
+  margin-bottom: 0.5em
+  border-bottom: 1px solid #eee
+  a.tag
+    &, &:link, &:visited
+      margin-right: 0.5em
+      &.active
+        font-weight: bold
+      &.inactive
+        color: #999

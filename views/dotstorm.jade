@@ -62,35 +62,35 @@ script#dotstormOrganizer(type='text/template')
   div.front-matter
     div.topic
   div.idea-browser
-    a.cta.cta-blue.add-link(href='/d/#{slug}/add') + Add
-    div#organizer
+    div.add-link-block
+      a.cta.cta-blue.add-link(href='/d/#{slug}/add') + Add
+    span#organizer
     div(style='clear: both;')
   div.tag-links
 
 script#dotstormSmallIdea(type='text/template')
-  div.canvasHolder
-    div.canvas
-      <img src='<%= drawingURLs.medium %>' alt='<%= description %>' />
-    div.tags
-      <%= tags %>
-    div.votes
-    div.dragger
+  <img src='<%= drawingURLs.medium %>' alt='<%= description %>' />
+  div.tags
+    <%= tags %>
+  div.votes
+  div.dragger
 
 script#dotstormSmallIdeaGroup(type='text/template')
-  <% if (showGroup) { %>
-  div
-    span.label.clickToEdit
-      <%= label || "[Click to add label]" %>
-    <a href='/g/<%= group_id %>' class='embed'>embed</a> 
-      
-  <% } %>
+  div.labelHolder
+    span.labelMask
+      <% if (showGroup) { %>
+      span.label.clickToEdit
+        <%= label || "[Click to add label]" %>
+      <a href='/g/<%= group_id %>' class='embed' title='Embed this group'>&#9901;</a> 
+      <% } else {%>
+      | &nbsp;
+      <% } %>
   div.ideas
 
 script#dotstormSmallIdeaGroupEditLabel(type='text/template')
-  div
-    form
-      | <input type='text' value='<%= label %>' placeholder='label' />
-      input(type='submit', value='OK')
+  form
+    | <input type='text' value='<%= label %>' placeholder='label' />
+    input(type='submit', value='OK')
 
 script#dotstormBigIdea(type='text/template')
   div.shadow
