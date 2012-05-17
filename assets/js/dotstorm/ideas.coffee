@@ -371,7 +371,25 @@ class ds.ShowIdeaGroup extends Backbone.View
       container.append view.el
       view.$el.attr("data-idea-position", i)
       view.render()
+    # HACK: Obsessive hack for equal margins of children -- depends on:
+    #  - 14px smallIdeaMargin
+    #  - 4px encroachment from group
+    # This is duplicated from assets/css/style.styl
+    if @ideaViews.length > 1
+      totalMargin = (14 * @ideaViews.length - 4) * 2
+      space = parseInt(totalMargin / (@ideaViews.length + 1))
+      @$(".smallIdea").css
+        marginLeft: (space / 2) + "px"
+        marginRight: (space / 2) + "px"
+      @$(".smallIdea:first").css "marginLeft", space + "px"
+      @$(".smallIdea:last").css "marginRight", space + "px"
+      console.log space, @$(".smallIdea:last").css("margin-left")
+    else
+      @$(".smallIdea").css
+        marginLeft: "14px"
+        marginRight: "14px"
     this
+
 
 class ds.Organizer extends Backbone.View
   #
