@@ -383,7 +383,6 @@ class ds.ShowIdeaGroup extends Backbone.View
         marginRight: (space / 2) + "px"
       @$(".smallIdea:first").css "marginLeft", space + "px"
       @$(".smallIdea:last").css "marginRight", space + "px"
-      console.log space, @$(".smallIdea:last").css("margin-left")
     else
       @$(".smallIdea").css
         marginLeft: "14px"
