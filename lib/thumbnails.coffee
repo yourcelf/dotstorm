@@ -136,7 +136,8 @@ drawIdeaToCanvas = (idea, callback) ->
         if x + width > dims.x
           x = 0
           lineNum += 1
-        ctx.fillText(word, x, (dims.y / totalLines) * lineNum)
+        # HACK: 10px offset found by experimentation to line up better.
+        ctx.fillText(word, x, (dims.y / totalLines) * lineNum - 10)
         x += width
     callback(canvas)
 
