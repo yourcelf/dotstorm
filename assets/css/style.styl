@@ -314,19 +314,24 @@ nav.tabs, ul.tablinks
       top: 0
       text-decoration: none
       font-size: 24px
+      color: #060
+    .smallIdea
+      margin-left: 5px
+      margin-right: 5px
     &.group
+      .smallIdea
+        margin-left: 2px
+        margin-right: 2px
       .smallIdea:first-child
-        margin-left: 10px
+        margin-left: 15px
       .smallIdea:last-child
-        margin-right: 10px
-      margin-left: smallIdeaMargin - 10px
-      margin-right: smallIdeaMargin - 10px
-      border-color: #333
-      background: rgba(200, 220, 200, 0.5)
+        margin-right: 15px
+      margin-left: 5px
+      margin-right: 5px
+      border-color: #999
+      background: rgba(200, 200, 200, 0.5)
 
   .smallIdea
-    margin-left: smallIdeaMargin
-    margin-right: smallIdeaMargin
     float: left
     cursor: pointer
     overflow: hidden
@@ -345,7 +350,7 @@ nav.tabs, ul.tablinks
       right: 0
     .tags
       position: absolute
-      bottom: 5px 
+      bottom: 0
       left: 0
       background-color: rgba(0, 0, 0, 0.5)
       color: white

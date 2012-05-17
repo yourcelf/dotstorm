@@ -375,19 +375,19 @@ class ds.ShowIdeaGroup extends Backbone.View
     #  - 14px smallIdeaMargin
     #  - 4px encroachment from group
     # This is duplicated from assets/css/style.styl
-    if @ideaViews.length > 1
-      totalMargin = (14 * @ideaViews.length - 4) * 2
-      space = parseInt(totalMargin / (@ideaViews.length + 1))
-      @$(".smallIdea").css
-        marginLeft: (space / 2) + "px"
-        marginRight: (space / 2) + "px"
-      @$(".smallIdea:first").css "marginLeft", space + "px"
-      @$(".smallIdea:last").css "marginRight", space + "px"
-    else
-      @$(".smallIdea").css
-        marginLeft: "14px"
-        marginRight: "14px"
-    this
+#    if @ideaViews.length > 1
+#      totalMargin = (14 * @ideaViews.length - 4) * 2
+#      space = parseInt(totalMargin / (@ideaViews.length + 1))
+#      @$(".smallIdea").css
+#        marginLeft: (space / 2) + "px"
+#        marginRight: (space / 2) + "px"
+#      @$(".smallIdea:first").css "marginLeft", space + "px"
+#      @$(".smallIdea:last").css "marginRight", space + "px"
+#    else
+#      @$(".smallIdea").css
+#        marginLeft: "5px"
+#        marginRight: "5px"
+#    this
 
 
 class ds.Organizer extends Backbone.View
@@ -678,8 +678,8 @@ class ds.Organizer extends Backbone.View
     for note in @$(".smallIdea")
       $n = $(note)
       dims = $n.offset()
-      dims.width = $n.width()
-      dims.height = $n.height()
+      dims.width = $n.outerWidth(true) + 2
+      dims.height = $n.outerHeight(true)
       dims.el = $n
       @dragState.noteDims.push(dims)
     for group in @$(".group")
@@ -931,6 +931,7 @@ class ds.ShowIdeaBig extends Backbone.View
     event.stopPropagation()
     @$(event.currentTarget).replaceWith @editorTemplate
       text: (@model.get("tags") or []).join(", ")
+    @$("input[type=text]").select()
     return false
 
   saveTags: (event) =>
