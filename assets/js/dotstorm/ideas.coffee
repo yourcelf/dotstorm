@@ -918,7 +918,6 @@ class ds.Organizer extends Backbone.View
       sourceGroupPos = parseInt(
         @dragState.activeParent.attr("data-group-position")
       )
-      console.log @dragState.currentTarget
       @dotstorm.move(
         sourceGroupPos, sourceIdeaPos,
         @dragState.currentTarget.groupPos,
@@ -942,7 +941,6 @@ class ds.Organizer extends Backbone.View
         Math.pow(@dragState.lastPos.y - @dragState.startPos.y, 2)
     )
     elapsed = new Date().getTime() - @dragState.startTime
-    console.log distance, elapsed
     return distance < 20 and elapsed < 400
 
 class ds.ShowIdeaSmall extends Backbone.View
