@@ -725,8 +725,11 @@ class ds.Organizer extends Backbone.View
         continue
       el = $(el)
       ideaPos = parseInt(el.attr("data-idea-position"))
+      parent = el.parents("[data-group-position]")
+      if parent[0] == @dragState.active[0]
+        continue
       groupPos = parseInt(
-        el.parents("[data-group-position]").attr("data-group-position")
+        parent.attr("data-group-position")
       )
       inGroup = @dotstorm.get("groups")[groupPos].ideas.length > 1
       offset = el.offset()
