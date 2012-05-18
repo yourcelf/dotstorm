@@ -294,9 +294,9 @@ nav.tabs, ul.tablinks
 
   // All ideas are in masonry's.
   .masonry
+    position: relative
     float: left
     margin-top: smallIdeaMargin
-    position: relative
     display: inline-block
     border: 1px solid transparent
     text-align: center
@@ -316,16 +316,15 @@ nav.tabs, ul.tablinks
       font-size: 24px
       color: #060
     .smallIdea
+      overflow: visible
       margin-left: 5px
       margin-right: 5px
     &.group
+      padding-left: 13px
+      padding-right: 13px
       .smallIdea
         margin-left: 2px
         margin-right: 2px
-      .smallIdea:first-child
-        margin-left: 15px
-      .smallIdea:last-child
-        margin-right: 15px
       margin-left: 5px
       margin-right: 5px
       border-color: #999
@@ -362,6 +361,9 @@ nav.tabs, ul.tablinks
       width: 100%
       height: 100%
 
+  //.group
+  //  .smallIdea.hovered
+  //    outline: none
   .smallIdea, .group
     &.active
       -webkit-transform: rotate(-2deg)
@@ -373,22 +375,27 @@ nav.tabs, ul.tablinks
       z-index: 10
     &.hovered
       outline: 1em solid #999
+    /*
     &.leftside
       -webkit-box-shadow: -2em 0 1em orange
       -khtml-box-shadow: -2em 0 1em orange
       -moz-box-shadow: -2em 0 1em orange
       -o-box-shadow: -2em 0 1em orange
       box-shadow: -2em 0 1em orange
-      //border-left: 6px solid orange
-      //width: 112px
     &.rightside
       -webkit-box-shadow: 2em 0 1em orange
       -khtml-box-shadow: 2em 0 1em orange
       -moz-box-shadow: 2em 0 1em orange
       -o-box-shadow: 2em 0 1em orange
       box-shadow: 2em 0 1em orange
-      //width: 111px
-      //border-right: 6px solid orange
+    */
+  .dropline
+    z-index: 1
+    position: absolute
+    width: 44px
+    height: 118px
+    background: url("../img/droptarget.png")
+    background-size: 44px 100%
 
 .vote-widget
   display: inline-block

@@ -1,4 +1,31 @@
 
+getPx = (el, v) -> return parseInt(el.css(v).replace("px", ""))
+getBox = (el) ->
+  return {
+    el: el
+    offset: el.offset()
+    position: el.position()
+    margin:
+      top: getPx(el, "margin-top")
+      right: getPx(el, "margin-right")
+      bottom: getPx(el, "margin-bottom")
+      left: getPx(el, "margin-left")
+    padding:
+      top: getPx(el, "padding-top")
+      right: getPx(el, "padding-right")
+      bottom: getPx(el, "padding-bottom")
+      left: getPx(el, "padding-left")
+    border:
+      top: getPx(el, "border-top-width")
+      right: getPx(el, "border-right-width")
+      bottom: getPx(el, "border-bottom-width")
+      left: getPx(el, "border-left-width")
+    width: el.width()
+    height: el.height()
+    outerWidth: el.outerWidth(true)
+    outerHeight: el.outerHeight(true)
+  }
+    
 
 class ds.Intro extends Backbone.View
   #
@@ -616,30 +643,38 @@ class ds.Organizer extends Backbone.View
       y: pointerObj.pageY
     }
 
-  moveNote: () =>
+  moveNote: =>
     pos = @dragState.lastPos
     @dragState.active.css
       position: "absolute"
       left: pos.x + @dragState.mouseOffset.x + "px"
       top: pos.y + @dragState.mouseOffset.y + "px"
-    ph = @dragState.placeholderDims
-    inPlaceHolder = ph.x1 < pos.x < ph.x2 and ph.y1 < pos.y < ph.y2
-    # Skip drop targets if were inside the placeholder. 
-    inIdea = false
-    $(".smallIdea, .group").removeClass("hovered leftside rightside")
-    for dim in @dragState.noteDims.concat(@dragState.groupDims)
-      if dim.el[0] == @dragState.active[0] or inPlaceHolder
-        continue
-      if dim.top < pos.y < dim.top + dim.height
-        if dim.left < pos.x < dim.left + dim.width * 0.2
-          dim.el.addClass("leftside")
-          return false
-        if dim.left + dim.width * 0.2 < pos.x < dim.left + dim.width * 0.8
-          dim.el.addClass("hovered")
-          return false
-        if dim.left + dim.width * 0.8 < pos.x < dim.left + dim.width
-          dim.el.addClass("rightside")
-          return false
+    @dragState.currentTarget = null
+    @dragState.dropline.hide()
+    @$(".hovered").removeClass("hovered")
+    for target in @dragState.targetDims
+      if target.box.x1 <= pos.x < target.box.x2 and target.box.y1 <= pos.y < target.box.y2
+        if target.dropline?
+          target.el.append(@dragState.dropline)
+          @dragState.dropline.show().css
+            left: target.dropline.left + "px"
+            top: target.dropline.top + "px"
+            height: target.dropline.height + "px"
+        else
+          target.el.addClass("hovered")
+        @dragState.currentTarget = target
+        break
+    unless @dragState.currentTarget?
+      # Are we breaking the group?
+      bg = @dragState.breakGroup
+      if bg?
+        unless bg.box.x1 <= pos.x < bg.box.x2 and bg.box.y1 <= pos.y < bg.box.y2
+          target = @dragState.currentTarget = @dragState.breakGroup
+          target.el.append(@dragState.dropline)
+          @dragState.dropline.show().css
+            left: target.dropline.left + "px"
+            top: target.dropline.top + "px"
+            height: target.dropline.height + "px"
     return false
 
   startDragGroup: (event) => return @startDrag(event)
@@ -650,15 +685,13 @@ class ds.Organizer extends Backbone.View
     activeOffset = active.offset()
     activeWidth = active.outerWidth(true)
     activeHeight = active.outerHeight(true)
-    active.addClass("active")
     @dragState = {
       startTime: new Date().getTime()
       active: active
       offset: active.position()
-      noteDims: []
-      groupDims: []
+      targetDims: []
+      dropline: $("<div class='dropline'></div>")
       placeholder: $("<div></div>").css
-        display: "inline-block"
         float: "left"
         width: (activeWidth) + "px"
         height: (activeHeight) + "px"
@@ -667,29 +700,171 @@ class ds.Organizer extends Backbone.View
         y1: activeOffset.top
         x2: activeOffset.left + activeWidth
         y2: activeOffset.top + activeHeight
+      startPos: @getPosition(event)
     }
-    @dragState.lastPos = @dragState.startPos = @getPosition(event)
+    @dragState.lastPos = @dragState.startPos
     @dragState.mouseOffset =
       x: @dragState.offset.left - @dragState.startPos.x
       y: @dragState.offset.top - @dragState.startPos.y
-    for note in @$(".smallIdea")
-      $n = $(note)
-      dims = $n.offset()
-      dims.width = $n.outerWidth(true) + 2
-      dims.height = $n.outerHeight(true)
-      dims.el = $n
-      @dragState.noteDims.push(dims)
+
+    @$(".idea-browser").append(@dragState.dropline)
+    if @dragState.active.is(".group")
+      @dragState.activeParent = @dragState.active
+    else
+      @dragState.activeParent = @dragState.active.parents("[data-group-position]")
+
+    ###################################################
+    # Set up drop targets
+    #
+
+    # Note adjacencies
+    droplineOuterWidth = @dragState.dropline.outerWidth(true)
+    droplineExtension = 15
+    for el in @$(".smallIdea")
+      if el == @dragState.active[0]
+        continue
+      el = $(el)
+      ideaPos = parseInt(el.attr("data-idea-position"))
+      groupPos = parseInt(
+        el.parents("[data-group-position]").attr("data-group-position")
+      )
+      inGroup = @dotstorm.get("groups")[groupPos].ideas.length > 1
+      offset = el.offset()
+      outerWidthMargin = el.outerWidth(true)
+      outerHeightMargin = el.outerHeight(true)
+      outerHeight = el.outerHeight(false)
+      # Left side
+      @dragState.targetDims.push
+        el: el
+        box:
+          x1: offset.left
+          x2: offset.left + outerWidthMargin * (if inGroup then 0.5 else 0.2)
+          y1: offset.top
+          y2: offset.top + outerHeightMargin
+        right: 0
+        groupPos: groupPos
+        ideaPos: if inGroup then ideaPos else null
+        dropline:
+          top: -droplineExtension
+          left: -droplineOuterWidth / 2 - getPx(el, "margin-left") - 1
+          height: outerHeight + droplineExtension * 2
+      # Right side
+      @dragState.targetDims.push
+        el: el
+        box:
+          x1: offset.left + outerWidthMargin * (if inGroup then 0.5 else 0.8)
+          x2: offset.left + outerWidthMargin
+          y1: offset.top
+          y2: offset.top + outerHeightMargin
+        right: 1
+        groupPos: groupPos
+        ideaPos: if inGroup then ideaPos else null
+        dropline:
+          top: -droplineExtension
+          left: el.outerWidth(false) - droplineOuterWidth / 2 + getPx(el, "margin-right")
+          height: outerHeight + droplineExtension * 2
+      unless inGroup
+        # center
+        @dragState.targetDims.push
+          el: el
+          box:
+            x1: offset.left + outerWidthMargin * 0.2
+            x2: offset.left + outerWidthMargin * 0.8
+            y1: offset.top
+            y2: offset.top + outerHeightMargin
+          right: 0
+          groupPos: groupPos
+          ideaPos: ideaPos
+          dropline: null
+
+    # Group adjacencies
     for group in @$(".group")
-      $g = $(group)
-      dims = $g.offset()
-      dims.width = $g.outerWidth(true)
-      dims.height = $g.outerHeight(true)
-      dims.el = $g
-      @dragState.groupDims.push(dims)
+      if group == @dragState.activeParent[0]
+        continue
+      group = $(group)
+      ideaPos = parseInt(
+        group.find(".smallIdea:first").attr("data-idea-position")
+      )
+      groupPos = parseInt(group.attr("data-group-position"))
+      offset = group.offset()
+      pos = group.position()
+      width = group.width()
+      outerWidthMargin = group.outerWidth(true)
+      outerHeight = group.outerHeight(false)
+      outerHeightMargin = group.outerHeight(true)
+      # Left of group
+      @dragState.targetDims.push
+        el: group
+        box:
+          x1: offset.left
+          x2: offset.left + outerWidthMargin * 0.2
+          y1: offset.top
+          y2: offset.top + outerHeightMargin
+        right: 0
+        groupPos: groupPos
+        ideaPos: null
+        dropline:
+          top: -droplineExtension
+          left: -droplineOuterWidth / 2 - getPx(group, "margin-left")
+          height: outerHeight + droplineExtension * 2
+      
+      # Right of group
+      @dragState.targetDims.push
+        el: group
+        box:
+          x1: offset.left + outerWidthMargin * 0.8
+          x2: offset.left + outerWidthMargin
+          y1: offset.top
+          y2: offset.top + outerHeightMargin
+        right: 1
+        groupPos: groupPos
+        ideaPos: null
+        dropline:
+          top: -droplineExtension
+          left: group.outerWidth(false) + getPx(group, "margin-right") - droplineOuterWidth/2
+          height: outerHeight + droplineExtension*2
+
+      # Center
+      @dragState.targetDims.push
+        el: group
+        box:
+          x1: offset.left + outerWidthMargin * 0.2
+          x2: offset.left + outerWidthMargin * 0.8
+          y1: offset.top
+          y2: offset.top + outerHeightMargin
+        right: 0
+        groupPos: groupPos
+        ideaPos: 0
+        dropline: null
+
+    # Pulling out of a group
+    if (not @dragState.active.is(".group")) and @dragState.activeParent.is(".group")
+      # Inverse target for breaking group
+      el = @dragState.activeParent
+      offset = el.offset()
+      @dragState.breakGroup =
+        el: el
+        box:
+          x1: offset.left
+          x2: offset.left + el.outerWidth(false)
+          y1: offset.top
+          y2: offset.top + el.outerHeight(false)
+        right: 1
+        groupPos: el.attr("data-group-position")
+        ideaPos: null
+        dropline:
+          top: -droplineExtension
+          left: el.outerWidth(false) + getPx(el, "margin-right") - droplineOuterWidth/2
+          height: el.outerHeight(true) + droplineExtension*2
+    
+    # Done setting up drop targets
+    ###################################
+
+    active.addClass("active")
     @dragState.active.before(@dragState.placeholder)
     @moveNote()
-    # Add window as a listener, so if we drag too fast, we still pull the note
-    # along. Remove this again in @stopDrag.
+    # Add window as a listener, so if we drag too fast and aren't on top of it
+    # any more, we still pull the note along. Remove this again at @stopDrag.
     $(window).on "mousemove", @continueDrag
     $(window).on "touchmove", @continueDrag
     return false
@@ -712,76 +887,43 @@ class ds.Organizer extends Backbone.View
       parseInt($el.attr("data-idea-position"))
     ]
 
-  clearDragUI: (event) =>
+  stopDragGroup: (event) => @stopDrag(event)
+  stopDrag: (event) =>
     event.preventDefault()
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
+    @$(".hovered").removeClass("hovered")
 
-    # reset drag UI...
     @dragState?.placeholder?.remove()
+    @dragState?.dropline?.remove()
     unless @dragState? and @dragState.active?
       return false
+
     @dragState.active.removeClass("active")
     @dragState.active.css
       position: "relative"
       left: 0
       top: 0
-    
-    drop =
-      source: @dragState.active
-      target: @$(".leftside, .hovered, .rightside")
-    drop.rightside = drop.target.hasClass("rightside")
 
-    [drop.sourceGroupPos, drop.sourceIdeaPos] = @getGroupPosition(drop.source)
-    if drop.target[0]?
-      [drop.destGroupPos, drop.destIdeaPos] = @getGroupPosition(drop.target)
-      if @dotstorm.get("groups")[drop.destGroupPos].ideas.length == 1 and not drop.target.hasClass("hovered")
-        drop.destIdeaPos = null
-      else if not drop.destIdeaPos and drop.target.hasClass("hovered")
-        drop.destIdeaPos = parseInt(drop.target.find("[data-idea-position]:first").attr("[data-idea-position]"))
+    if (not @dragState.active.is(".group")) and @checkForClick()
+      @showBig(@ideas.get(@dragState.active.attr("data-id")))
+      return false
 
-    else
-      drop.destGroupPos = null
-      drop.destIdeaPos = null
-    drop.target.removeClass("leftside rightside hovered")
-    return drop
-
-  stopDragGroup: (event) => @stopDrag(event)
-  stopDrag: (event) =>
-    drop = @clearDragUI(event)
-    unless drop
-      return
-
-    if not drop.target[0]
-      if drop.sourceIdeaPos? and @checkForClick()
-        @showBig(@ideas.get(drop.source.attr("data-id")))
-        return false
-      else if drop.sourceIdeaPos?
-        # Are we being dragged out of our current group?
-        groupParent = drop.source.parents(".group:first")
-        if groupParent[0]?
-          pos = @dragState.lastPos
-          dims = groupParent.offset()
-          dims.width = groupParent.width()
-          dims.height = groupParent.height()
-          unless dims.left < pos.x < dims.left + dims.width and dims.top < pos.y < dims.top + dims.height
-            @dotstorm.move(
-              drop.sourceGroupPos, drop.sourceIdeaPos,
-              drop.sourceGroupPos, null,
-              1
-            )
-            @dotstorm.trigger("change:groups")
-            @dotstorm.save null, {
-              error: (model, err) =>
-                console.error("error", err)
-                flash "error", "Error saving: #{err}"
-            }
-    else
-      # We have a drop target.  Move!
+    if @dragState.currentTarget?
+      sourceIdeaPos = parseInt(
+        @dragState.active.attr("data-idea-position")
+      )
+      if isNaN(sourceIdeaPos)
+        sourceIdeaPos = null
+      sourceGroupPos = parseInt(
+        @dragState.activeParent.attr("data-group-position")
+      )
+      console.log @dragState.currentTarget
       @dotstorm.move(
-        drop.sourceGroupPos, drop.sourceIdeaPos,
-        drop.destGroupPos, drop.destIdeaPos,
-        if drop.rightside then 1 else 0
+        sourceGroupPos, sourceIdeaPos,
+        @dragState.currentTarget.groupPos,
+        @dragState.currentTarget.ideaPos,
+        @dragState.currentTarget.right
       )
       @dotstorm.trigger("change:groups")
       @dotstorm.save null, {
@@ -800,6 +942,7 @@ class ds.Organizer extends Backbone.View
         Math.pow(@dragState.lastPos.y - @dragState.startPos.y, 2)
     )
     elapsed = new Date().getTime() - @dragState.startTime
+    console.log distance, elapsed
     return distance < 20 and elapsed < 400
 
 class ds.ShowIdeaSmall extends Backbone.View
