@@ -266,6 +266,14 @@ class ds.Organizer extends Backbone.View
             left: target.dropline.left + "px"
             top: target.dropline.top + "px"
             height: target.dropline.height + "px"
+
+    scrollTop = $(window).scrollTop()
+    if pos.y - scrollTop > @dragState.windowHeight - 10
+      $(window).scrollTop(Math.min(
+        Math.max(0, @dragState.documentHeight - @dragState.windowHeight),
+        scrollTop + 10))
+    else if pos.y - scrollTop < 10
+      $(window).scrollTop(Math.max(scrollTop - 10, 0))
     return false
 
   startDragGroup: (event) => return @startDrag(event)
@@ -277,6 +285,8 @@ class ds.Organizer extends Backbone.View
     activeWidth = active.outerWidth(true)
     activeHeight = active.outerHeight(true)
     @dragState = {
+      windowHeight: $(window).height()
+      documentHeight: $(document).height()
       startTime: new Date().getTime()
       active: active
       offset: active.position()
