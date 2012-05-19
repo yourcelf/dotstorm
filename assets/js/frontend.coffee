@@ -1,5 +1,6 @@
 #= require lib/jquery
 #= require lib/jquery.cookie
+#= require lib/jquery.color
 #= require lib/underscore
 #= require lib/underscore-autoescape
 #= require lib/backbone
@@ -8,7 +9,12 @@
 #= require backbone-socket.client
 #= require dotstorm/common
 #= require dotstorm/models
+#= require dotstorm/intro
+#= require dotstorm/topic
+#= require dotstorm/votes
 #= require dotstorm/ideas
+#= require dotstorm/editor
+#= require dotstorm/organizer
 #= require dotstorm/users
 #= require dotstorm/router
 #= require dotstorm/socket
