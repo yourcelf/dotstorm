@@ -654,6 +654,12 @@ class ds.Organizer extends Backbone.View
     @$(".hovered").removeClass("hovered")
     for target in @dragState.targetDims
       if target.box.x1 <= pos.x < target.box.x2 and target.box.y1 <= pos.y < target.box.y2
+        # Avoid next-door neighbors which don't change position (not in a group)
+        if target.ideaPos == null and ((target.right == 0 and target.groupPos == @dragState.groupPos + 1) or (target.right == 1 and target.groupPos == @dragState.groupPos - 1))
+          continue
+        # Avoid next-door neighbors which don't change position (in a group)
+        if target.groupPos == @dragState.groupPos and ((target.right == 0 and target.ideaPos == @dragState.ideaPos + 1) or (target.right == 1 and target.ideaPos == @dragState.ideaPos - 1))
+          continue
         if target.dropline?
           target.el.append(@dragState.dropline)
           @dragState.dropline.show().css
@@ -712,6 +718,10 @@ class ds.Organizer extends Backbone.View
       @dragState.activeParent = @dragState.active
     else
       @dragState.activeParent = @dragState.active.parents("[data-group-position]")
+    @dragState.groupPos = parseInt(@dragState.activeParent.attr("data-group-position"))
+    @dragState.ideaPos = parseInt(@dragState.active.attr("data-idea-position"))
+    if isNaN(@dragState.ideaPos)
+      @dragState.ideaPos = null
 
     ###################################################
     # Set up drop targets
@@ -782,7 +792,7 @@ class ds.Organizer extends Backbone.View
 
     # Group adjacencies
     for group in @$(".group")
-      if group == @dragState.activeParent[0]
+      if group == @dragState.active[0]
         continue
       group = $(group)
       ideaPos = parseInt(
@@ -828,17 +838,18 @@ class ds.Organizer extends Backbone.View
           height: outerHeight + droplineExtension*2
 
       # Center
-      @dragState.targetDims.push
-        el: group
-        box:
-          x1: offset.left + outerWidthMargin * 0.2
-          x2: offset.left + outerWidthMargin * 0.8
-          y1: offset.top
-          y2: offset.top + outerHeightMargin
-        right: 0
-        groupPos: groupPos
-        ideaPos: 0
-        dropline: null
+      unless group[0] == @dragState.activeParent[0]
+        @dragState.targetDims.push
+          el: group
+          box:
+            x1: offset.left + outerWidthMargin * 0.2
+            x2: offset.left + outerWidthMargin * 0.8
+            y1: offset.top
+            y2: offset.top + outerHeightMargin
+          right: 0
+          groupPos: groupPos
+          ideaPos: 0
+          dropline: null
 
     # Pulling out of a group
     if (not @dragState.active.is(".group")) and @dragState.activeParent.is(".group")
