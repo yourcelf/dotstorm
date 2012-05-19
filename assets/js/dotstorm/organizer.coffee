@@ -237,6 +237,7 @@ class ds.Organizer extends Backbone.View
     @dragState.currentTarget = null
     @dragState.dropline.hide()
     @$(".hovered").removeClass("hovered")
+    @dragState.placeholder.addClass("active")
     for target in @dragState.targetDims
       if target.box.x1 <= pos.x < target.box.x2 and target.box.y1 <= pos.y < target.box.y2
         # Avoid next-door neighbors which don't change position (not in a group)
@@ -249,6 +250,7 @@ class ds.Organizer extends Backbone.View
         else
           target.el.addClass("hovered")
         @dragState.currentTarget = target
+        @dragState.placeholder.removeClass("active")
         break
     unless @dragState.currentTarget?
       # Are we breaking the group?
@@ -261,6 +263,7 @@ class ds.Organizer extends Backbone.View
             left: target.dropline.left + "px"
             top: target.dropline.top + "px"
             height: target.dropline.height + "px"
+          @dragState.placeholder.removeClass("active")
 
     scrollTop = $(window).scrollTop()
     if pos.y - scrollTop > @dragState.windowHeight - 10
@@ -287,7 +290,7 @@ class ds.Organizer extends Backbone.View
       offset: active.position()
       targetDims: []
       dropline: $("<div class='dropline'></div>")
-      placeholder: $("<div></div>").css
+      placeholder: $("<div class='placeholder'></div>").css
         float: "left"
         width: (activeWidth) + "px"
         height: (activeHeight) + "px"
