@@ -71,7 +71,7 @@ script#dotstormOrganizer(type='text/template')
 script#dotstormSmallIdea(type='text/template')
   <img src='<%= drawingURLs.medium %>' alt='<%= description %>' />
   div.tags
-    <%= tags %>
+    <%= tags.join(", ") %>
   div.votes
   div.dragger
 
