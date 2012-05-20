@@ -143,3 +143,26 @@ describe "Dotstorm idea reordering", ->
     dotstorm.set "groups", [g(a, b), g(c, d)]
     dotstorm.move(1, null, 0, 0, 1)
     expectMatch [g(a, c, d, b)]
+
+  it "moves things in and out of the trash", ->
+    dotstorm.set "groups", [g(a, b), g(c, d)]
+    dotstorm.move(0, 0, null, null)
+
+    expectMatch [g(b), g(c, d)]
+    expect(dotstorm.get("trash")).to.eql([a])
+
+    dotstorm.move(1, null, null, null)
+    expectMatch [g(b)]
+    expect(dotstorm.get("trash")).to.eql([c, d, a])
+
+    dotstorm.move(null, 0, 0, null)
+    expect(dotstorm.get("trash")).to.eql([d, a])
+    expectMatch [g(c), g(b)]
+
+    dotstorm.move(null, 0, 0, 0)
+    expect(dotstorm.get("trash")).to.eql([a])
+    expectMatch [g(d, c), g(b)]
+
+    dotstorm.move(0, null, null, 1)
+    expect(dotstorm.get("trash")).to.eql([a, d, c])
+    expectMatch [g(b)]

@@ -70,20 +70,40 @@ class ds.Dotstorm extends Backbone.Model
   # Moving ideas within/between/into groups.
   # 
   # Takes 4 arguments:
-  #   sourceGroupPos: the source group position
+  #   sourceGroupPos: the source group position (or null if the source is in
+  #                   the trash).
   #   sourceIdeaPos: the position of the idea within the source group, or null
   #                  if the whole group is being moved.
-  #   destGroupPos: the position of the group at the destination.
+  #   destGroupPos: the position of the group at the destination (or null if
+  #                 the destination is the trash).
   #   destIdeaPos: the position of the idea within the group into which to
   #                interpolate the source idea(s); or null, if we intend to 
   #                drop the source idea(s) adjacent the destination group.
   #   offset: positional offset. 0 for left side, 1 for right side.
   move: (sourceGroupPos, sourceIdeaPos, destGroupPos, destIdeaPos, offset=0) =>
     groups = @get("groups")
+    trash = @get("trash") or []
     finish = =>
       @orderChanged()
       @set("groups", groups)
-    if sourceIdeaPos == null
+    if destGroupPos == null
+      # MOVING TO TRASH.  Dest group is null.
+      if sourceIdeaPos == null
+        # Move whole group to the trash.
+        group = groups.splice(sourceGroupPos, 1)[0]
+        toTrash = group.ideas
+      else
+        # Move individual note to trash.
+        toTrash = groups[sourceGroupPos].ideas.splice(sourceIdeaPos, 1)
+      trash.splice.apply(trash, [destIdeaPos or 0, 0].concat(toTrash))
+      @set("trash", trash)
+    else if sourceGroupPos == null
+      id = trash.splice(sourceIdeaPos, 1)[0]
+      pos = groups.length
+      groups.splice(pos, 0, {ideas: [id]})
+      # Just recurse to avoid duplicating the logic for moving.
+      @move(pos, 0, destGroupPos, destIdeaPos, offset)
+    else if sourceIdeaPos == null
       # MOVING A GROUP: Source is a whole group.
       # Ignore move if we're moving a group to itself.
       unless destGroupPos == sourceGroupPos

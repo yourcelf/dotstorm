@@ -207,6 +207,14 @@ class ds.Organizer extends Backbone.View
 
     @$("#organizer").append("<div style='clear: both;'></div>")
 
+  renderTrash: =>
+    @$("#trash .contents").html()
+    _.each @dotstorm.get("trash"), (id) ->
+      idea = @ideas.get(id)
+      view = @getIdeaView(idea)
+      @$("#trash .contents").append(view.el)
+      view.render()
+
   getIdeaView: (idea) =>
     unless @smallIdeaViews[idea.id]
       view = new ds.ShowIdeaSmall(model: idea)
@@ -411,13 +419,16 @@ class ds.Organizer extends Backbone.View
         for dim in doDims
           do (dim, groupPos, ideaPos) =>
             match = (pos) =>
-              if (@dragState.inGroup == false and ideaPos == null and \
+              ph = @dragState.placeholderDims
+              if (ph.x1 <= pos.x <= ph.x2 and ph.y1 <= pos.y <= ph.y2) or \
+                 (@dragState.inGroup == false and ideaPos == null and \
                    (groupPos == @dragState.groupPos or \
-                    groupPos - 1 == @dragState.groupPos) \
-                 ) or (@dragState.isGroup == true and \
-                       groupPos == @dragState.groupPos \
-                 ) or (groupPos == @dragState.groupPos and \
-                   (ideaPos == @dragState.ideaPos or ideaPos - 1 == @dragState.ideaPos))
+                    groupPos - 1 == @dragState.groupPos)) or \
+                 (@dragState.isGroup == true and \
+                   groupPos == @dragState.groupPos) or \
+                 (groupPos == @dragState.groupPos and \
+                   (ideaPos == @dragState.ideaPos or \
+                     ideaPos - 1 == @dragState.ideaPos))
                 return false
               return dim.x1 < pos.x < dim.x2 and dim.y1 < pos.y < dim.y2
             if ideaPos == null
