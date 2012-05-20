@@ -26,9 +26,16 @@ a:link, a:visited
 a:link.cta, a:visited.cta, a.cta
   color: white
 .cta-thin
-  line-height: 1.5em
-  height: 1.5em
+  //line-height: 2em
+  //height: 2em
 
+#size
+  position: absolute
+  bottom: 0
+  left: 0
+  background: white
+  border: 1px solid #aaa
+  display: none
 
 input[type=text]
   border: 1px solid gray
@@ -182,6 +189,8 @@ nav.tabs, ul.tablinks
     top: 3em
 
 #addIdea
+  margin-left: auto
+  margin-right: auto
   min-width: 240px
   max-width: 600px
   position: relative
@@ -310,10 +319,10 @@ nav.tabs, ul.tablinks
         display: inline
     .embed
       position: absolute
-      right: 0
+      right: 0.5em
       top: 0
       text-decoration: none
-      font-size: 24px
+      font-size: 20px
       color: #060
     .smallIdea
       overflow: visible
@@ -429,18 +438,34 @@ nav.tabs, ul.tablinks
   .note
     -webkit-box-sizing: border-box
     -moz-box-sizing: border-box
+    -ie-box-sizing: border-box
     box-sizing: border-box
     -webkit-box-shadow: 0px 0px 50px white
     -khtml-box-shadow: 0px 0px 50px white
     -moz-box-shadow: 0px 0px 50px white
     -o-box-shadow: 0px 0px 50px white
     box-shadow: 0px 0px 50px white
+    max-width: 100%
     position: relative
+    padding: 1em
     margin-left: auto
     margin-right: auto
-    padding-top: 0.5em
-    padding-bottom: 0.5em
     background: rgba(255, 255, 255, 0.8)
+    .toolbar
+      text-align: center
+      .edit
+        float: left
+        margin-left: 1em
+      img
+        vertical-align: middle
+      padding-bottom: 0.5em
+
+    .canvasHolder
+      text-align: center
+      img
+        max-width: 100%
+        max-height: 100%
+
     form
       -webkit-user-select: text
       -khtml-user-select: text
@@ -483,25 +508,10 @@ nav.tabs, ul.tablinks
         background: rgba(0, 0, 0, 0.5)
       &:hover .navlink
         display: block
-    .metadata
+    .tags
       font-size: 24px
       padding-left: 0.5em
       padding-right: 0.5em
-    .image-boxed, .canvasHolder
-      margin-left: auto
-      margin-right: auto
-    .canvasHolder
-      text-align: center
-      img
-        max-width: 100%
-
-    .toolbar
-      text-align: center
-      .edit
-        float: left
-      img
-        vertical-align: middle
-      padding-bottom: 0.5em
 
 /*
   Tag links

@@ -2,7 +2,7 @@ nav.tabs(style='display: none;')
   a.home(href='/')
     img(src='/img/home.png', alt='Dotstorm home')
   a.show-ideas(href='/d/#{slug}/') Show ideas
-  a.add(href='/d/#{slug}/add') Add idea +
+  //a.add(href='/d/#{slug}/add') Add idea +
 
 div#app
   <img src='/img/spinner.gif' alt='loading' /> Loading...
@@ -81,7 +81,7 @@ script#dotstormSmallIdeaGroup(type='text/template')
       <% if (showGroup) { %>
       span.label.clickToEdit
         <%= label || "[Click to add label]" %>
-      <a href='/g/<%= group_id %>' class='embed' title='Embed this group'>&#9901;</a> 
+      <a href='/g/<%= group_id %>' class='embed' title='Embed this group'>&#8734;</a> 
       <% } else {%>
       | &nbsp;
       <% } %>
@@ -102,8 +102,7 @@ script#dotstormBigIdea(type='text/template')
             img(src="/img/pencil.png", alt='edit')
           span.vote-widget
         div.canvasHolder
-          div.canvas
-            <img src='<%= drawingURLs.full %>' alt='<%= description %>' />
+          <img src='<%= drawingURLs.full %>' alt='<%= description %>' />
           <% if (hasPrev) { %>
           div.nav.prevHolder
             div.navlink.prev(title='previous') &laquo;
@@ -112,11 +111,10 @@ script#dotstormBigIdea(type='text/template')
           div.nav.nextHolder
             div.navlink.next(title='next') &raquo;
           <% } %>
-        div.metadata.image-boxed
-          div.tags
-            b tags:&nbsp;
-            span.clickToEdit
-              <%= tags.join(", ") || "[Click to add]"%>
+        div.tags
+          b tags:&nbsp;
+          span.clickToEdit
+            <%= tags.join(", ") || "[Click to add]"%>
       div(style='clear: both;')
 
 script#dotstormTagOverlay(type='text/template')

@@ -14,7 +14,10 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.3.1 r9886"
-   sodipodi:docname="New document 1">
+   sodipodi:docname="eraser.svg"
+   inkscape:export-filename="/home/tc1/git/dotstorm/assets/img/eraser.png"
+   inkscape:export-xdpi="48"
+   inkscape:export-ydpi="48">
   <defs
      id="defs4">
     <filter
@@ -23,9 +26,9 @@
        y="0"
        width="1"
        height="1"
-       inkscape:menu-tooltip="Glowing image content without blurring it"
-       inkscape:menu="Image effects"
-       inkscape:label="Soft focus lens"
+       inkscape:menu-tooltip="Blur inner borders and intersections"
+       inkscape:menu="Blurs"
+       inkscape:label="Cross-smooth"
        color-interpolation-filters="sRGB">
       <feGaussianBlur
          id="feGaussianBlur4204"
@@ -103,7 +106,47 @@
       <feComposite
          id="feComposite4242"
          in2="fbSourceGraphic"
-         operator="in" />
+         operator="in"
+         result="fbSourceGraphic" />
+      <feColorMatrix
+         result="fbSourceGraphicAlpha"
+         in="fbSourceGraphic"
+         values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"
+         id="feColorMatrix3079" />
+      <feGaussianBlur
+         id="feGaussianBlur3081"
+         stdDeviation="3"
+         in="fbSourceGraphic" />
+      <feColorMatrix
+         id="feColorMatrix3083"
+         result="fbSourceGraphic"
+         values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 6 -2.5 " />
+      <feColorMatrix
+         result="fbSourceGraphicAlpha"
+         in="fbSourceGraphic"
+         values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"
+         id="feColorMatrix3085" />
+      <feGaussianBlur
+         id="feGaussianBlur3087"
+         stdDeviation="3"
+         in="fbSourceGraphic" />
+      <feColorMatrix
+         id="feColorMatrix3089"
+         result="fbSourceGraphic"
+         values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 6 -2.5 " />
+      <feColorMatrix
+         result="fbSourceGraphicAlpha"
+         in="fbSourceGraphic"
+         values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"
+         id="feColorMatrix3091" />
+      <feGaussianBlur
+         id="feGaussianBlur3093"
+         stdDeviation="3"
+         in="fbSourceGraphic" />
+      <feColorMatrix
+         id="feColorMatrix3095"
+         result="fbSourceGraphic"
+         values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 6 -2.5 " />
     </filter>
   </defs>
   <sodipodi:namedview
@@ -113,9 +156,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="3.959798"
-     inkscape:cx="366.40871"
-     inkscape:cy="520"
+     inkscape:zoom="0.9899495"
+     inkscape:cx="380.55085"
+     inkscape:cy="534.14214"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"

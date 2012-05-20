@@ -145,7 +145,7 @@ class ds.EditIdea extends Backbone.View
 
   resize: =>
     [width, height] = ds.fillSquare(@$(".canvasHolder"), @$el, 600, 160)
-    @$el.css "min-width", width + "px"
+    @$("#addIdea").css "width", width + "px"
     @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
 
   setPhoto: (imageData) =>

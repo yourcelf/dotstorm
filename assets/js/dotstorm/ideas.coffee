@@ -127,15 +127,11 @@ class ds.ShowIdeaBig extends Backbone.View
     @$el.html @template args
     @$el.addClass("bigIdea")
     resize = =>
-      [width, height] = ds.fillSquare(@$(".canvasHolder"), @$(".note"), 600, 200)
-      @$(".text").css "font-size", (height / 10) + "px"
-      @$(".note").css "max-width", width + "px"
-      # Hack for mobile lack of position:fixed.  Not working yet...
-      @$(".shadow").css
-        position: "absolute"
-        top: $("html,body").scrollTop() + 'px'
-        minHeight: window.innerHeight
-    @$(".canvasHolder img").on "load", resize
+      noteHeight = @$(".note").outerHeight(true) - @$(".canvasHolder").outerHeight(true)
+      maxImgHeight = $(window).height() - noteHeight
+      @$(".canvasHolder").css("max-height", $(window).height() - noteHeight)
+      @$(".note").css("width", Math.min(640, maxImgHeight))
+    @$(".note img").on "load", resize
     resize()
     @renderVotes()
     $(window).on "resize", resize
