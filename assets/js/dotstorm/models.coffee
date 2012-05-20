@@ -95,6 +95,8 @@ class ds.Dotstorm extends Backbone.Model
       else
         # Move individual note to trash.
         toTrash = groups[sourceGroupPos].ideas.splice(sourceIdeaPos, 1)
+        if groups[sourceGroupPos].ideas.length == 0
+          groups.splice(sourceGroupPos, 1)
       trash.splice.apply(trash, [destIdeaPos or 0, 0].concat(toTrash))
       @set("trash", trash)
     else if sourceGroupPos == null

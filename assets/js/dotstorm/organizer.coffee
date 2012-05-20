@@ -9,6 +9,7 @@ class ds.Organizer extends Backbone.View
   events:
     'click         .add-link': 'softNav'
     'click              .tag': 'toggleTag'
+    'click            #trash': 'toggleTrash'
                 
     'touchstart   .labelMask': 'nothing'
     'mouseDown    .labelMask': 'nothing'
@@ -53,6 +54,7 @@ class ds.Organizer extends Backbone.View
       #console.debug "Dotstorm: grouping changed"
       # This double-calls... but ok!
       @renderGroups()
+      @renderTrash()
     @ideas.on "add", =>
       #console.debug "Dotstorm: idea added"
       @renderGroups()
@@ -142,6 +144,10 @@ class ds.Organizer extends Backbone.View
       @showTag = tag
     @filterByTag(@showTag)
     return false
+
+  toggleTrash: (event) =>
+    if @dotstorm.get("trash").length > 0
+      $("#trash").toggleClass("open")[0].scrollIntoView()
   
   render: =>
     #console.debug "Dotstorm: RENDER DOTSTORM"
@@ -152,6 +158,7 @@ class ds.Organizer extends Backbone.View
     @renderTagCloud()
     @renderTopic()
     @renderGroups()
+    @renderTrash()
     @renderOverlay()
     $(window).on "mouseup", @stopDrag
     $(".smallIdea").on "touchmove", (event) -> event.preventDefault()
@@ -209,11 +216,17 @@ class ds.Organizer extends Backbone.View
 
   renderTrash: =>
     @$("#trash .contents").html()
-    _.each @dotstorm.get("trash"), (id) ->
+    trash = @dotstorm.get("trash") or []
+    _.each trash, (id, i) =>
       idea = @ideas.get(id)
       view = @getIdeaView(idea)
       @$("#trash .contents").append(view.el)
       view.render()
+      view.$el.attr("data-idea-position", i)
+    if trash.length == 0
+      @$("#trash").addClass("empty").removeClass("open")
+    else
+      @$("#trash").removeClass("empty")
 
   getIdeaView: (idea) =>
     unless @smallIdeaViews[idea.id]
@@ -296,7 +309,7 @@ class ds.Organizer extends Backbone.View
       document:
         height: $(document).height()
     }
-    for el in @$(".smallIdea")
+    for el in @$(".idea-browser .smallIdea")
       el = $(el)
       parent = el.parents("[data-group-position]")
       dim = @getElementDims(el)
@@ -305,7 +318,7 @@ class ds.Organizer extends Backbone.View
       dim.ideaPos = parseInt(el.attr("data-idea-position"))
       dim.groupPos = parseInt(parent.attr("data-group-position"))
       dims.ideas.push(dim)
-    for el in @$(".group")
+    for el in @$(".idea-browser .group")
       el = $(el)
       dim = @getElementDims(el)
       dim.el = el
@@ -455,7 +468,57 @@ class ds.Organizer extends Backbone.View
                 @dotstorm.move(
                   @dragState.groupPos, @dragState.ideaPos, groupPos, ideaPos
                 )
-    #TODO: another pass to extend drop targets to the edge of the window.
+
+    # Trash
+    trash = $("#trash")
+    trashPos =
+      offset: trash.offset()
+      outerWidth: trash.outerWidth(true)
+      outerHeight: trash.outerHeight(true)
+    # Drag into trash
+    targets.trash.push {
+      onDrag: (pos) =>
+        tp = trashPos
+        if @dragState.groupPos != null and \
+            tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
+            tp.offset.top < pos.y < tp.offset.top + tp.outerHeight
+          trash.addClass("active")
+          return true
+        else
+          trash.removeClass("active")
+          return false
+      onDrop: =>
+        @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, null, null)
+    }
+    # Drag out of trash (but not into another explicit target)
+    targets.trash.push {
+      onDrag: (pos) =>
+        tp = trashPos
+        if @dragState.groupPos == null and not (
+            tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
+            tp.offset.top < pos.y < tp.offset.top + tp.outerHeight)
+          return true
+        return false
+      onDrop: =>
+        @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, 0, null)
+        $(".smallIdea[data-id=#{@dragState.active.attr("data-id")}]").css({
+          "outline-width": "12px"
+          "outline-style": "solid"
+          "outline-color": "rgba(255, 200, 0, 1.0)"
+        }).animate({
+          "outline-width": "12px"
+          "outline-style": "solid"
+          "outline-color": "rgb(255, 255, 255, 0.0)"
+        }, 5000, ->
+          $(this).css
+            "outline-width": ""
+            "outline-style": ""
+            "outline-color": ""
+        )
+    }
+
+
+
     return targets
 
 
@@ -493,6 +556,7 @@ class ds.Organizer extends Backbone.View
       y: @dragState.offset.top - @dragState.startPos.y
 
     @$(".idea-browser").append(@dragState.dropline)
+    @$("#trash").addClass("dragging")
     if @dragState.active.is(".group")
       @dragState.activeParent = @dragState.active
       @dragState.isGroup = true
@@ -502,6 +566,8 @@ class ds.Organizer extends Backbone.View
       @dragState.isGroup = false
       @dragState.inGroup = @dragState.activeParent.is(".group")
     @dragState.groupPos = parseInt(@dragState.activeParent.attr("data-group-position"))
+    if isNaN(@dragState.groupPos)
+      @dragState.groupPos = null
     @dragState.ideaPos = parseInt(@dragState.active.attr("data-idea-position"))
     if isNaN(@dragState.ideaPos)
       @dragState.ideaPos = null
@@ -510,7 +576,6 @@ class ds.Organizer extends Backbone.View
 
     active.addClass("active")
     @dragState.active.before(@dragState.placeholder)
-    
 
     @moveNote()
 
@@ -543,6 +608,7 @@ class ds.Organizer extends Backbone.View
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
     @$(".hovered").removeClass("hovered")
+    @$("#trash").removeClass("dragging")
 
     @dragState?.placeholder?.remove()
     @dragState?.dropline?.remove()

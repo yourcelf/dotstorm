@@ -46,7 +46,7 @@ attach = (channel, io) ->
           rebroadcast(doc.dotstorm_id, json)
 
       saveDotstormAndRespond = (doc) ->
-        for key in ["slug", "name", "topic", "groups"]
+        for key in ["slug", "name", "topic", "groups", "trash"]
           if data.model[key]?
             doc.set key, data.model[key]
         doc.save (err) ->

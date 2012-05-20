@@ -144,7 +144,7 @@ class ds.EditIdea extends Backbone.View
     this
 
   resize: =>
-    [width, height] = ds.fillSquare(@$(".canvasHolder"), @$el, 600, 160)
+    [width, height] = ds.fillSquare(@$(".canvasHolder"), @$el, 600, 320)
     @$("#addIdea").css "width", width + "px"
     @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
 
