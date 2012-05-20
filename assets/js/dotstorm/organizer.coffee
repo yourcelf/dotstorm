@@ -306,7 +306,7 @@ class ds.Organizer extends Backbone.View
       dims.groups.push(dim)
     return dims
 
-  buildNoteTargets: =>
+  buildDropTargets: =>
     targets = {
       adjacent: []
       join: []
@@ -495,7 +495,7 @@ class ds.Organizer extends Backbone.View
     if isNaN(@dragState.ideaPos)
       @dragState.ideaPos = null
 
-    @dragState.noteTargets = @buildNoteTargets()
+    @dragState.noteTargets = @buildDropTargets()
 
     active.addClass("active")
     @dragState.active.before(@dragState.placeholder)
