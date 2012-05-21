@@ -156,7 +156,15 @@ class ds.Organizer extends Backbone.View
       $("#trash").toggleClass("open")[0].scrollIntoView()
   
   render: =>
-    #console.debug "Dotstorm: RENDER DOTSTORM"
+    # Re-fetch drop target dims on resize.
+    resizeTimeout = null
+    $(window).on "resize", => @trigger "resize"
+    @on "resize", =>
+      clearTimeout(resizeTimeout) if resizeTimeout
+      resizeTimeout = setTimeout(
+        (=> @ideaAndGroupDims = @getIdeaAndGroupDims()), 100
+      )
+    $(window).on "mouseup", @stopDrag
     @$el.html @template
       sorting: true
       slug: @model.get("slug")
@@ -166,7 +174,8 @@ class ds.Organizer extends Backbone.View
     @renderGroups()
     @renderTrash()
     @renderOverlay()
-    $(window).on "mouseup", @stopDrag
+
+
     $(".smallIdea").on "touchmove", (event) -> event.preventDefault()
     # iOS needs this.  Argh.
     setTimeout (=> @delegateEvents()), 100
@@ -219,6 +228,8 @@ class ds.Organizer extends Backbone.View
           groupView.render()
 
     @$("#organizer").append("<div style='clear: both;'></div>")
+    # Trigger fetching group dims.
+    @trigger "resize"
 
   renderTrash: =>
     @$("#trash .contents").html()
@@ -341,9 +352,9 @@ class ds.Organizer extends Backbone.View
       trash: []
     }
     
-    droplineOuterWidth = @dragState.dropline.outerWidth(true)
+    droplineOuterWidth = 44
     droplineExtension = 15
-    dims = @getIdeaAndGroupDims()
+    dims = @ideaAndGroupDims
 
     # add handlers for combining ideas to create new groups.
     for dim in dims.ideas.concat(dims.groups)
@@ -488,7 +499,7 @@ class ds.Organizer extends Backbone.View
                     leftOffset = 0
                   @dragState.dropline.show().css
                     top: -droplineExtension + (dim.topOffset or 0)
-                    left: -droplineOuterWidth / 2 - dim.margin.left + leftOffset
+                    left: -droplineOuterWidth / 2 - dim.margin.left + leftOffset - 1
                     height: dim.outerHeight + droplineExtension * 2
               hide: =>
                 # UGLY: we're looking at the global state here to see if anyone
