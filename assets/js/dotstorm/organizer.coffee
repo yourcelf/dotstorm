@@ -214,7 +214,7 @@ class ds.Organizer extends Backbone.View
           @dotstorm.get("groups")[i].label = group.label
           @dotstorm.save null,
             error: (model, err) =>
-              console.error("error", err)
+              console.log("error", err)
               flash "error", "Error saving: #{err}"
           groupView.render()
 
@@ -265,19 +265,17 @@ class ds.Organizer extends Backbone.View
       top: pos.y + @dragState.mouseOffset.y + "px"
 
     # Clear previous drop target and UI.
-    @dragState.dropline.hide()
-    @$(".hovered").removeClass("hovered")
     @dragState.currentTarget = null
 
     # Update current drop target.
     matched = false
     for type in ["join", "adjacent", "create", "ungroup", "trash"]
       for target in @dragState.noteTargets[type]
-        if target.onDrag(pos)
+        if (not @dragState.currentTarget?) and target.match(pos)
           @dragState.currentTarget = target
-          break
-      if @dragState.currentTarget?
-        break
+          target.show()
+        else
+          target.hide()
     @dragState.placeholder.toggleClass("active", not @dragState.currentTarget?)
 
     # Handle edge scrolling.
@@ -306,7 +304,7 @@ class ds.Organizer extends Backbone.View
       height: el.height()
     }
 
-  getNoteDims: =>
+  getIdeaAndGroupDims: =>
     dims = {
       ideas: []
       groups: []
@@ -345,24 +343,27 @@ class ds.Organizer extends Backbone.View
     
     droplineOuterWidth = @dragState.dropline.outerWidth(true)
     droplineExtension = 15
-    dims = @getNoteDims()
+    dims = @getIdeaAndGroupDims()
 
     # add handlers for combining ideas to create new groups.
     for dim in dims.ideas.concat(dims.groups)
       do (dim) =>
+        active = false
         unless dim.inGroup or @dragState.groupPos == dim.groupPos
-          match = (pos) =>
-            return (
-              dim.offset.top < pos.y < dim.offset.top + dim.height and \
-              dim.offset.left < pos.x < dim.offset.left + dim.width
-            )
           targets.create.push
-            onDrag: (pos) =>
-              if match(pos)
-                @dragState.dropline.hide()
+            match: (pos) =>
+              return (
+                dim.offset.top < pos.y < dim.offset.top + dim.height and \
+                dim.offset.left < pos.x < dim.offset.left + dim.width
+              )
+            show: (pos) =>
+              unless active
                 dim.el.addClass("hovered")
-                return true
-              return false
+                active = true
+            hide: (pos) =>
+              if active
+                dim.el.removeClass("hovered")
+                active = false
             onDrop: =>
               @dotstorm.move(
                 @dragState.groupPos, @dragState.ideaPos,
@@ -438,28 +439,45 @@ class ds.Organizer extends Backbone.View
           doDims.push(dims.left or dims.right)
         for dim in doDims
           do (dim, groupPos, ideaPos) =>
-            match = (pos) =>
-              ph = @dragState.placeholderDims
-              if (ph.x1 <= pos.x <= ph.x2 and ph.y1 <= pos.y <= ph.y2) or \
-                 (@dragState.inGroup == false and ideaPos == null and \
-                   (groupPos == @dragState.groupPos or \
-                    groupPos - 1 == @dragState.groupPos)) or \
-                 (@dragState.isGroup == true and \
-                   groupPos == @dragState.groupPos) or \
-                 (groupPos == @dragState.groupPos and \
-                   (ideaPos == @dragState.ideaPos or \
-                     ideaPos - 1 == @dragState.ideaPos))
-                return false
-              return dim.x1 < pos.x < dim.x2 and dim.y1 < pos.y < dim.y2
             if ideaPos == null
               type = "adjacent"
             else
               type = "join"
+            active = false
             targets[type].push
-              onDrag: (pos) =>
-                if match(pos)
+              match: (pos) =>
+                ph = @dragState.placeholderDims
+                # This ugly conditional checks whether we should ignore the
+                # drop target because it will result in no change in ordering.
+                # For example, moving from position 0 to the left side of
+                # position 1 is no change; even though the position has a
+                # different number.  Remember that the arguments to
+                # @dotstorm.move assume "put me to the left of the named
+                # destination" unless you specify an offset to the right.
+                #
+                # Also, ignore any drop targets that overlap with the place
+                # holder from where the note was picked up.  This avoids the
+                # case of clicking on an idea and accidentally ungrouping it,
+                # since the group's "put outside of me" drop target overlaps
+                # with the placeholder.
+                if (ph.x1 <= pos.x <= ph.x2 and ph.y1 <= pos.y <= ph.y2) or \
+                   (@dragState.inGroup == false and ideaPos == null and \
+                     (groupPos == @dragState.groupPos or \
+                      groupPos - 1 == @dragState.groupPos)) or \
+                   (@dragState.isGroup == true and \
+                     groupPos == @dragState.groupPos) or \
+                   (groupPos == @dragState.groupPos and \
+                     (ideaPos == @dragState.ideaPos or \
+                       ideaPos - 1 == @dragState.ideaPos))
+                  return false
+                return dim.x1 < pos.x < dim.x2 and dim.y1 < pos.y < dim.y2
+              show: =>
+                unless active
+                  active = true
                   dim.el.append(@dragState.dropline)
-                  # Right side hack..
+                  # Right side hack... to tell whether to draw the dropline on
+                  # the right or the left, see if the target position is
+                  # greater than our current position.
                   if (ideaPos == null and groupPos > dim.groupPos) or \
                       (ideaPos != null and ideaPos > dim.ideaPos)
                     leftOffset = dim.outerWidth
@@ -469,8 +487,12 @@ class ds.Organizer extends Backbone.View
                     top: -droplineExtension + (dim.topOffset or 0)
                     left: -droplineOuterWidth / 2 - dim.margin.left + leftOffset
                     height: dim.outerHeight + droplineExtension * 2
-                  return true
-                return false
+              hide: =>
+                # UGLY: we're looking at the global state here to see if anyone
+                # else is using the dropline.  If not, hide it.
+                if active and not @dragState.currentTarget?
+                  active = false
+                  @dragState.dropline.hide()
               onDrop: =>
                 @dotstorm.move(
                   @dragState.groupPos, @dragState.ideaPos, groupPos, ideaPos
@@ -483,31 +505,38 @@ class ds.Organizer extends Backbone.View
       outerWidth: trash.outerWidth(true)
       outerHeight: trash.outerHeight(true)
     # Drag into trash
+    trashActive = false
     targets.trash.push {
-      onDrag: (pos) =>
+      match: (pos) =>
         tp = trashPos
-        if @dragState.groupPos != null and \
-            tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
-            tp.offset.top < pos.y < tp.offset.top + tp.outerHeight
+        return @dragState.groupPos != null and \
+          tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
+          tp.offset.top < pos.y < tp.offset.top + tp.outerHeight
+      show: =>
+        unless trashActive
+          trashActive = true
           trash.addClass("active")
-          return true
-        else
+      hide: =>
+        if trashActive
+          trashActive = false
           trash.removeClass("active")
-          return false
       onDrop: =>
         @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, null, null)
     }
     # Drag out of trash (but not into another explicit target)
     targets.trash.push {
-      onDrag: (pos) =>
+      match: (pos) =>
         tp = trashPos
-        if @dragState.groupPos == null and not (
+        return (
+          @dragState.groupPos == null and not (
             tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
             tp.offset.top < pos.y < tp.offset.top + tp.outerHeight)
-          return true
-        return false
+        )
+      show: ->
+      hide: ->
       onDrop: =>
-        @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, 0, null)
+        end = @dotstorm.get("groups").length + 1
+        @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, end, null)
         $(".smallIdea[data-id=#{@dragState.active.attr("data-id")}]").css({
           "outline-width": "12px"
           "outline-style": "solid"
@@ -566,7 +595,6 @@ class ds.Organizer extends Backbone.View
       x: @dragState.offset.left - @dragState.startPos.x
       y: @dragState.offset.top - @dragState.startPos.y
 
-    @$(".idea-browser").append(@dragState.dropline)
     @$("#trash").addClass("dragging")
     if @dragState.active.is(".group")
       @dragState.activeParent = @dragState.active
@@ -623,7 +651,7 @@ class ds.Organizer extends Backbone.View
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
     @$(".hovered").removeClass("hovered")
-    @$("#trash").removeClass("dragging")
+    @$("#trash").removeClass("dragging active")
 
     @dragState?.placeholder?.remove()
     @dragState?.dropline?.remove()
@@ -645,7 +673,7 @@ class ds.Organizer extends Backbone.View
       @dotstorm.trigger("change:groups")
       @dotstorm.save null, {
         error: (model, err) =>
-          console.error("error", err)
+          console.log("error", model, err)
           flash "error", "Error saving: #{err}"
       }
     @dragState = null

@@ -166,3 +166,8 @@ describe "Dotstorm idea reordering", ->
     dotstorm.move(0, null, null, 1)
     expect(dotstorm.get("trash")).to.eql([a, d, c])
     expectMatch [g(b)]
+
+    dotstorm.move(null, 1, 1, null)
+    expectMatch [g(b), g(d)]
+    expect(dotstorm.get("trash")).to.eql([a, c])
+

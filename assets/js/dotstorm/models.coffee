@@ -52,9 +52,10 @@ class ds.Dotstorm extends Backbone.Model
   addIdeaId: (idea_id, options) =>
     unless @indexOfIdeaId(idea_id)?
       groups = @get("groups") or []
-      groups.splice(0, 0, {_id: @uuid(), ideas: [idea_id]})
+      groups.splice(0, 0, @createGroup(idea_id))
       @set("groups", groups, options)
-
+  createGroup: (idea_id) =>
+    return {_id: @uuid(), ideas: [idea_id]}
   removeIdea: (idea, options) => @removeIdeaId(idea.id, options)
   removeIdeaId: (idea_id, options) =>
     pos = @indexOfIdeaId(idea_id)
@@ -100,10 +101,14 @@ class ds.Dotstorm extends Backbone.Model
       trash.splice.apply(trash, [destIdeaPos or 0, 0].concat(toTrash))
       @set("trash", trash)
     else if sourceGroupPos == null
+      # MOVING OUT OF TRASH.  Source group is null.
       id = trash.splice(sourceIdeaPos, 1)[0]
       pos = groups.length
-      groups.splice(pos, 0, {ideas: [id]})
-      # Just recurse to avoid duplicating the logic for moving.
+      groups.splice(pos, 0, @createGroup(id))
+      # Is this our desired destination?
+      if destGroupPos + offset == pos and destIdeaPos == null
+        return
+      # If not, Just recurse to avoid duplicating the logic for moving.
       @move(pos, 0, destGroupPos, destIdeaPos, offset)
     else if sourceIdeaPos == null
       # MOVING A GROUP: Source is a whole group.
@@ -141,7 +146,7 @@ class ds.Dotstorm extends Backbone.Model
         destGroup = groups[destGroupPos + destGroupOffset]
         if destIdeaPos == null
           # Dest is adjacent the target group.
-          newGroup = {_id: @uuid(), ideas: [source]}
+          newGroup = @createGroup(source)
           groups.splice(destGroupPos + destGroupOffset + offset, 0, newGroup)
         else
           # Dest is within the target group.
