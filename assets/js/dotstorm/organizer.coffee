@@ -365,9 +365,12 @@ class ds.Organizer extends Backbone.View
                 dim.el.removeClass("hovered")
                 active = false
             onDrop: =>
+              # Always specify a target ideaPos, even if we are a group and it
+              # would thus be null.  This results in a "combine" action rather
+              # than "move before".
               @dotstorm.move(
                 @dragState.groupPos, @dragState.ideaPos,
-                dim.groupPos, dim.ideaPos
+                dim.groupPos, dim.ideaPos or 0
               )
 
     # add handlers for consolidated targets for moving.

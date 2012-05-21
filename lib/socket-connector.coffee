@@ -49,7 +49,6 @@ attach = (channel, io) ->
         for key in ["slug", "name", "topic", "groups", "trash"]
           if data.model[key]?
             doc.set key, data.model[key]
-            console.log key, data.model[key]
         doc.save (err) ->
           if err? then return errorOut(err)
           respond(doc.serialize())
