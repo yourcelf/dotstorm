@@ -176,17 +176,21 @@ nav.tabs, ul.tablinks
   position: relative
   div.toolbar
     margin-top: 1em
-    a, .file-input
+    a, .file-chooser
       display: inline-block
       width: 32px
       height: 32px
       border: 1px solid #eee
     a.tool
       padding: 6px
-    a.tool
+      float: left
       &:active, &.active
         background: #f90
-      float: left
+      &.loading
+        img
+          display: none
+        background: url("../img/spinner.gif") no-repeat
+        background-position: 14px 14px
     a.note-color
       position: relative
       top: 5px
@@ -198,18 +202,6 @@ nav.tabs, ul.tablinks
         background-color: #ddf
       &.green
         background-color: #dfd
-    .file-input
-      padding: 6px
-      float: left
-      background: url("../img/camera.png") no-repeat
-      background-position: 6px 6px
-      &.loading
-        background: url("../img/spinner.gif") no-repeat
-        background-position: 14px 14px
-      input[type=file]
-        position: absolute
-        z-index: 2
-        opacity: 0
     
   canvas
     position: absolute

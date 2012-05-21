@@ -40,8 +40,9 @@ script#dotstormAddIdea(type='text/template')
       a.tool(data-tool='camera')
         img(src='/img/camera.png', alt='Camera')
       <% } else if (fileEnabled) { %>
-      div.file-input
-        input(type='file', accept='image/*;capture=camera')
+      a.tool.file-upload(data-tool='file-upload')
+        img.normal(src='/img/camera.png', alt='Camera')
+      input.file-input(type='file', accept='image/*;capture=camera')
       <% } %>
       span(style='float: right')
         a.note-color.yellow

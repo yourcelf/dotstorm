@@ -281,13 +281,14 @@ class ds.Organizer extends Backbone.View
     @dragState.placeholder.toggleClass("active", not @dragState.currentTarget?)
 
     # Handle edge scrolling.
+    scrollMargin = 20 # pixels
     scrollTop = $(window).scrollTop()
-    if pos.y - scrollTop > @dragState.windowHeight - 10
+    if pos.y - scrollTop > @dragState.windowHeight - scrollMargin
       $(window).scrollTop(Math.min(
         Math.max(0, @dragState.documentHeight - @dragState.windowHeight),
-        scrollTop + 10))
-    else if pos.y - scrollTop < 10
-      $(window).scrollTop(Math.max(scrollTop - 10, 0))
+        scrollTop + scrollMargin))
+    else if pos.y - scrollTop < scrollMargin
+      $(window).scrollTop(Math.max(scrollTop - scrollMargin, 0))
 
     return false
 
@@ -532,6 +533,10 @@ class ds.Organizer extends Backbone.View
   startDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()
+    if event.type == "touchstart"
+      @isTouch = true
+    else if @isTouch
+      return
     active = $(event.currentTarget)
     activeOffset = active.offset()
     activeWidth = active.outerWidth(true)
@@ -593,6 +598,8 @@ class ds.Organizer extends Backbone.View
 
   continueDragGroup: (event) => return @continueDrag(event)
   continueDrag: (event) =>
+    if @isTouch and event.type != "touchmove"
+      return
     if @dragState?
       @dragState.lastPos = @getPosition(event)
       @moveNote()
@@ -611,6 +618,8 @@ class ds.Organizer extends Backbone.View
   stopDragGroup: (event) => @stopDrag(event)
   stopDrag: (event) =>
     event.preventDefault()
+    if @isTouch and event.type == "mouseend"
+      return
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
     @$(".hovered").removeClass("hovered")

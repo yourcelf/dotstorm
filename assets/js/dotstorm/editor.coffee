@@ -117,10 +117,10 @@ class ds.EditIdea extends Backbone.View
   events:
     'submit             form': 'saveIdea'
     'click             .tool': 'changeTool'
-    'touchstart        .tool': 'changeTool'
+    'touchend          .tool': 'changeTool'
     'click       .note-color': 'handleChangeBackgroundColor'
-    'touchstart  .note-color': 'handleChangeBackgroundColor'
-    'change input[type=file]': 'fileAdded'
+    'touchend    .note-color': 'handleChangeBackgroundColor'
+    'change input.file-input': 'fileAdded'
 
   initialize: (options) ->
     @idea = options.idea
@@ -129,12 +129,22 @@ class ds.EditIdea extends Backbone.View
     @cameraEnabled = options.cameraEnabled
 
   render: =>
+    fileEnabled = window.File and window.FileReader and window.FileList and window.Blob
+
     @$el.html @template
       longDescription: @idea.get "longDescription"
       description: @idea.get "description"
       tags: @idea.get("tags") or ""
       cameraEnabled: @cameraEnabled
-      fileEnabled: window.File and window.FileReader and window.FileList and window.Blob
+      fileEnabled: fileEnabled
+
+    # Using this hack for file input styling:
+    # http://stackoverflow.com/questions/3226167/how-to-style-input-file-with-css3-javascript
+    if fileEnabled
+      @$("input.file-input").wrap(
+        $("<div/>").css { height: 0, width: 0, overflow: "hidden" }
+      )
+
     @changeBackgroundColor @idea.get("background") or @$(".note-color:first").css("background-color")
     @noteTextarea = @$("#id_description")
     @$(".canvas").append(@canvas.el)
@@ -160,11 +170,14 @@ class ds.EditIdea extends Backbone.View
     @$("#addIdea").css "width", width + "px"
     @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
 
+  changeFile: (event) =>
+    @$("input.file-input").click()
+
   fileAdded: (event) =>
     files = event.originalEvent.target.files
     file = files[0]
     if file? and file.type.match('image.*')
-      @$(".file-input").addClass("loading")
+      @$(".file-upload").addClass("loading")
       reader = new FileReader()
       reader.onload = (e) =>
         # Make 640x480 max thumbnail.
@@ -186,11 +199,11 @@ class ds.EditIdea extends Backbone.View
           data = canvas.toDataURL()
           parts = data.split(",")
           @setPhoto(parts[1], parts[0] + ",")
-          @$(".file-input").removeClass("loading")
+          @$(".file-upload").removeClass("loading")
       reader.readAsDataURL(file)
     else
       flash "info", "File not recognized as an image.  Try another."
-      @$("input[type=file]").val("")
+      @$(".file-input").val("")
 
   setPhoto: (imageData, prefix="data:image/jpg;base64,") =>
     @photo = imageData
@@ -251,17 +264,21 @@ class ds.EditIdea extends Backbone.View
     event.stopPropagation()
     el = $(event.currentTarget)
     tool = el.attr("data-tool")
-    if tool == "camera"
-      @trigger "takePhoto"
-      el = @$(".tool[data-tool=text]")
-      tool = "text"
-    if tool == "text"
-      @$(".text").before(@$(".canvas"))
-    else
-      @$(".text").after(@$(".canvas"))
-      @canvas.tool = tool
     @$(".tool").removeClass("active")
-    el.addClass("active")
+    switch tool
+      when "camera"
+        @trigger "takePhoto"
+        el = @$(".tool[data-tool=text]")
+        tool = "text"
+      when "file-upload"
+        @changeFile()
+      when "text"
+        @$(".text").before(@$(".canvas"))
+        el.addClass("active")
+      when "eraser", "pencil"
+        @$(".text").after(@$(".canvas"))
+        @canvas.tool = tool
+        el.addClass("active")
     return false
 
   handleChangeBackgroundColor: (event) =>
