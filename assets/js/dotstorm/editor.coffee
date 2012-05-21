@@ -115,11 +115,12 @@ class ds.EditIdea extends Backbone.View
   #
   template: _.template $("#dotstormAddIdea").html() or ""
   events:
-    'submit            form': 'saveIdea'
-    'click            .tool': 'changeTool'
-    'touchstart       .tool': 'changeTool'
-    'click      .note-color': 'handleChangeBackgroundColor'
-    'touchstart .note-color': 'handleChangeBackgroundColor'
+    'submit             form': 'saveIdea'
+    'click             .tool': 'changeTool'
+    'touchstart        .tool': 'changeTool'
+    'click       .note-color': 'handleChangeBackgroundColor'
+    'touchstart  .note-color': 'handleChangeBackgroundColor'
+    'change input[type=file]': 'fileAdded'
 
   initialize: (options) ->
     @idea = options.idea
@@ -133,6 +134,7 @@ class ds.EditIdea extends Backbone.View
       description: @idea.get "description"
       tags: @idea.get("tags") or ""
       cameraEnabled: @cameraEnabled
+      fileEnabled: window.File and window.FileReader and window.FileList and window.Blob
     @changeBackgroundColor @idea.get("background") or @$(".note-color:first").css("background-color")
     @noteTextarea = @$("#id_description")
     @$(".canvas").append(@canvas.el)
@@ -158,13 +160,46 @@ class ds.EditIdea extends Backbone.View
     @$("#addIdea").css "width", width + "px"
     @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
 
-  setPhoto: (imageData) =>
+  fileAdded: (event) =>
+    files = event.originalEvent.target.files
+    file = files[0]
+    if file? and file.type.match('image.*')
+      @$(".file-input").addClass("loading")
+      reader = new FileReader()
+      reader.onload = (e) =>
+        # Make 640x480 max thumbnail.
+        img = new Image()
+        img.src = e.target.result
+        img.onload = =>
+          canvas = document.createElement("canvas")
+          canvas.width = 640
+          canvas.height = 480
+          if img.width > img.height
+            w = Math.min(img.width, canvas.width)
+            h = img.height * canvas.width / img.width
+          else
+            h = Math.min(canvas.height, img.height)
+            w = img.width * canvas.height / img.height
+          x = (canvas.width - w)/2
+          ctx = canvas.getContext('2d')
+          ctx.drawImage(img, x, 0, w, h)
+          data = canvas.toDataURL()
+          parts = data.split(",")
+          @setPhoto(parts[1], parts[0] + ",")
+          @$(".file-input").removeClass("loading")
+      reader.readAsDataURL(file)
+    else
+      flash "info", "File not recognized as an image.  Try another."
+      @$("input[type=file]").val("")
+
+  setPhoto: (imageData, prefix="data:image/jpg;base64,") =>
     @photo = imageData
     @$(".photo").html $("<img/>").attr(
-      "src", "data:image/jpg;base64," + @photo
+      "src", prefix + imageData
     ).css({width: "100%"})
 
-  saveIdea: =>
+  saveIdea: (event) =>
+    @$("input[type=submit]").addClass("loading")
     ideaIsNew = not @idea.id?
     attrs = {
       dotstorm_id: @dotstorm.id
@@ -178,6 +213,7 @@ class ds.EditIdea extends Backbone.View
     }
     @idea.save(attrs, {
       success: (model) =>
+        @$("input[type=submit]").removeClass("loading")
         if ideaIsNew
           @dotstorm.addIdea(model, silent: true)
           @dotstorm.save null, {
@@ -203,7 +239,8 @@ class ds.EditIdea extends Backbone.View
         )
 
       error: (model, err) ->
-        console.error("error", err)
+        @$("input[type=submit]").removeClass("loading")
+        console.log("error", err)
         str = err.error?.message
         flash "error", "Error saving: #{str}. See log for details."
     })

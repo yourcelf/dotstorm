@@ -25,9 +25,6 @@ a:link, a:visited
   color: #00e
 a:link.cta, a:visited.cta, a.cta
   color: white
-.cta-thin
-  //line-height: 2em
-  //height: 2em
 
 #size
   position: absolute
@@ -179,7 +176,7 @@ nav.tabs, ul.tablinks
   position: relative
   div.toolbar
     margin-top: 1em
-    a
+    a, .file-input
       display: inline-block
       width: 32px
       height: 32px
@@ -201,6 +198,18 @@ nav.tabs, ul.tablinks
         background-color: #ddf
       &.green
         background-color: #dfd
+    .file-input
+      padding: 6px
+      float: left
+      background: url("../img/camera.png") no-repeat
+      background-position: 6px 6px
+      &.loading
+        background: url("../img/spinner.gif") no-repeat
+        background-position: 14px 14px
+      input[type=file]
+        position: absolute
+        z-index: 2
+        opacity: 0
     
   canvas
     position: absolute
@@ -210,7 +219,6 @@ nav.tabs, ul.tablinks
     height: 100%
   input[type=text]
     max-width: 160px
-
   .canvasHolder
     -webkit-box-sizing: border-box
     -moz-box-sizing: border-box
@@ -249,6 +257,11 @@ nav.tabs, ul.tablinks
       text-align: left
       overflow: hidden
       resize: none
+  .cta.loading
+    background-image: url("../img/spinner.gif")
+    background-repeat: no-repeat
+    background-color: #0093e6
+
 
 /*
   Organizer

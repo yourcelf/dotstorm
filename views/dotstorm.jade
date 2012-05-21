@@ -39,6 +39,9 @@ script#dotstormAddIdea(type='text/template')
       <% if (cameraEnabled) { %>
       a.tool(data-tool='camera')
         img(src='/img/camera.png', alt='Camera')
+      <% } else if (fileEnabled) { %>
+      div.file-input
+        input(type='file', accept='image/*;capture=camera')
       <% } %>
       span(style='float: right')
         a.note-color.yellow
