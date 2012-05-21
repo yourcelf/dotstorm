@@ -9,11 +9,14 @@ class ds.Topic extends Backbone.View
   inputEditorTemplate: _.template $("#dotstormInPlaceInput").html() or ""
 
   events:
-    'click .topicEdit .clickToEdit': 'editTopic'
-    'submit .topicEdit form': 'saveTopic'
-    'click .nameEdit .clickToEdit': 'editName'
-    'submit .nameEdit form': 'saveName'
-    'click .cancel': 'cancel'
+    'click    .topicEdit .clickToEdit': 'editTopic'
+    'touchend .topicEdit .clickToEdit': 'editTopic'
+    'submit           .topicEdit form': 'saveTopic'
+    'click     .nameEdit .clickToEdit': 'editName'
+    'touchend  .nameEdit .clickToEdit': 'editName'
+    'submit            .nameEdit form': 'saveName'
+    'click                    .cancel': 'cancel'
+    'touchend                 .cancel': 'cancel'
 
   initialize: (options) ->
     @model = options.model
@@ -30,6 +33,7 @@ class ds.Topic extends Backbone.View
 
   editName: (event) =>
     $(event.currentTarget).replaceWith @inputEditorTemplate text: @model.get("name")
+    @$("input[text]").select()
     return false
 
   saveName: (event) =>
@@ -45,6 +49,7 @@ class ds.Topic extends Backbone.View
 
   editTopic: (event) =>
     $(event.currentTarget).hide().after @textareaEditorTemplate text: @model.get("topic")
+    @$("textarea").select()
     return false
 
   saveTopic: (event) =>

@@ -2,9 +2,11 @@ class ds.ShowIdeaGroup extends Backbone.View
   template: _.template $("#dotstormSmallIdeaGroup").html() or ""
   editTemplate: _.template $("#dotstormSmallIdeaGroupEditLabel").html() or ""
   events:
-    'click   .label': 'editLabel'
-    'click  .cancel': 'cancelEdit'
-    'submit    form': 'saveLabel'
+    'click     .label': 'editLabel'
+    'touchend  .label': 'editLabel'
+    'click    .cancel': 'cancelEdit'
+    'touchend .cancel': 'cancelEdit'
+    'submit      form': 'saveLabel'
 
   initialize: (options) ->
     @group = options.group
