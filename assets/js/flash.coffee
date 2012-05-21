@@ -1,3 +1,12 @@
+#= require lib/underscore
+#= require lib/underscore-autoescape
+#= require lib/backbone
+
+FlashTemplate = "
+      <%| message %>
+      <a href='#' class='close'>&#10006;</a>
+"
+
 #
 # Flash
 #
@@ -6,7 +15,7 @@ class FlashMessageList extends Backbone.Collection
   model: FlashMessage
 
 class FlashView extends Backbone.View
-  template: _.template $('#flashView').html() or ""
+  template: _.template FlashTemplate
   tagName: 'li'
   events:
     'click .close': 'closeMessage'

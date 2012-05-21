@@ -41,6 +41,7 @@ class ds.IdeaCanvas extends Backbone.View
     if event.originalEvent.touches?
       touch = event.originalEvent.touches?[0] or event.originalEvent.changedTouches?[0]
       pointerObj = touch
+      @isTouch = true
     else
       pointerObj = event
     @pointer =
@@ -51,21 +52,30 @@ class ds.IdeaCanvas extends Backbone.View
   handleStart: (event) =>
     if @disabled then return
     event.preventDefault()
+    event.stopPropagation()
+    if event.type == "touchstart"
+      @isTouch = true
     @offset = @canvas.offset()
     @curDims = { x: @canvas.width(), y: @canvas.height() }
     @mouseIsDown = true
     @getPointer(event)
     @handleDrag(event)
     return false
+
   handleEnd: (event) =>
     event.preventDefault()
     @mouseIsDown = false
     @pointer = null
     return false
+
   handleDrag: (event) =>
     if @disabled then return
     event.preventDefault()
     event.stopPropagation()
+    if @isTouch and event.type != "touchmove"
+      # Android 4.0 browser throws a mousemove in here after 100 milliseconds
+      # or so.  Assume that if we've seen one touch event, we're touch only.
+      return false
     if @mouseIsDown
       old = @pointer
       @getPointer(event)

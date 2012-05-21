@@ -8,8 +8,11 @@ class ds.Organizer extends Backbone.View
   template: _.template $("#dotstormOrganizer").html() or ""
   events:
     'click         .add-link': 'softNav'
+    'touchend      .add-link': 'softNav'
     'click              .tag': 'toggleTag'
+    'touchend           .tag': 'toggleTag'
     'click            #trash': 'toggleTrash'
+    'touchend         #trash': 'toggleTag'
                 
     'touchstart   .labelMask': 'nothing'
     'mouseDown    .labelMask': 'nothing'
@@ -31,6 +34,7 @@ class ds.Organizer extends Backbone.View
     'touchmove        .group': 'continueDragGroup'
     'mousemove        .group': 'continueDragGroup'
     'touchend         .group': 'stopDragGroup'
+    'touchcancel      .group': 'stopDragGroup'
     'mouseup          .group': 'stopDragGroup'
 
 
@@ -62,6 +66,8 @@ class ds.Organizer extends Backbone.View
       @renderTagCloud()
 
   softNav: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
     ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
     return false
 

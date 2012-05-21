@@ -1,3 +1,5 @@
+
+#
 # Console log safety.
 if typeof console == 'undefined'
   @console = {log: (->), error: (->), debug: (->)}

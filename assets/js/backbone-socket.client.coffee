@@ -1,3 +1,6 @@
+#= require lib/underscore
+#= require lib/backbone
+
 # adapted from
 # http://developer.teradata.com/blog/jasonstrimpel/2011/11/backbone-js-and-socket-io
   
