@@ -201,16 +201,18 @@ class ds.Organizer extends Backbone.View
         max = count
       if count < min
         min = count
-    minPercent = 70
-    maxPercent = 150
-    @$(".tag-links").html("")
+    minPercent = 90
+    maxPercent = 200
+    if max == 0
+      return
+    @$(".tag-links").html("<h2>Tags</h2>")
     for tag, count of tags
       @$(".tag-links").append($("<a/>").attr({
           class: 'tag'
           "data-tag": tag
           href: "/d/#{@model.get("slug")}/tag/#{encodeURIComponent(tag)}"
           style: "font-size: #{minPercent + ((max-(max-(count-min)))*(maxPercent - minPercent) / (max-min))}%"
-        }).html( _.escapeHTML tag ), " "
+        }).html( "<nobr>#{_.escapeHTML tag}</nobr>" ), " "
       )
 
   renderTopic: =>

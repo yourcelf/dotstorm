@@ -257,6 +257,24 @@ nav.tabs, ul.tablinks
 
 
 /*
+  Tag links
+*/
+.tag-links
+  h2
+    margin-bottom: 0
+  display: inline-block
+  padding-left: 1em
+  margin-bottom: 0.5em
+  border-bottom: 1px solid #eee
+  a.tag
+    &, &:link, &:visited
+      margin-right: 0.5em
+      &.active
+        font-weight: bold
+      &.inactive
+        color: #999
+
+/*
   Organizer
 */
 
@@ -265,7 +283,13 @@ nav.tabs, ul.tablinks
 @media only screen and (min-width: 480px)
   .idea-browser, .front-matter
     margin: 1em
+@media only screen and (min-width: 840px)
+  .idea-browser
+    width: 80%
+  .tag-links
+    width: 10%
 .idea-browser
+  float: left
   position: relative
   &, *
     -webkit-user-select: none
@@ -567,17 +591,3 @@ nav.tabs, ul.tablinks
       font-size: 24px
       padding-left: 0.5em
       padding-right: 0.5em
-
-/*
-  Tag links
-*/
-.tag-links
-  margin-bottom: 0.5em
-  border-bottom: 1px solid #eee
-  a.tag
-    &, &:link, &:visited
-      margin-right: 0.5em
-      &.active
-        font-weight: bold
-      &.inactive
-        color: #999
