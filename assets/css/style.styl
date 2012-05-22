@@ -499,9 +499,17 @@ nav.tabs, ul.tablinks
       display: inline-block
       right: 0
       top: 0
-      max-width: 180px
       .contents
         display: block
+        // Snap to 120px widths for 1, 2, 3, or 4 columns depending on 
+        // screen size
+        width: 120px
+        @media only screen and (min-width: 480px)
+          width: 240px
+        @media only screen and (min-width: 720px)
+          width: 360px
+        @media only screen and (min-width: 960px)
+          width: 480px
 
 .bigIdea
   overflow: hidden
