@@ -11,8 +11,8 @@ class ds.Organizer extends Backbone.View
     'touchend      .add-link': 'softNav'
     'click              .tag': 'toggleTag'
     'touchend           .tag': 'toggleTag'
-    'click            #trash': 'toggleTrash'
-    'touchend         #trash': 'toggleTag'
+    'mousedown        #trash': 'toggleTrash'
+    'touchstart       #trash': 'toggleTrash'
                 
     'touchstart   .labelMask': 'nothing'
     'mouseDown    .labelMask': 'nothing'
@@ -152,8 +152,19 @@ class ds.Organizer extends Backbone.View
     return false
 
   toggleTrash: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
     if @dotstorm.get("trash").length > 0
-      $("#trash").toggleClass("open")[0].scrollIntoView()
+      el = $("#trash")
+      el.addClass("dragging")
+      el.toggleClass("open")
+      # Timeout hack for mobile webkit, which doesn't scroll if we do it right
+      # away.
+      setTimeout ->
+        el[0].scrollIntoView()
+        el.removeClass("dragging")
+      , 10
+    return false
   
   render: =>
     # Re-fetch drop target dims on resize.
@@ -357,7 +368,7 @@ class ds.Organizer extends Backbone.View
     dims = @ideaAndGroupDims
 
     # add handlers for combining ideas to create new groups.
-    for dim in dims.ideas.concat(dims.groups)
+    for dim in (dims.ideas or []).concat(dims.groups or [])
       do (dim) =>
         active = false
         unless dim.inGroup or @dragState.groupPos == dim.groupPos
