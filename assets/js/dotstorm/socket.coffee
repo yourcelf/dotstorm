@@ -69,6 +69,6 @@ window.addEventListener 'message', (event) ->
       window.location.reload(true)
 , false
 
-$("nav a").on 'touchend click', (event) ->
+$("a.soft").on 'touchend click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false

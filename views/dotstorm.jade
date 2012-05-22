@@ -1,8 +1,9 @@
 nav.tabs(style='display: none;')
-  a.home(href='/')
+  a.soft.home(href='/')
     img(src='/img/home.png', alt='Dotstorm home')
-  a.show-ideas(href='/d/#{slug}/') Show ideas
+  a.soft.show-ideas(href='/d/#{slug}/') Show ideas
   //a.add(href='/d/#{slug}/add') Add idea +
+  div#auth
 
 div#app
   <img src='/img/spinner.gif' alt='loading' /> Loading...
@@ -13,7 +14,6 @@ script#dotstormTopic(type='text/template')
       h1.clickToEdit <%= name || "[add name]" %>
     div.topicEdit
       span.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
-    <a href='/e/<%= embed_slug %>' class='embed'>embed link</a>
 
 script#dotstormInPlaceInput(type='text/template')
   form.editInPlace
@@ -63,16 +63,19 @@ script#dotstormAddIdea(type='text/template')
     div(style='clear: both;')
 
 script#dotstormOrganizer(type='text/template')
+  div(style='clear: both;')
   div.front-matter
     div.topic
-  div.idea-browser
     div.add-link-block
       <a href='/d/<%= slug %>/add' class='cta cta-blue add-link'>+ Add</a>
+    div#trash
+      div.trash
+        div.icon
+        div.contents
+    div(style='clear: both;')
+  div.idea-browser
     span#organizer
     div(style='clear: both;')
-  div#trash
-    div.icon
-    div.contents
   div.tag-links
 
 script#dotstormSmallIdea(type='text/template')
@@ -153,11 +156,15 @@ script#usersWidget(type='text/template')
       <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
       <% } %>
   div.box.invite
+    p
     | Invite others using this URL:<br />
     | <nobr><a href='<%= url %>'><%= url %></a></nobr>
     | or with the handy barcode dohickey:
     | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
     div(style='clear: both')
+    p
+      | Embed or export this dotstorm:
+      | <a class="embed-dotstorm" href="/e/<%= embed_slug %>" title="Embed read-only">Read-only version</a>
   </div>
 
 

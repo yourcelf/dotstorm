@@ -87,8 +87,11 @@ class ds.Router extends Backbone.Router
     if ds.model?.get("slug") == slug
       return callback()
 
-    $("nav a.show-ideas").attr("href", "/d/#{slug}/")
-    $("nav a.add").attr("href", "/d/#{slug}/add")
+    fixLinks = ->
+      $("nav a.show-ideas").attr("href", "/d/#{slug}/")
+      $("nav a.add").attr("href", "/d/#{slug}/add")
+      $("a.embed-dotstorm").attr("href", "/e/#{ds.model.get("embed_slug")}")
+
     coll = new ds.DotstormList
     coll.fetch
       query: { slug }
@@ -98,11 +101,13 @@ class ds.Router extends Backbone.Router
             success: (model) ->
               flash "info", "Created!  Click things to change them."
               ds.joinRoom(model, true, callback)
+              fixLinks()
             error: (model, err) ->
               console.log "error", err
               flash "error", err
         else if coll.length == 1
           ds.joinRoom(coll.models[0], false, callback)
+          fixLinks()
         else
           flash "error", "Ouch. Something broke. Sorry."
       error: (coll, res) =>

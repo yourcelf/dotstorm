@@ -19,6 +19,7 @@ class ds.UsersView extends Backbone.View
       users: userlist
       open: @open
       url: @url
+      embed_slug: ds.model.get("embed_slug")
     this
 
   toggle: (event) =>

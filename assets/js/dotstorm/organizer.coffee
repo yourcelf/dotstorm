@@ -11,8 +11,8 @@ class ds.Organizer extends Backbone.View
     'touchend      .add-link': 'softNav'
     'click              .tag': 'toggleTag'
     'touchend           .tag': 'toggleTag'
-    'mousedown        #trash': 'toggleTrash'
-    'touchstart       #trash': 'toggleTrash'
+    'mousedown        .trash': 'toggleTrash'
+    'touchstart       .trash': 'toggleTrash'
                 
     'touchstart   .labelMask': 'nothing'
     'mouseDown    .labelMask': 'nothing'
@@ -155,15 +155,15 @@ class ds.Organizer extends Backbone.View
     event.preventDefault()
     event.stopPropagation()
     if @dotstorm.get("trash").length > 0
-      el = $("#trash")
+      el = $(".trash")
       el.addClass("dragging")
       el.toggleClass("open")
       # Timeout hack for mobile webkit, which doesn't scroll if we do it right
       # away.
-      setTimeout ->
-        el[0].scrollIntoView()
-        el.removeClass("dragging")
-      , 10
+      #setTimeout ->
+        #el[0].scrollIntoView()
+      el.removeClass("dragging")
+      #, 10
     return false
   
   render: =>
@@ -243,18 +243,18 @@ class ds.Organizer extends Backbone.View
     @trigger "resize"
 
   renderTrash: =>
-    @$("#trash .contents").html()
+    @$(".trash .contents").html()
     trash = @dotstorm.get("trash") or []
     _.each trash, (id, i) =>
       idea = @ideas.get(id)
       view = @getIdeaView(idea)
-      @$("#trash .contents").append(view.el)
+      @$(".trash .contents").append(view.el)
       view.render()
       view.$el.attr("data-idea-position", i)
     if trash.length == 0
-      @$("#trash").addClass("empty").removeClass("open")
+      @$(".trash").addClass("empty").removeClass("open")
     else
-      @$("#trash").removeClass("empty")
+      @$(".trash").removeClass("empty")
 
   getIdeaView: (idea) =>
     unless @smallIdeaViews[idea.id]
@@ -291,14 +291,16 @@ class ds.Organizer extends Backbone.View
 
     # Update current drop target.
     matched = false
-    for type in ["join", "adjacent", "create", "ungroup", "trash"]
+    @dragState.placeholder.removeClass("active")
+    for type in ["trashIn", "join", "adjacent", "create", "ungroup", "trashOut"]
       for target in @dragState.noteTargets[type]
         if (not @dragState.currentTarget?) and target.match(pos)
           @dragState.currentTarget = target
           target.show()
         else
           target.hide()
-    @dragState.placeholder.toggleClass("active", not @dragState.currentTarget?)
+    if not @dragState.currentTarget?
+      @dragState.placeholder.addClass("active")
 
     # Handle edge scrolling.
     scrollMargin = 20 # pixels
@@ -360,7 +362,8 @@ class ds.Organizer extends Backbone.View
       join: []
       create: []
       ungroup: []
-      trash: []
+      trashOut: []
+      trashIn: []
     }
     
     droplineOuterWidth = 44
@@ -524,43 +527,44 @@ class ds.Organizer extends Backbone.View
                 )
 
     # Trash
-    trash = $("#trash")
-    trashPos =
-      offset: trash.offset()
-      outerWidth: trash.outerWidth(true)
-      outerHeight: trash.outerHeight(true)
+    trash = @$(".trash")
     # Drag into trash
     trashActive = false
-    targets.trash.push {
+    targets.trashIn.push {
       match: (pos) =>
-        tp = trashPos
-        return @dragState.groupPos != null and \
-          tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
+        tp = @dragState.trashDims
+        return tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
           tp.offset.top < pos.y < tp.offset.top + tp.outerHeight
       show: =>
         unless trashActive
+          # UGLY: This is a consequence of the global state usage above.
+          @dragState.dropline.hide()
           trashActive = true
-          trash.addClass("active")
+          unless @dragState.groupPos == null
+            trash.addClass("active")
+        if @dragState.groupPos == null
+          @dragState.placeholder.addClass("active")
       hide: =>
         if trashActive
           trashActive = false
           trash.removeClass("active")
       onDrop: =>
-        @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, null, null)
+        unless @dragState.groupPos == null
+          @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, null, null)
     }
     # Drag out of trash (but not into another explicit target)
-    targets.trash.push {
+    targets.trashOut.push {
       match: (pos) =>
-        tp = trashPos
+        tp = @dragState.trashDims
         return (
-          @dragState.groupPos == null and not (
+          @dragState.groupPos == null and tp? and not (
             tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
             tp.offset.top < pos.y < tp.offset.top + tp.outerHeight)
         )
       show: ->
       hide: ->
       onDrop: =>
-        end = @dotstorm.get("groups").length + 1
+        end = 0 #@dotstorm.get("groups").length + 1
         @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, end, null)
         $(".smallIdea[data-id=#{@dragState.active.attr("data-id")}]").css({
           "outline-width": "12px"
@@ -620,7 +624,15 @@ class ds.Organizer extends Backbone.View
       x: @dragState.offset.left - @dragState.startPos.x
       y: @dragState.offset.top - @dragState.startPos.y
 
-    @$("#trash").addClass("dragging")
+    trash = @$(".trash")
+    trash.addClass("dragging")
+    # Re-calculate on drag start, because it might be "open" or "closed" since
+    # last re-render.
+    @dragState.trashDims = {
+      offset: trash.offset()
+      outerWidth: trash.outerWidth(true)
+      outerHeight: trash.outerHeight(true)
+    }
     if @dragState.active.is(".group")
       @dragState.activeParent = @dragState.active
       @dragState.isGroup = true
@@ -676,7 +688,7 @@ class ds.Organizer extends Backbone.View
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
     @$(".hovered").removeClass("hovered")
-    @$("#trash").removeClass("dragging active")
+    @$(".trash").removeClass("dragging active")
 
     @dragState?.placeholder?.remove()
     @dragState?.dropline?.remove()
