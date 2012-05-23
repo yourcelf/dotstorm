@@ -144,6 +144,8 @@ nav.tabs, ul.tablinks
   text-align: center
   margin-left: auto
   margin-right: auto
+  input[type=text]
+    height: 2em
 
 /*
   Editing
@@ -280,10 +282,16 @@ nav.tabs, ul.tablinks
 
 
 
+// Add an extra margin for touch-scrolling.
+.idea-browser, .front-matter
+  margin-right: 2em
 @media only screen and (min-width: 480px)
   .idea-browser, .front-matter
     margin: 1em
+    margin-right: 2em
 @media only screen and (min-width: 840px)
+  .idea-browser, .front-matter
+    margin-right: 1em
   .idea-browser
     width: 80%
   .tag-links
@@ -297,7 +305,7 @@ nav.tabs, ul.tablinks
     -moz-user-select: none
     -o-user-select: none
     user-select: none
-  input
+  input, textarea
     -webkit-user-select: text
     -khtml-user-select: text
     -moz-user-select: text
