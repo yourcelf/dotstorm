@@ -375,22 +375,23 @@ class ds.Organizer extends Backbone.View
     # add handlers for combining ideas to create new groups.
     for dim in (dims.ideas or []).concat(dims.groups or [])
       do (dim) =>
-        active = false
+        groupActive = false
         unless dim.inGroup or @dragState.groupPos == dim.groupPos
           targets.create.push
+            type: "create"
             match: (pos) =>
               return (
                 dim.offset.top < pos.y < dim.offset.top + dim.height and \
                 dim.offset.left < pos.x < dim.offset.left + dim.width
               )
             show: (pos) =>
-              unless active
+              unless groupActive
                 dim.el.addClass("hovered")
-                active = true
+                groupActive = true
             hide: (pos) =>
-              if active
+              if groupActive
                 dim.el.removeClass("hovered")
-                active = false
+                groupActive = false
             onDrop: =>
               # Always specify a target ideaPos, even if we are a group and it
               # would thus be null.  This results in a "combine" action rather
@@ -473,8 +474,9 @@ class ds.Organizer extends Backbone.View
               type = "adjacent"
             else
               type = "join"
-            active = false
+            adjacentActive = false
             targets[type].push
+              type: type
               match: (pos) =>
                 ph = @dragState.placeholderDims
                 # This ugly conditional checks whether we should ignore the
@@ -502,8 +504,8 @@ class ds.Organizer extends Backbone.View
                   return false
                 return dim.x1 < pos.x < dim.x2 and dim.y1 < pos.y < dim.y2
               show: =>
-                unless active
-                  active = true
+                unless adjacentActive
+                  adjacentActive = true
                   dim.el.append(@dragState.dropline)
                   # Right side hack... to tell whether to draw the dropline on
                   # the right or the left, see if the target position is
@@ -518,11 +520,10 @@ class ds.Organizer extends Backbone.View
                     left: -droplineOuterWidth / 2 - dim.margin.left + leftOffset - 1
                     height: dim.outerHeight + droplineExtension * 2
               hide: =>
-                # UGLY: we're looking at the global state here to see if anyone
-                # else is using the dropline.  If not, hide it.
-                if active and not @dragState.currentTarget?
-                  active = false
-                  @dragState.dropline.hide()
+                if adjacentActive
+                  adjacentActive = false
+                  if not _.contains ["adjacent", "join"], @dragState.currentTarget?.type
+                    @dragState.dropline.hide()
               onDrop: =>
                 @dotstorm.move(
                   @dragState.groupPos, @dragState.ideaPos, groupPos, ideaPos
@@ -533,14 +534,13 @@ class ds.Organizer extends Backbone.View
     # Drag into trash
     trashActive = false
     targets.trashIn.push {
+      type: "trashIn"
       match: (pos) =>
         tp = @dragState.trashDims
         return tp.offset.left < pos.x < tp.offset.left + tp.outerWidth and \
           tp.offset.top < pos.y < tp.offset.top + tp.outerHeight
       show: =>
         unless trashActive
-          # UGLY: This is a consequence of the global state usage above.
-          @dragState.dropline.hide()
           trashActive = true
           unless @dragState.groupPos == null
             trash.addClass("active")
@@ -556,6 +556,7 @@ class ds.Organizer extends Backbone.View
     }
     # Drag out of trash (but not into another explicit target)
     targets.trashOut.push {
+      type: "trashOut"
       match: (pos) =>
         tp = @dragState.trashDims
         return (
