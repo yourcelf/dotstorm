@@ -437,7 +437,7 @@ class ds.Organizer extends Backbone.View
         moveTargets[side.groupPos][side.ideaPos][side.name] = res
     # Extend the drop target on the very last line which extends to the right
     # edge of the window.
-    moveTargets[lastGroupPos + 1][null].right.x2 = @dragState.windowWidth
+    moveTargets[lastGroupPos + 1]?[null]?.right.x2 = @dragState.windowWidth
 
     for groupPos, ideaPosDims of moveTargets
       for ideaPos, dims of ideaPosDims
