@@ -9,7 +9,8 @@ class ds.Idea extends Backbone.Model
     rawtags = commaStr.split(/,\s*/)
     clean = []
     for tag in rawtags
-      clean.push($.trim(tag.replace(/[^-\w\s]/g, '')))
+      if tag != ""
+        clean.push($.trim(tag.replace(/[^-\w\s]/g, '')))
     return clean
 
 
