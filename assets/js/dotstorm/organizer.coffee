@@ -57,6 +57,7 @@ class ds.Organizer extends Backbone.View
     @dotstorm.on "change:groups", =>
       #console.debug "Dotstorm: grouping changed"
       # This double-calls... but ok!
+      if @dragState? then @abortDrag()
       @renderGroups()
       @renderTrash()
     @ideas.on "add", =>
@@ -392,12 +393,12 @@ class ds.Organizer extends Backbone.View
               if groupActive
                 dim.el.removeClass("hovered")
                 groupActive = false
-            onDrop: =>
+            onDrop: (groupPos, ideaPos) =>
               # Always specify a target ideaPos, even if we are a group and it
               # would thus be null.  This results in a "combine" action rather
               # than "move before".
               @dotstorm.move(
-                @dragState.groupPos, @dragState.ideaPos,
+                groupPos, ideaPos,
                 dim.groupPos, dim.ideaPos or 0
               )
 
@@ -524,9 +525,9 @@ class ds.Organizer extends Backbone.View
                   adjacentActive = false
                   if not _.contains ["adjacent", "join"], @dragState.currentTarget?.type
                     @dragState.dropline.hide()
-              onDrop: =>
+              onDrop: (sourceGroupPos, sourceIdeaPos) =>
                 @dotstorm.move(
-                  @dragState.groupPos, @dragState.ideaPos, groupPos, ideaPos
+                  sourceGroupPos, sourceIdeaPos, groupPos, ideaPos
                 )
 
     # Trash
@@ -550,9 +551,9 @@ class ds.Organizer extends Backbone.View
         if trashActive
           trashActive = false
           trash.removeClass("active")
-      onDrop: =>
-        unless @dragState.groupPos == null
-          @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, null, null)
+      onDrop: (groupPos, ideaPos) =>
+        unless groupPos == null
+          @dotstorm.move(groupPos, ideaPos, null, null)
     }
     # Drag out of trash (but not into another explicit target)
     targets.trashOut.push {
@@ -566,10 +567,10 @@ class ds.Organizer extends Backbone.View
         )
       show: ->
       hide: ->
-      onDrop: =>
+      onDrop: (groupPos, ideaPos, idea_id) =>
         end = 0 #@dotstorm.get("groups").length + 1
-        @dotstorm.move(@dragState.groupPos, @dragState.ideaPos, end, null)
-        $(".smallIdea[data-id=#{@dragState.active.attr("data-id")}]").css({
+        @dotstorm.move(groupPos, ideaPos, end, null)
+        $(".smallIdea[data-id=#{idea_id}]").css({
           "outline-width": "12px"
           "outline-style": "solid"
           "outline-color": "rgba(255, 200, 0, 1.0)"
@@ -683,48 +684,52 @@ class ds.Organizer extends Backbone.View
       parseInt($el.attr("data-idea-position"))
     ]
 
-  stopDragGroup: (event) => @stopDrag(event)
-  stopDrag: (event) =>
-    event.preventDefault()
-    if @isTouch and event.type == "mouseend"
-      return
+  abortDrag: =>
     $(window).off "mousemove", @continueDrag
     $(window).off "touchmove", @continueDrag
     @$(".hovered").removeClass("hovered")
     @$(".trash").removeClass("dragging active")
+    if @dragState?
+      @dragState.active?.removeClass("active")
+      @dragState.active?.css
+        position: "relative"
+        left: 0
+        top: 0
+      @dragState.placeholder?.remove()
+      @dragState.dropline?.remove()
+    @dragState = null
 
-    @dragState?.placeholder?.remove()
-    @dragState?.dropline?.remove()
-    unless @dragState? and @dragState.active?
+  stopDragGroup: (event) => @stopDrag(event)
+  stopDrag: (event) =>
+    event?.preventDefault()
+    if @isTouch and event?.type == "mouseend"
+      return
+    state = @dragState
+    @abortDrag()
+    unless state?
       return false
 
-    @dragState.active.removeClass("active")
-    @dragState.active.css
-      position: "relative"
-      left: 0
-      top: 0
-
-    if (not @dragState.active.is(".group")) and @checkForClick()
-      @showBig(@ideas.get(@dragState.active.attr("data-id")))
+    if (not state.active.is(".group")) and @checkForClick(state)
+      @showBig(@ideas.get(state.active.attr("data-id")))
       return false
 
-    if @dragState.currentTarget?
-      @dragState.currentTarget.onDrop()
+    if state.currentTarget?
+      state.currentTarget.onDrop(state.groupPos, state.ideaPos,
+                                 state.active.attr("data-id"))
       @dotstorm.trigger("change:groups")
       @dotstorm.save null, {
         error: (model, err) =>
           console.log("error", model, err)
           flash "error", "Error saving: #{err}"
       }
-    @dragState = null
     return false
 
-  checkForClick: () =>
+  checkForClick: (state) =>
     # A heuristic for distinguishing clicks from drags, based on time and
     # distance.
     distance = Math.sqrt(
-        Math.pow(@dragState.lastPos.x - @dragState.startPos.x, 2) +
-        Math.pow(@dragState.lastPos.y - @dragState.startPos.y, 2)
+        Math.pow(state.lastPos.x - state.startPos.x, 2) +
+        Math.pow(state.lastPos.y - state.startPos.y, 2)
     )
-    elapsed = new Date().getTime() - @dragState.startTime
+    elapsed = new Date().getTime() - state.startTime
     return distance < 20 and elapsed < 400
