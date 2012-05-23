@@ -169,7 +169,7 @@ class ds.EditIdea extends Backbone.View
     @$("#addIdea").css "width", width + "px"
     @$(".canvasHolder textarea").css "fontSize", (height / 10) + "px"
 
-  changeFile: (event) =>
+  changeFile: =>
     @$("input.file-input").click()
 
   fileAdded: (event) =>
@@ -261,6 +261,10 @@ class ds.EditIdea extends Backbone.View
   changeTool: (event) =>
     event.preventDefault()
     event.stopPropagation()
+    if event.type == "touchend"
+      @_isTouch = true
+    else if @_isTouch
+      return false
     el = $(event.currentTarget)
     tool = el.attr("data-tool")
     @$(".tool").removeClass("active")
