@@ -74,7 +74,6 @@ class ds.Organizer extends Backbone.View
 
   nothing: (event) =>
     event.stopPropagation()
-    return false
 
   sortGroups: =>
     # Recursively run through the grouped ideas referenced in the dotstorm sort
