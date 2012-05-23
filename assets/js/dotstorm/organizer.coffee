@@ -158,12 +158,7 @@ class ds.Organizer extends Backbone.View
       el = $(".trash")
       el.addClass("dragging")
       el.toggleClass("open")
-      # Timeout hack for mobile webkit, which doesn't scroll if we do it right
-      # away.
-      #setTimeout ->
-        #el[0].scrollIntoView()
       el.removeClass("dragging")
-      #, 10
     return false
   
   render: =>
@@ -438,6 +433,8 @@ class ds.Organizer extends Backbone.View
     # Extend the drop target on the very last line which extends to the right
     # edge of the window.
     moveTargets[lastGroupPos + 1]?[null]?.right.x2 = @dragState.windowWidth
+    # Extend the first to before the beginning.
+    moveTargets[0]?[null]?.left.x1 = -50
 
     for groupPos, ideaPosDims of moveTargets
       for ideaPos, dims of ideaPosDims
@@ -453,8 +450,9 @@ class ds.Organizer extends Backbone.View
           # [note --activeright]center[activeleft -- note]
           if dims.right.x2 > dims.left.x1
             # We've wrapped.
-            doDims.push(dims.left)
+            dims.left.x1 = -50
             dims.right.x2 = @dragState.windowWidth
+            doDims.push(dims.left)
             doDims.push(dims.right)
           else
             # Combine the dims -- remember, right is left of left. Think
