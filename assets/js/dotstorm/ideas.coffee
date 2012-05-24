@@ -134,13 +134,7 @@ class ds.ShowIdeaBig extends Backbone.View
       @$(".canvasHolder").css("max-height", $(window).height() - noteHeight)
       @$(".note").css("width", Math.min(640, maxImgHeight))
       # hack for mobile which doesn't support 'fixed'
-      @$(".shadow").css {
-        position: "absolute"
-        height: $(document).height()
-      }
-      @$(".note").css {
-        top: $(window).scrollTop()
-      }
+      @$(".note")[0].scrollIntoView()
     @$(".note img").on "load", resize
     resize()
     @renderVotes()
