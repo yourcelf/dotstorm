@@ -55,7 +55,7 @@ ds.socket.on 'connect', ->
 ds.socket.on 'disconnect', ->
   # Timeout prevents a flash when you are just closing a tab.
   setTimeout ->
-    flash "error", "Connection lost.  <a href=''>Click to reconnect</a>."
+    flash "error", "Connection lost.  <a href='' onclick='window.location.reload(); return false;'>Click to reconnect</a>."
   , 500
 
 window.addEventListener 'message', (event) ->
