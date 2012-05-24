@@ -438,15 +438,30 @@ nav.tabs, ul.tablinks
 
 .vote-widget
   display: inline-block
-  width: 4em
   text-align: right
   height: 32px
-  a.upvote
+  a.upvote, a.downvote
+    cursor: pointer
+    position: relative
     display: inline-block
-    height: 5em
-  img
-    float: left
+    overflow: hidden
+    line-height: 500px
+    height: 2em
+    width: 32px
+    &.active
+      cursor: auto
+  a.upvote
+    background: url("../img/upvote.png") no-repeat
+    &.active
+      background: url("../img/upvote-active.png") no-repeat
+  a.downvote
+    background: url("../img/downvote.png") no-repeat
+    top: 8px
+    &.active
+      background: url("../img/downvote-active.png") no-repeat
+
   .vote-count
+    position: relative
     display: inline-block
     text-align: center
     background: green
@@ -571,11 +586,11 @@ nav.tabs, ul.tablinks
     .close
       cursor: pointer
       position: absolute
+      right: 0
+      top: 0
       width: 2em
       height: 2em
       text-align: center
-      right: 0
-      top: 0
       color: #000
       text-decoration: none
       font-size: 24pt

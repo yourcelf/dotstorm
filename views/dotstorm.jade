@@ -106,11 +106,11 @@ script#dotstormBigIdea(type='text/template')
   div.shadow
     div.noteHolder
       div.note
-        a.close(title='close') &#10006;
         div.toolbar.image-boxed
           a.edit(href='', title='edit')
             img(src="/img/pencil.png", alt='edit')
           span.vote-widget
+          a.close(title='close') &#10006;
         div.canvasHolder
           <img src='<%= drawingURLs.full %>' alt='<%= description %>' />
           <% if (hasPrev) { %>
@@ -131,14 +131,13 @@ script#dotstormTagOverlay(type='text/template')
   div.shadow
 
 script#dotstormVoteWidget(type='text/template')
-  | <% if (!readOnly) { %>
-  |   <a href='' class='upvote' href='' title='Toggle vote'>
-  |     <img src="/img/upvote<%= youVoted ? "-active" : "" %>.png" alt='vote' title="Vote!" />
-  | <% } %>
-  |     <span class='vote-count<%= youVoted ? " active" : "" %>'><%= votes %></span>
-  | <% if (!readOnly) { %>
-  |   </a>
-  | <% } %>
+  <% if (!readOnly) { %>
+  a.upvote(title='Vote up') Vote up
+  <% } %>
+  span.vote-count
+  <% if (!readOnly) { %>
+  a.downvote(title='Vote down') Vote down
+  <% } %>
 
 script#usersWidget(type='text/template')
   <span class='users' title='Online: <%= ["You"].concat(_.map(users, function(u) { return u.name || "Anon" }).join(", ")).join(", ") %>'>
