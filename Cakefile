@@ -14,3 +14,24 @@ task 'runserver', 'Run the server.', (options) ->
     dbhost: config.dbhost
     dbport: config.dbport
     dbname: config.dbname
+
+task 'resave', 'Resave all ideas, to recreate their images.', (options) ->
+  mongoose = require 'mongoose'
+  db = mongoose.connect(
+    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
+  )
+  models = require('./lib/schema')
+  models.Idea.find {}, (err, docs) ->
+    count = docs.length
+    exitCode = 0
+    for doc in docs
+      doc.incImageVersion()
+      doc.save (err) ->
+        count--
+        if err?
+          exitCode = 1
+          console.log(count, err)
+        else
+          console.log(count)
+        if count == 0
+          process.exit(exitCode)
