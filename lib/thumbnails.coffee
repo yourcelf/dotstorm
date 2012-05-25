@@ -22,7 +22,10 @@ mkdirs = (dir, mode, callback) ->
         mkdirs dir.split("/").slice(0, -1).join("/"), mode, (err) ->
           if err? then return callback?(err)
           fs.mkdir dir, mode, (err) ->
-            if err? then return callback?(err)
+            # Ignore EEXIST; the dir could've been created while asynchronously
+            # while we were waiting (especially when importing/resaving
+            # images).
+            if err? and err.code != "EEXIST" then return callback?(err)
             return callback(null)
       else
         return callback?(err)
