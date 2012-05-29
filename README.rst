@@ -20,7 +20,7 @@ Download the code by cloningthe repository.  Install node >= 0.6, and navigate t
 
     npm install
 
-Run the development server using::
+Run the development server (defaults to `localhost:8000`) using::
 
     cake runserver
 
