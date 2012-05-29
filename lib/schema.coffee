@@ -22,7 +22,7 @@ Voter = mongoose.model("Voter", VoterSchema)
 # Idea
 IdeaSchema = new Schema
   author: { type: Schema.ObjectId, ref: 'User' }
-  votes: { type: Number }
+  votes: { type: Number, default: 0 }
   dotstorm_id: { type: Schema.ObjectId, required: true }
   imageVersion: {
     type: Number

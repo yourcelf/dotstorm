@@ -22,7 +22,7 @@ class ds.VoteWidget extends Backbone.View
     this
 
   update: =>
-    votes = @idea.get("votes")
+    votes = @idea.get("votes") or 0
     @$(".vote-count").html votes
     if @hideOnZero
       if votes == 0
