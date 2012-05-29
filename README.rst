@@ -3,7 +3,6 @@ Dotstorm
 
 .. image:: http://dotstorm.byconsens.us/img/icon96.png
     :alt: dotstorm logo
-    :align: left
     :target: http://dotstorm.byconsens.us
 
 Dotstorm is a real-time, collaborative sticky-note style brainstorming tool.
