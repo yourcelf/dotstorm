@@ -16,7 +16,7 @@ Dotstorm is written in coffeescript, using node.js, socket.io, and the other dep
 Development
 ~~~~~~~~~~~
 
-Download the code by cloningthe repository.  Install node >= 0.6, and navigate to the project directory.  Install dependencies using::
+Download the code by cloningthe repository.  Install node >= 0.6, and navigate to the project directory.  Depends on ``mongodb``, ``imagemagick``, and ``libcairo``.  Install node dependencies using::
 
     npm install
 
