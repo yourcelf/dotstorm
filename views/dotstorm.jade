@@ -169,15 +169,30 @@ script#usersWidget(type='text/template')
 
 script#intro(type='text/template')
   div#intro
-    h1= title
-    p Welcome to DotStorm!
-    form#random
-      input.cta.cta-blue(type='submit', value='New dotstorm')
-    form#named
-      p
-        label(for='id_join')
-          | Or choose a name:
-        br
-        input(type='text', name='room', id='id_join', placeholder='name')
-        input.cta.cta-green(type='submit', value='OK')
-    p Warning: this is pre-alpha software. Data is periodically deleted without warning.
+    div.container
+      div.left-column
+        h1 Dotstorm
+        h2 Sticky-note brainstorming
+        iframe(width="340", height="400", src="http://dotstorm.byconsens.us/e/8771d8b6-a355-4ffc-90ff-49832b65ebde")
+      div.right-column
+        ul
+          li 
+            | Totally free. 
+            span.subtle (Fork me on <a href='http://github.com/yourcelf/dotstorm/'>github</a>!)
+          li 
+            | Rather beta.
+            span.subtle  (please don't use for sensitive or critical data).
+          li 
+            | Compatible with all modern web devices 
+            span.subtle (iPhone, Android, Firefox, Chrome, etc).
+          li Awesome
+
+        form#random
+          input.cta.cta-blue(type='submit', value='New random dotstorm')
+        form#named
+          p
+            label(for='id_join')
+              | Or choose a name:
+            br
+            input(type='text', name='room', id='id_join', placeholder='name')
+            input.cta.cta-green(type='submit', value='OK')
