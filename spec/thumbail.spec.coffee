@@ -1,4 +1,4 @@
-path       = require 'path'
+fs         = require 'fs'
 expect     = require 'expect.js'
 h          = require './helper'
 models     = require '../lib/schema'
@@ -26,7 +26,7 @@ describe "Canvas to image from idea", ->
     idea.save (err) =>
       @mahId = idea._id
       expect(err).to.be null
-      expect(path.existsSync idea.getDrawingPath("small")).to.be true
+      expect(fs.existsSync idea.getDrawingPath("small")).to.be true
       done()
       return true
 
@@ -35,5 +35,5 @@ describe "Canvas to image from idea", ->
       expect(err).to.be null
       expect(idea).to.not.be null
       idea.remove (err) ->
-        expect(path.existsSync idea.getDrawingPath("small")).to.be false
+        expect(fs.existsSync idea.getDrawingPath("small")).to.be false
         done()

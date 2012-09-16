@@ -2,7 +2,7 @@ expect     = require 'expect.js'
 _          = require 'underscore'
 Browser    = require 'zombie'
 mongoose   = require 'mongoose'
-path       = require 'path'
+fs         = require 'fs'
 h          = require './helper'
 models     = require '../lib/schema'
 
@@ -56,7 +56,7 @@ describe "socket pipeline", ->
         models.Idea.findOne {_id: backboneIdea.id}, (err, doc) =>
           @idea = doc
           expect("" + doc.dotstorm_id).to.eql @dotstorm_id
-          expect(path.existsSync @idea.getDrawingPath('small')).to.be true
+          expect(fs.existsSync @idea.getDrawingPath('small')).to.be true
           expect(doc.background).to.be '#ff9033'
           done()
         return true
@@ -75,7 +75,7 @@ describe "socket pipeline", ->
         models.Idea.findOne {_id: @idea._id}, (err, doc) =>
           @idea = doc
           expect(doc.description).to.be 'updated'
-          expect(path.existsSync @idea.getDrawingPath('small')).to.be true
+          expect(fs.existsSync @idea.getDrawingPath('small')).to.be true
           expect(parseInt(@idea.imageVersion) > startingVersion).to.be true
           done()
         return true
@@ -94,7 +94,7 @@ describe "socket pipeline", ->
       model = @browser.evaluate("window.ideaWithPhoto")
       if model?
         models.Idea.findOne {_id: @idea.id}, (err, doc) =>
-          expect(path.existsSync doc.getPhotoPath('small')).to.be true
+          expect(fs.existsSync doc.getPhotoPath('small')).to.be true
           expect(doc.photoVersion > 0).to.be true
           expect(doc.photoData).to.be undefined
           done()
@@ -185,7 +185,7 @@ describe "socket pipeline", ->
       if @browser.evaluate("window.ideaDeleteSuccess")
         models.Idea.findOne {_id: @idea._id}, (err, doc) =>
           expect(doc).to.be null
-          expect(path.existsSync @idea.getDrawingPath('small')).to.be false
+          expect(fs.existsSync @idea.getDrawingPath('small')).to.be false
           done()
         return true
     

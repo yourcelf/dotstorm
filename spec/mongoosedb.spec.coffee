@@ -1,7 +1,7 @@
 expect   = require 'expect.js'
 mongoose = require 'mongoose'
 models   = require '../lib/schema'
-path     = require 'path'
+fs       = require 'fs'
 _        = require 'underscore'
 h        = require './helper'
 
@@ -49,7 +49,7 @@ describe "Mongoose connector", ->
       idea.save (err) ->
         expect(err).to.be null
         expect(idea.drawingURLs.small).to.be "/uploads/idea/#{idea._id}/drawing/small#{idea.imageVersion}.png"
-        expect(path.existsSync idea.getDrawingPath("small")).to.be true
+        expect(fs.existsSync idea.getDrawingPath("small")).to.be true
         done()
 
   it "returns light ideas", (done) ->
@@ -82,8 +82,8 @@ describe "Mongoose connector", ->
 
   it "removes thumbnails with idea", (done) ->
     models.Idea.findOne {dotstorm_id: @dotstorm._id}, (err, idea) =>
-      expect(path.existsSync idea.getDrawingPath("small")).to.be true
+      expect(fs.existsSync idea.getDrawingPath("small")).to.be true
       idea.remove (err) =>
         expect(err).to.be null
-        expect(path.existsSync idea.getDrawingPath("small")).to.be false
+        expect(fs.existsSync idea.getDrawingPath("small")).to.be false
         done()

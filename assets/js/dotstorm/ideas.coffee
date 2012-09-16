@@ -173,7 +173,7 @@ class ds.ShowIdeaBig extends Backbone.View
   edit: (event) =>
     event.stopPropagation()
     event.preventDefault()
-    ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}",
+    ds.app.navigate "/d/#{ds.model.get("slug")}/edit/#{@model.id}/",
       trigger: true
     return false
 

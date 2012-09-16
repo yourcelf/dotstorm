@@ -100,7 +100,7 @@ class ds.Organizer extends Backbone.View
     # For prev/next navigation, we assume that 'prev' and 'next' have been set
     # on the model for ordering, linked-list style.  This is done by @sortGroups.
     # Without this, prev and next nav buttons just won't show up.
-    ds.app.navigate "/d/#{@dotstorm.get("slug")}/#{model.id}"
+    ds.app.navigate "/d/#{@dotstorm.get("slug")}/#{model.id}/"
     if model.prev?
       model.showPrev = => @showBig(model.prev)
     if model.next?
@@ -125,7 +125,7 @@ class ds.Organizer extends Backbone.View
 
   filterByTag: (tag) =>
     if tag?
-      ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}"
+      ds.app.navigate "/d/#{@dotstorm.get("slug")}/tag/#{tag}/"
       cleanedTag = $.trim(tag)
       for noteDom in @$(".smallIdea")
         idea = @ideas.get noteDom.getAttribute('data-id')

@@ -75,11 +75,14 @@ attach = (channel, io) ->
               if data.signature.query?
                 query = data.signature.query
               else if data.model?
-                query = data.model
-                # Remove virtuals before querying...
-                delete query.drawingURLs
-                delete query.photoURLs
-                delete query.taglist
+                if data.model._id
+                  query = {_id: data.model._id}
+                else
+                  query = data.model
+                  # Remove virtuals before querying...
+                  delete query.drawingURLs
+                  delete query.photoURLs
+                  delete query.taglist
               else
                 query = {}
               if data.signature.isCollection

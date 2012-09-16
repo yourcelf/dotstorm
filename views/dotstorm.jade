@@ -5,6 +5,10 @@ nav.tabs(style='display: none;')
   //a.add(href='/d/#{slug}/add') Add idea +
   div#auth
 
+div#oops(style='display: none;')
+  <h1>Oops...</h1>
+  <p>Can't find that page!</p>
+
 div#app
   <img src='/img/spinner.gif' alt='loading' /> Loading...
 
@@ -67,7 +71,7 @@ script#dotstormOrganizer(type='text/template')
   div.front-matter
     div.topic
     div.add-link-block
-      <a href='/d/<%= slug %>/add' class='cta cta-blue add-link'>+ Add</a>
+      <a href='/d/<%= slug %>/add/' class='cta cta-blue add-link'>+ Add</a>
     div#trash
       div.trash
         div.icon
@@ -91,7 +95,9 @@ script#dotstormSmallIdeaGroup(type='text/template')
       <% if (showGroup) { %>
       span.label.clickToEdit
         <%= label || "[Click to add label]" %>
-      <a href='/g/<%= group_id %>' class='embed' title='Embed this group'>&#8734;</a> 
+      <% if (!ds.settings.hideLinks) { %>
+      <a href='/g/<%= group_id %>/' class='embed group' title='Embed this group'>&#8734;</a> 
+      <% } %>
       <% } else {%>
       | &nbsp;
       <% } %>
@@ -154,6 +160,7 @@ script#usersWidget(type='text/template')
       <% for (var i = 0; i < users.length; i++) { %>
       <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
       <% } %>
+  <% if (!ds.settings.hideLinks) { %>
   div.box.invite
     p
     | Invite others using this URL:<br />
@@ -163,8 +170,9 @@ script#usersWidget(type='text/template')
     div(style='clear: both')
     p
       | Embed or export this dotstorm:
-      | <a class="embed-dotstorm" href="/e/<%= embed_slug %>" title="Embed read-only">Read-only version</a>
+      | <a class="embed-dotstorm" href="/e/<%= embed_slug %>/" title="Embed read-only">Read-only version</a>
   </div>
+  <% } %>
 
 
 script#intro(type='text/template')
@@ -196,3 +204,4 @@ script#intro(type='text/template')
             br
             input(type='text', name='room', id='id_join', placeholder='name')
             input.cta.cta-green(type='submit', value='OK')
+

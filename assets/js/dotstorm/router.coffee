@@ -1,11 +1,35 @@
+getUrlVars = ->
+  vars = {}
+  hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&')
+  for hash in hashes
+    [key, val] = hash.split('=')
+    vars[key] = val
+  return vars
+
+
+ds.URL_VARS = getUrlVars()
+ds.settings = {
+  hideHome: ds.URL_VARS.hideHome == "true"
+  hideLinks: ds.URL_VARS.hideLinks == "true"
+}
+if ds.settings.hideHome
+  $("a.home").hide()
+
 class ds.Router extends Backbone.Router
   routes:
-    'd/:slug/add':        'dotstormAddIdea'
-    'd/:slug/edit/:id':   'dotstormEditIdea'
-    'd/:slug/tag/:tag':   'dotstormShowTag'
-    'd/:slug/:id':        'dotstormShowIdeas'
-    'd/:slug/':           'dotstormShowIdeas'
-    '':                   'intro'
+    'd/:slug/add/*query':        'dotstormAddIdea'
+    'd/:slug/edit/:id/*query':   'dotstormEditIdea'
+    'd/:slug/tag/:tag/*query':   'dotstormShowTag'
+    'd/:slug/:id/*query':        'dotstormShowIdeas'
+    'd/:slug/*query':            'dotstormShowIdeas'
+    '':                          'intro'
+    '*query':                    'fourOhFour'
+
+  navigate: (path, options) ->
+    if window.location.search
+      path += window.location.search
+    return super(path, options)
+
 
   updateNavLinks: (showNav, active) ->
     if showNav
@@ -67,6 +91,7 @@ class ds.Router extends Backbone.Router
     return false
 
   dotstormEditIdea: (slug, id) =>
+    console.log(slug, id)
     @updateNavLinks(true, "add")
     @open slug, "", ->
       idea = ds.ideas.get(id)
@@ -80,6 +105,9 @@ class ds.Router extends Backbone.Router
             $("#app").html view.el
             view.render()
     return false
+
+  fourOhFour: (query) =>
+    $("#app").html $("#oops").html()
 
   open: (slug, name, callback) =>
     # Open (if it exists) or create a new dotstorm with the name `name`, and
