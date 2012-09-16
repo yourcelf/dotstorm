@@ -11,14 +11,15 @@ models     = require '../lib/schema'
 #
 describe "socket pipeline", ->
   before (done) ->
-    @server = h.startServer()
-    @browser  = new Browser()
-    @browser2 = new Browser()
-    h.clearDb(done)
+    mongoose.disconnect =>
+      @server = h.startServer()
+      @browser  = new Browser()
+      @browser2 = new Browser()
+      h.clearDb(done)
 
   after (done) ->
     @server.app.close()
-    h.clearDb(done)
+    h.clearDb(-> mongoose.disconnect(done))
 
   it "visits the front page", (done) ->
     @browser.visit "http://localhost:8127", =>

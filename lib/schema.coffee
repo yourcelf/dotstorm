@@ -167,7 +167,7 @@ Dotstorm = mongoose.model("Dotstorm", DotstormSchema)
 Dotstorm.withLightIdeas = (constraint, cb) ->
   return Dotstorm.findOne(constraint).populate(
     'groups.ideas', { 'drawing': 0 }
-  ).run cb
+  ).exec cb
 Dotstorm.prototype.serialize = ->
   return @toJSON()
 
