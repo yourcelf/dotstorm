@@ -7,6 +7,7 @@
 #= require ../iorooms.client
 #= require ../backbone-socket.client
 #= require common
+#= require queryparams
 #= require models
 #= require intro
 #= require topic

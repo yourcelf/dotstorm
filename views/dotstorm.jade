@@ -156,7 +156,11 @@ script#usersWidget(type='text/template')
     <%= users.length + 1 %> online:
     ol
       li.you
+        <% if (ds.settings.userNameReadOnly) { %>
+        <%= self.name || "(You)" %>
+        <% } else { %>
         | <input tile='<%= self.user_id %>' type=text value='<%= self.name || "" %>' placeholder='Enter your name' />
+        <% } %>
       <% for (var i = 0; i < users.length; i++) { %>
       <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
       <% } %>

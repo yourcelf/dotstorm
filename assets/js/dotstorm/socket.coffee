@@ -6,6 +6,8 @@ Backbone.setSocket(ds.socket)
 ds.app = new ds.Router
 ds.socket.on 'connect', ->
   ds.client = new Client(ds.socket)
+  if ds.settings.userName
+    ds.client.setName(ds.settings.userName)
   Backbone.history.start pushState: true
   ds.socket.on 'users', (data) ->
     #console.debug "users", data
