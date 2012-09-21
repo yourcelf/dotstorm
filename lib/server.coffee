@@ -49,7 +49,25 @@ start = (options) ->
   # /d/:slug/:action (action optional)
   app.get /\/d\/([^/]+)(\/.*)?/, (req, res) ->
     #XXX load initial data when a slug is given....
-    res.render 'dotstorm', title: "DotStorm", slug: req.params[0], initial: {}
+    if req.params[1] == "/json/"
+      models.Dotstorm.withLightIdeas {slug: req.params[0]}, (err, doc) ->
+        if err? or not doc
+          res.send(404)
+        else
+          res.writeHead(200, {'Content-Type': 'application/json'})
+          res.write(JSON.stringify(doc.toJSON()))
+          res.end()
+    else
+      res.render 'dotstorm', title: "DotStorm", slug: req.params[0], initial: {}
+
+  app.get '/i/:idea/json/', (req, res) ->
+    models.Idea.findOne {_id: req.params.idea}, (err, doc) ->
+      if err? or not doc
+        res.send(404)
+      else
+        res.writeHead(200, {'Content-Type': 'application/json'})
+        res.write(JSON.stringify(doc.toJSON()))
+        res.end()
 
   # Embed read-only dostorm using embed slug.
   app.get '/e/:embed_slug', (req, res) ->
