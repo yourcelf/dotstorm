@@ -150,7 +150,6 @@ class ds.ShowIdeaBig extends Backbone.View
     @trigger "close", this
     @$el.remove()
     ds.app.navigate "/d/#{ds.model.get("slug")}/"
-    ds.app.updateNavLinks(true, "show-ideas")
     return false
 
   nothing: (event) =>

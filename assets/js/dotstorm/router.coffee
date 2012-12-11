@@ -126,6 +126,7 @@ sharing_view = null
 ds.leaveRoom = ->
   room_view?.remove()
   sharing_view?.remove()
+  $(".sharing-online-group .embedding").hide()
 
 ds.joinRoom = (newModel) ->
   ds.leaveRoom()
@@ -146,3 +147,4 @@ ds.joinRoom = (newModel) ->
     }
     sharing_view.close()
 
+  $(".sharing-online-group .embedding").show()

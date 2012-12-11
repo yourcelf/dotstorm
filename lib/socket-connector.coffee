@@ -3,18 +3,23 @@ models        = require './schema'
 thumbnails    = require './thumbnails'
 intertwinkles = require 'node-intertwinkles'
 
+
 #
 # Connect the plumbing for backbone models coming over the socket to mongoose
 # models.  Rebroadcast data to rooms as appropriate.
 #
-attach = (iorooms) ->
+attach = (config, iorooms) ->
+  events = require('./events')(config)
   iorooms.onChannel 'backbone', (socket, data) ->
     session = socket.session
+
     errorOut = (error) ->
       logger.error(error)
       socket.emit(data.signature.event, error: error)
+
     respond = (model) ->
       socket.emit(data.signature.event, model)
+
     rebroadcast = (room, model) ->
       if room?
         socket.broadcast.to(room).emit "backbone", {
@@ -32,7 +37,7 @@ attach = (iorooms) ->
           idea[key] = data.model[key]
       if not data.model.tags? and data.model.taglist?
         idea.taglist = data.model.taglist
-      models.Dotstorm.find {_id: idea.dotstorm_id}, 'sharing', (err, dotstorm) ->
+      models.Dotstorm.findOne {_id: idea.dotstorm_id}, 'sharing', (err, dotstorm) ->
         return errorOut(err) if err?
         return errorOut("Unknown dotstorm") unless dotstorm?
         return errorOut("Permission denied") unless intertwinkles.can_edit(session, dotstorm)
@@ -42,9 +47,12 @@ attach = (iorooms) ->
           delete json.drawing
           respond(json)
           rebroadcast(idea.dotstorm_id, json)
+          events.post_event(session, dotstorm, "append", {data: json})
+          events.post_search_index(dotstorm)
 
     saveDotstormAndRespond = (doc) ->
       return errorOut("Permission denied") unless intertwinkles.can_edit(session, doc)
+      event_type = if doc._id then "update" else "create"
       for key in ["slug", "name", "topic", "groups", "trash"]
         if data.model[key]?
           doc.set key, data.model[key]
@@ -57,6 +65,8 @@ attach = (iorooms) ->
         if err? then return errorOut(err)
         respond(doc.serialize())
         rebroadcast(doc._id, doc)
+        events.post_event(session, doc, event_type)
+        events.post_search_index(doc)
 
     switch data.signature.collectionName
       when "Idea"
@@ -70,15 +80,6 @@ attach = (iorooms) ->
               saveIdeaAndRespond(doc)
           when "delete"
             return errorOut("Unsupported method `delete`")
-#            models.Idea.findOne {_id: data.model._id}, (err, doc) ->
-#              models.Dotstorm.findOne {_id: doc.dotstorm_id}, 'sharing', (err, doc) ->
-#                return errorOut(err) if err?
-#                return errorOut("Permission denied") unless intetwinkles.can_edit(doc)
-#                doc.remove (err) ->
-#                  if err? then return errorOut(err)
-#                  json = {_id: doc._id}
-#                  respond(json)
-#                  rebroadcast(doc.dotstorm_id, json)
           when "read"
             if data.signature.query?
               query = data.signature.query
@@ -125,12 +126,6 @@ attach = (iorooms) ->
               saveDotstormAndRespond(doc)
           when "delete"
             return errorOut("Unsupported method `delete`")
-#            models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
-#              return errorOut("Permission denied") unless intertwinkles.can_edit(session, doc)
-#              doc.remove (err) ->
-#                return errorOut(err) if err?
-#                respond(doc)
-#                rebroadcast(doc._id, doc)
           when "read"
             query = data.signature.query or data.model
             models.Dotstorm.find query, (err, docs) ->
@@ -141,5 +136,6 @@ attach = (iorooms) ->
                 respond(docs or [])
               else
                 respond(docs?[0] or {})
+              events.post_event(session, docs[0], "view", {timeout: 60 * 1000 * 5})
 
 module.exports = { attach }

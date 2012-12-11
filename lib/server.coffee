@@ -10,6 +10,7 @@ intertwinkles = require 'node-intertwinkles'
 
 # See Cakefile for config definitions and defaults
 start = (config) ->
+  events = require('./events')(config)
   db = mongoose.connect(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
@@ -51,7 +52,7 @@ start = (config) ->
   #
   io = socketio.listen(app, "log level": 0)
   iorooms = new RoomManager("/iorooms", io, sessionStore)
-  require('./socket-connector').attach(iorooms)
+  require('./socket-connector').attach(config, iorooms)
   iorooms.authorizeJoinRoom = (session, name, callback) ->
     schema.Dotstorm.findOne {_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
@@ -112,6 +113,7 @@ start = (config) ->
               dotstorm: doc
               ideas: (idea.serialize() for idea in ideas)
             })
+            events.post_event(req.session, doc, "view", {timeout: 60 * 1000 * 5})
 
   app.get '/i/:idea/json/', (req, res) ->
     schema.Idea.findOne {_id: req.params.idea}, (err, idea) ->

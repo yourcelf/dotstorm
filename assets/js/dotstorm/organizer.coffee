@@ -139,7 +139,6 @@ class ds.Organizer extends Backbone.View
       @$("a.tag[data-tag=\"#{cleanedTag}\"]").addClass("active").removeClass("inactive")
     else
       ds.app.navigate "/d/#{@dotstorm.get("slug")}/"
-      ds.app.updateNavLinks(true, "show-ideas")
       @$(".smallIdea").removeClass("fade")
       @$("a.tag").removeClass("inactive active")
 

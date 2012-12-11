@@ -1,10 +1,10 @@
 extends layout
 block body
-  div.pull-right(style='position: absolute; right: 2em; top: 50px;')
+  div.pull-right(style='position: absolute; right: 1em; top: 0.5em;')
     ul.sharing-online-group(style='float: right;')
       li.room-users
       li.sharing
-      li.dropdown
+      li.embedding.dropdown.hide
         a.btn.btn-inverse.dropdown-toggle(
           title='Embed and share',
           data-toggle='dropdown'
@@ -32,15 +32,15 @@ block body
         span.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
 
   script#dotstormInPlaceInput(type='text/template')
-    form.editInPlace
+    form.editInPlace.input-append
       <input type='text' value='<%= text %>' />
-      input(type='submit', value='OK')
+      input.btn(type='submit', value='OK')
 
   script#dotstormInPlaceTextarea(type='text/template')
     form.inPlaceTextarea
       textarea(rows="4", cols="40") <%= text %>
       br
-      input(type='submit', value='save')
+      input.btn(type='submit', value='save')
       a.cancel(href='') cancel
 
   script#dotstormAddIdea(type='text/template')
@@ -73,9 +73,10 @@ block body
           textarea#id_description <%= description %>
       form
         label(for='id_tags') Tags
-        <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
-        //a.cta.cta-yellow.cta-thin Say more
-        input.cta.cta-blue.cta-thin(type='submit', value='Share &raquo;', style='float: right')
+        div.input-append
+          <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
+          //a.cta.cta-yellow.cta-thin Say more
+          input.btn.btn-primary(type='submit', value='Share &raquo;', style='float: right')
       div(style='clear: both;')
 
   script#dotstormOrganizer(type='text/template')
@@ -83,7 +84,7 @@ block body
     div.front-matter
       div.topic
       div.add-link-block
-        <a href='/d/<%= slug %>/add/' class='cta cta-blue add-link'>+ Add</a>
+        <a href='/d/<%= slug %>/add/' class='btn btn-primary btn-large add-link'>+ Add</a>
       div#trash
         div.trash
           div.icon
@@ -114,9 +115,9 @@ block body
     div.ideas
 
   script#dotstormSmallIdeaGroupEditLabel(type='text/template')
-    form
+    form.input-append
       | <input type='text' value='<%= label %>' placeholder='label' />
-      input(type='submit', value='OK')
+      input.btn(type='submit', value='OK')
 
   script#dotstormBigIdea(type='text/template')
     div.shadow
@@ -159,32 +160,31 @@ block body
 
 
   script#intro(type='text/template')
-    div#intro
-      div.container
-        div.left-column
-          h1 Dotstorm
-          h2 Sticky-note brainstorming
-          iframe(width="340", height="400", src="http://dotstorm.byconsens.us/e/8771d8b6-a355-4ffc-90ff-49832b65ebde")
-        div.right-column
-          ul
-            li 
-              | Totally free. 
-              span.subtle (Fork me on <a href='http://github.com/yourcelf/dotstorm/'>github</a>!)
-            li 
-              | Rather beta.
-              span.subtle  (please don't use for sensitive or critical data).
-            li 
-              | Compatible with all modern web devices 
-              span.subtle (iPhone, Android, Firefox, Chrome, etc).
-            li Awesome
+    div#intro.row-fluid
+      div.span4.offset2
+        h1 Dotstorm
+        h2 Sticky-note brainstorming
+        iframe(width="335", height="400", src="http://dotstorm.byconsens.us/e/8771d8b6-a355-4ffc-90ff-49832b65ebde")
+      div.span4(style='padding-top: 5em;')
+        ul
+          li 
+            | Totally free. 
+            span.subtle (Fork me on <a href='http://github.com/yourcelf/dotstorm/'>github</a>!)
+          li 
+            | Rather beta.
+            span.subtle  (please don't use for sensitive or critical data).
+          li 
+            | Compatible with all modern web devices 
+            span.subtle (iPhone, Android, Firefox, Chrome, etc).
+          li Awesome
 
-          form#random
-            input.cta.cta-blue(type='submit', value='New random dotstorm')
-          form#named
-            p
-              label(for='id_join')
-                | Or choose a name:
-              br
+        form#random
+          input.btn.btn-primary.btn-large(type='submit', value='New random dotstorm')
+        form#named
+          p
+            label(for='id_join')
+              | Or choose a name:
+            div.input-append
               input(type='text', name='room', id='id_join', placeholder='name')
-              input.cta.cta-green(type='submit', value='OK')
+              input.btn.btn-success(type='submit', value='OK')
 
