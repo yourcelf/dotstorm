@@ -1,27 +1,12 @@
 # 
 # Socket data!!!!!!!!!!!!!!
 #
-ds.socket = io.connect("/io", reconnect: false)
+intertwinkles.socket = ds.socket = io.connect("/iorooms", reconnect: false)
 Backbone.setSocket(ds.socket)
 ds.app = new ds.Router
 ds.socket.on 'connect', ->
   ds.client = new Client(ds.socket)
-  if ds.settings.userName
-    ds.client.setName(ds.settings.userName)
   Backbone.history.start pushState: true
-  ds.socket.on 'users', (data) ->
-    #console.debug "users", data
-    ds.users = new ds.UsersView
-      users: data
-      url: "#{window.location.protocol}//#{window.location.host}/d/#{ds.model.get("slug")}/"
-    $("#auth").html ds.users.el
-    ds.users.render()
-  ds.socket.on 'user_left', (user) ->
-    ds.users?.removeUser(user)
-  ds.socket.on 'user_joined', (user) ->
-    ds.users?.addUser(user)
-  ds.socket.on 'username', (user) ->
-    ds.users?.setUser(user)
 
   ds.socket.on 'backbone', (data) ->
     console.debug 'backbone sync', data
@@ -58,7 +43,7 @@ ds.socket.on 'disconnect', ->
   # Timeout prevents a flash when you are just closing a tab.
   setTimeout ->
     flash "error", "Connection lost.  <a href='' onclick='window.location.reload(); return false;'>Click to reconnect</a>."
-  , 500
+  , 1000
 
 window.addEventListener 'message', (event) ->
   if event.origin == "file://"

@@ -220,7 +220,7 @@ class ds.EditIdea extends Backbone.View
       background: @canvas.background
       dims: @canvas.ctxDims
       drawing: @canvas.actions
-      editor: ds.users?.self?.user_id
+      editor: intertwinkles.user?.id
       photoData: @photo
     }
     @idea.save(attrs, {

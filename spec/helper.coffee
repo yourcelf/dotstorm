@@ -1,12 +1,7 @@
 _      = require 'underscore'
-config = require '../lib/config'
+config = require './config'
 server = require '../lib/server'
 models = require '../lib/schema'
-
-# Use a different port from the config port, so we don't clash with a
-# running dev server.
-config.port = 8127
-config.dbname = 'test'
 
 module.exports =
   startServer: (opts) ->

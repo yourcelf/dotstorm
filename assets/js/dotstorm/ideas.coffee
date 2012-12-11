@@ -2,11 +2,11 @@ class ds.ShowIdeaGroup extends Backbone.View
   template: _.template $("#dotstormSmallIdeaGroup").html() or ""
   editTemplate: _.template $("#dotstormSmallIdeaGroupEditLabel").html() or ""
   events:
-    'click     .label': 'editLabel'
-    'touchend  .label': 'editLabel'
-    'click    .cancel': 'cancelEdit'
-    'touchend .cancel': 'cancelEdit'
-    'submit      form': 'saveLabel'
+    'click    .grouplabel': 'editLabel'
+    'touchend .grouplabel': 'editLabel'
+    'click        .cancel': 'cancelEdit'
+    'touchend     .cancel': 'cancelEdit'
+    'submit          form': 'saveLabel'
 
   initialize: (options) ->
     @group = options.group
@@ -80,7 +80,6 @@ class ds.ShowIdeaSmall extends Backbone.View
   renderVotes: =>
     @$(".votes").html new ds.VoteWidget({
       idea: @model
-      self: ds.users.self
       readOnly: true
       hideOnZero: true
     }).render().el
@@ -142,7 +141,7 @@ class ds.ShowIdeaBig extends Backbone.View
     this
 
   renderVotes: =>
-    @$(".vote-widget").html new ds.VoteWidget(idea: @model, self: ds.users.self).render().el
+    @$(".vote-widget").html new ds.VoteWidget(idea: @model).render().el
 
   close: (event) =>
     if event?

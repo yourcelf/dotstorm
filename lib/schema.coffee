@@ -163,6 +163,14 @@ DotstormSchema = new Schema
   topic: { type: String, required: false, trim: true }
   groups: [IdeaGroupSchema]
   trash: [{type: Schema.ObjectId, ref: 'Idea'}]
+  sharing: {
+    group_id: String
+    public_view_until: Date
+    public_edit_until: Date
+    extra_viewers: [String]
+    extra_editors: [String]
+    advertise: Boolean
+  }
 Dotstorm = mongoose.model("Dotstorm", DotstormSchema)
 Dotstorm.withLightIdeas = (constraint, cb) ->
   return Dotstorm.findOne(constraint).populate(

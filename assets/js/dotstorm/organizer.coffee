@@ -29,13 +29,13 @@ class ds.Organizer extends Backbone.View
     'touchcancel  .smallIdea': 'stopDrag'
     'mouseup      .smallIdea': 'stopDrag'
                  
-    'touchstart       .group': 'startDragGroup'
-    'mousedown        .group': 'startDragGroup'
-    'touchmove        .group': 'continueDragGroup'
-    'mousemove        .group': 'continueDragGroup'
-    'touchend         .group': 'stopDragGroup'
-    'touchcancel      .group': 'stopDragGroup'
-    'mouseup          .group': 'stopDragGroup'
+    'touchstart  .masonry.group': 'startDragGroup'
+    'mousedown   .masonry.group': 'startDragGroup'
+    'touchmove   .masonry.group': 'continueDragGroup'
+    'mousemove   .masonry.group': 'continueDragGroup'
+    'touchend    .masonry.group': 'stopDragGroup'
+    'touchcancel .masonry.group': 'stopDragGroup'
+    'mouseup     .masonry.group': 'stopDragGroup'
 
 
   initialize: (options) ->
@@ -74,6 +74,8 @@ class ds.Organizer extends Backbone.View
 
   nothing: (event) =>
     event.stopPropagation()
+    event.preventDefault()
+    return false
 
   sortGroups: =>
     # Recursively run through the grouped ideas referenced in the dotstorm sort
@@ -344,7 +346,7 @@ class ds.Organizer extends Backbone.View
       dim.ideaPos = parseInt(el.attr("data-idea-position"))
       dim.groupPos = parseInt(parent.attr("data-group-position"))
       dims.ideas.push(dim)
-    for el in @$(".idea-browser .group")
+    for el in @$(".idea-browser .masonry.group")
       el = $(el)
       dim = @getElementDims(el)
       dim.el = el
@@ -582,13 +584,12 @@ class ds.Organizer extends Backbone.View
             "outline-color": ""
         )
     }
-
-
-
     return targets
 
 
-  startDragGroup: (event) => return @startDrag(event)
+  startDragGroup: (event) =>
+    console.log "startDragGroup"
+    return @startDrag(event)
   startDrag: (event) =>
     event.preventDefault()
     event.stopPropagation()

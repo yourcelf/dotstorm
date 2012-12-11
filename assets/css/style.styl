@@ -1,6 +1,7 @@
 // Mixins
 @import "normalize.css"
 @import "buttons.css"
+@import "../intertwinkles/css/intertwinkles"
 
 background-rgba(r, g, b, a)
   // rgba with fallback to rgb
@@ -11,18 +12,6 @@ background-rgba(r, g, b, a)
 
 smallIdeaMargin = 14px
 
-bodybackground = url("../img/frenchstucco.png") repeat
-tabbackground = url("../img/dark_dotted.png") repeat
-
-body
-  position: relative
-  background: bodybackground
-  background-position: 0px -32px
-body,textarea
-  font-family: "Droid Sans",Helvetica,sans-serif
-
-a:link, a:visited
-  color: #00e
 a:link.cta, a:visited.cta, a.cta
   color: white
 
@@ -32,33 +21,10 @@ a:link.cta, a:visited.cta, a.cta
   left: 0
   background: white
   border: 1px solid #aaa
-  display: none
 
 input[type=text]
   border: 1px solid gray
   padding: 0.2em
-
-nav.tabs, ul.tablinks
-  font-size: 20px
-  height: 24px
-  background: tabbackground
-  a
-    border: 1px solid transparent
-    color: white
-    text-decoration: none
-    padding-left: 0.5em
-    padding-right: 0.5em
-    &.active
-      background: bodybackground
-      color: black
-  a.home
-    margin: 0
-    padding: 0
-    float: left
-    position: relative
-    display: inline-block
-    width: 32px
-    height: 24px
 
 #auth
   font-size: 16px
@@ -106,40 +72,16 @@ nav.tabs, ul.tablinks
       color: #09f
       font-weight: bold
 
+ul.sharing-online-group
+  padding: inherit 
+  margin: inherit
+  margin-bottom: 10px
+  margin-left: 25px
+
+
 @media only screen and (min-width: 480px)
   #auth .invite 
     display: block
-
-#flash
-  z-index: 100
-  font-size: 20px
-  a.close
-    color: black
-    text-decoration: none
-    position: absolute
-    text-align: center
-    right: 0em
-    width: 2em
-    height: 2em
-  ul
-    z-index: 100
-    position: fixed
-    width: 85%
-    top: 1em
-    left: 5%
-    li
-      position: relative
-      padding: 0.5em
-      margin-left: 0
-      list-style-type: none
-      box-shadow: 0px 0px 1px black, 0 0 20px white inset
-      color: white
-      text-shadow: black 0px 1px 2px
-      margin-right: 1em
-      &.info
-        background-rgba(0, 153, 255, 0.9)
-      &.error
-        background-rgba(255, 51, 0, 0.9)
 
 #intro
   position: relative
@@ -228,7 +170,7 @@ nav.tabs, ul.tablinks
       &.loading
         img
           display: none
-        background: url("../img/spinner.gif") no-repeat
+        background: url("/static/img/spinner.gif") no-repeat
         background-position: 14px 14px
     a.note-color
       position: relative
@@ -289,9 +231,12 @@ nav.tabs, ul.tablinks
       overflow: hidden
       resize: none
   .cta.loading
-    background-image: url("../img/spinner.gif")
+    background-image: url("/static/img/spinner.gif")
     background-repeat: no-repeat
     background-color: #0093e6
+
+.participation-menu
+  width: 320px
 
 
 /*
@@ -335,18 +280,11 @@ nav.tabs, ul.tablinks
 .idea-browser
   float: left
   position: relative
-  &, *
-    -webkit-user-select: none
-    -khtml-user-select: none
-    -moz-user-select: none
-    -o-user-select: none
-    user-select: none
-  input, textarea
-    -webkit-user-select: text
-    -khtml-user-select: text
-    -moz-user-select: text
-    -o-user-select: text
-    user-select: text
+.idea-browser, .idea-browser *
+  user-select: none
+
+.idea-browser input, .idea-browser textarea
+  user-select: text
 
 .add-link-block
   float: left
@@ -393,6 +331,7 @@ nav.tabs, ul.tablinks
   padding-top: 10px
   padding-bottom: 10px
   .labelHolder
+    z-index: 10
     height: 27px
     input[type=text]
       width: 120px
@@ -469,7 +408,7 @@ nav.tabs, ul.tablinks
   position: absolute
   width: 44px
   height: 118px
-  background: url("../img/droptarget.png")
+  background: url("/static/img/droptarget.png")
   background-size: 44px 100%
 
 .vote-widget
@@ -487,14 +426,14 @@ nav.tabs, ul.tablinks
     &.active
       cursor: auto
   a.upvote
-    background: url("../img/upvote.png") no-repeat
+    background: url("/static/img/upvote.png") no-repeat
     &.active
-      background: url("../img/upvote-active.png") no-repeat
+      background: url("/static/img/upvote-active.png") no-repeat
   a.downvote
-    background: url("../img/downvote.png") no-repeat
+    background: url("/static/img/downvote.png") no-repeat
     top: 8px
     &.active
-      background: url("../img/downvote-active.png") no-repeat
+      background: url("/static/img/downvote-active.png") no-repeat
 
   .vote-count
     position: relative
@@ -540,14 +479,14 @@ nav.tabs, ul.tablinks
       height: 32px
       margin-left: auto
       margin-right: auto
-      background: url("../img/trash-full.png")
+      background: url("/static/img/trash-full.png")
     &.empty
       cursor: auto
       &.open
         .contents
           display: none
       .icon
-        background: url("../img/trash-empty.png")
+        background: url("/static/img/trash-empty.png")
     .contents
       display: none
       margin-top: 0.5em
@@ -613,10 +552,6 @@ nav.tabs, ul.tablinks
         max-height: 100%
 
     form
-      -webkit-user-select: text
-      -khtml-user-select: text
-      -moz-user-select: text
-      -o-user-select: text
       user-select: text
       
     .close
@@ -635,10 +570,6 @@ nav.tabs, ul.tablinks
       bottom: 40px
       width: 30%
       height: 30%
-      -webkit-user-select: none
-      -khtml-user-select: none
-      -moz-user-select: none
-      -o-user-select: none
       user-select: none
       &.prevHolder
         left: 0

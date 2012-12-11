@@ -1,211 +1,190 @@
-nav.tabs(style='display: none;')
-  a.soft.home(href='/')
-    img(src='/img/home.png', alt='Dotstorm home')
-  a.soft.show-ideas(href='/d/#{slug}/') Show ideas
-  //a.add(href='/d/#{slug}/add') Add idea +
-  div#auth
+extends layout
+block body
+  div.pull-right(style='position: absolute; right: 2em; top: 50px;')
+    ul.sharing-online-group(style='float: right;')
+      li.room-users
+      li.sharing
+      li.dropdown
+        a.btn.btn-inverse.dropdown-toggle(
+          title='Embed and share',
+          data-toggle='dropdown'
+          href='#') &lt;/&gt;
+        ul.dropdown-menu.participation-menu(role='menu')
+          li.linkless
+            p
+            | Invite others using this URL:<br />
+            | <nobr><a class='participation-link' href=''></a></nobr>
+            | or with the handy barcode dohickey:
+            | <img class='qrcode' src='/static/img/loading.gif' alt='QR code' style='float: left; margin-right: 1em'/>
+            div(style='clear: both')
+            p
+            | Embed or export this dotstorm:
+            | <nobr><a class="embed-dotstorm" href="" title="Embed read-only">Read-only version</a></nobr>
+  div(style='height: 2em;')
+  div#app
+    <img src='/static/img/spinner.gif' alt='loading' /> Loading...
 
-div#oops(style='display: none;')
-  <h1>Oops...</h1>
-  <p>Can't find that page!</p>
+  script#dotstormTopic(type='text/template')
+    div#dotstorm
+      div.nameEdit
+        h1.clickToEdit <%= name || "[add name]" %>
+      div.topicEdit
+        span.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
 
-div#app
-  <img src='/img/spinner.gif' alt='loading' /> Loading...
+  script#dotstormInPlaceInput(type='text/template')
+    form.editInPlace
+      <input type='text' value='<%= text %>' />
+      input(type='submit', value='OK')
 
-script#dotstormTopic(type='text/template')
-  div#dotstorm
-    div.nameEdit
-      h1.clickToEdit <%= name || "[add name]" %>
-    div.topicEdit
-      span.clickToEdit <%| _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
+  script#dotstormInPlaceTextarea(type='text/template')
+    form.inPlaceTextarea
+      textarea(rows="4", cols="40") <%= text %>
+      br
+      input(type='submit', value='save')
+      a.cancel(href='') cancel
 
-script#dotstormInPlaceInput(type='text/template')
-  form.editInPlace
-    <input type='text' value='<%= text %>' />
-    input(type='submit', value='OK')
-
-script#dotstormInPlaceTextarea(type='text/template')
-  form.inPlaceTextarea
-    textarea(rows="4", cols="40") <%= text %>
-    br
-    input(type='submit', value='save')
-    a.cancel(href='') cancel
-
-script#dotstormAddIdea(type='text/template')
-  div#addIdea
-    div.toolbar
-      a.tool.active(data-tool='text')
-        img(src='/img/T.png', alt='Text')
-      a.tool(data-tool='pencil')
-        img(src='/img/pencil.png', alt='Pencil')
-      a.tool(data-tool='eraser')
-        img(src='/img/eraser.png', alt='Eraser')
-      <% if (cameraEnabled) { %>
-      a.tool(data-tool='camera')
-        img(src='/img/camera.png', alt='Camera')
-      <% } else if (fileEnabled) { %>
-      a.tool.file-upload(data-tool='file-upload')
-        img.normal(src='/img/camera.png', alt='Camera')
-      input.file-input(type='file', accept='image/*;capture=camera')
-      <% } %>
-      span(style='float: right')
-        a.note-color.yellow
-        a.note-color.pink
-        a.note-color.aqua
-        a.note-color.green
-    div(style='clear: both;')
-    div.canvasHolder
-      div.photo
-      div.canvas
-      div.text
-        textarea#id_description <%= description %>
-    form
-      label(for='id_tags') Tags
-      <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
-      //a.cta.cta-yellow.cta-thin Say more
-      input.cta.cta-blue.cta-thin(type='submit', value='Share &raquo;', style='float: right')
-    div(style='clear: both;')
-
-script#dotstormOrganizer(type='text/template')
-  div(style='clear: both;')
-  div.front-matter
-    div.topic
-    div.add-link-block
-      <a href='/d/<%= slug %>/add/' class='cta cta-blue add-link'>+ Add</a>
-    div#trash
-      div.trash
-        div.icon
-        div.contents
-    div(style='clear: both;')
-  div.idea-browser
-    span#organizer
-    div(style='clear: both;')
-  div.tag-links
-
-script#dotstormSmallIdea(type='text/template')
-  <img src='<%= drawingURLs.medium %>' alt='<%= description %>' />
-  div.tags
-    <%= tags.join(", ") %>
-  div.votes
-  div.dragger
-
-script#dotstormSmallIdeaGroup(type='text/template')
-  div.labelHolder
-    span.labelMask
-      <% if (showGroup) { %>
-      span.label.clickToEdit
-        <%= label || "[Click to add label]" %>
-      <% if (!ds.settings.hideLinks) { %>
-      <a href='/g/<%= group_id %>/' class='embed group' title='Embed this group'>&#8734;</a> 
-      <% } %>
-      <% } else {%>
-      | &nbsp;
-      <% } %>
-  div.ideas
-
-script#dotstormSmallIdeaGroupEditLabel(type='text/template')
-  form
-    | <input type='text' value='<%= label %>' placeholder='label' />
-    input(type='submit', value='OK')
-
-script#dotstormBigIdea(type='text/template')
-  div.shadow
-    div.noteHolder
-      div.note
-        div.toolbar.image-boxed
-          a.edit(href='', title='edit')
-            img(src="/img/pencil.png", alt='edit')
-          span.vote-widget
-          a.close(title='close') &#10006;
-        div.canvasHolder
-          <img src='<%= drawingURLs.full %>' alt='<%= description %>' />
-          <% if (hasPrev) { %>
-          div.nav.prevHolder
-            div.navlink.prev(title='previous') &laquo;
-          <% } %>
-          <% if (hasNext) { %>
-          div.nav.nextHolder
-            div.navlink.next(title='next') &raquo;
-          <% } %>
-        div.tags
-          b tags:&nbsp;
-          span.clickToEdit
-            <%= tags.join(", ") || "[Click to add]"%>
+  script#dotstormAddIdea(type='text/template')
+    div#addIdea
+      div.toolbar
+        a.tool.active(data-tool='text')
+          img(src='/static/img/T.png', alt='Text')
+        a.tool(data-tool='pencil')
+          img(src='/static/img/pencil.png', alt='Pencil')
+        a.tool(data-tool='eraser')
+          img(src='/static/img/eraser.png', alt='Eraser')
+        <% if (cameraEnabled) { %>
+        a.tool(data-tool='camera')
+          img(src='/static/img/camera.png', alt='Camera')
+        <% } else if (fileEnabled) { %>
+        a.tool.file-upload(data-tool='file-upload')
+          img.normal(src='/static/img/camera.png', alt='Camera')
+        input.file-input(type='file', accept='image/*;capture=camera')
+        <% } %>
+        span(style='float: right')
+          a.note-color.yellow
+          a.note-color.pink
+          a.note-color.aqua
+          a.note-color.green
+      div(style='clear: both;')
+      div.canvasHolder
+        div.photo
+        div.canvas
+        div.text
+          textarea#id_description <%= description %>
+      form
+        label(for='id_tags') Tags
+        <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
+        //a.cta.cta-yellow.cta-thin Say more
+        input.cta.cta-blue.cta-thin(type='submit', value='Share &raquo;', style='float: right')
       div(style='clear: both;')
 
-script#dotstormTagOverlay(type='text/template')
-  div.shadow
+  script#dotstormOrganizer(type='text/template')
+    div(style='clear: both;')
+    div.front-matter
+      div.topic
+      div.add-link-block
+        <a href='/d/<%= slug %>/add/' class='cta cta-blue add-link'>+ Add</a>
+      div#trash
+        div.trash
+          div.icon
+          div.contents
+      div(style='clear: both;')
+    div.idea-browser
+      span#organizer
+      div(style='clear: both;')
+    div.tag-links
 
-script#dotstormVoteWidget(type='text/template')
-  <% if (!readOnly) { %>
-  a.upvote(title='Vote up') Vote up
-  <% } %>
-  span.vote-count
-  <% if (!readOnly) { %>
-  a.downvote(title='Vote down') Vote down
-  <% } %>
+  script#dotstormSmallIdea(type='text/template')
+    <img src='/static<%= drawingURLs.medium %>' alt='<%= description %>' />
+    div.tags
+      <%= tags.join(", ") %>
+    div.votes
+    div.dragger
 
-script#usersWidget(type='text/template')
-  <span class='users' title='Online: <%= ["You"].concat(_.map(users, function(u) { return u.name || "Anon" }).join(", ")).join(", ") %>'>
-  img(src='/img/user.png', style='width: 22px; height: 22px')
-  span.count
-    <%= users.length + 1 %>
-  </span>
-  <div class='userlist' style='display: <%= open ? 'block' : 'none' %>'>
-  div.box
-    <%= users.length + 1 %> online:
-    ol
-      li.you
-        <% if (ds.settings.userNameReadOnly) { %>
-        <%= self.name || "(You)" %>
-        <% } else { %>
-        | <input tile='<%= self.user_id %>' type=text value='<%= self.name || "" %>' placeholder='Enter your name' />
+  script#dotstormSmallIdeaGroup(type='text/template')
+    div.labelHolder
+      span.labelMask
+        <% if (showGroup) { %>
+        span.grouplabel.clickToEdit
+          <%= label || "[Click to add label]" %>
+        <a href='/g/<%= group_id %>/' class='embed group' title='Embed this group'>&#8734;</a> 
+        <% } else {%>
+        | &nbsp;
         <% } %>
-      <% for (var i = 0; i < users.length; i++) { %>
-      <li title='<%= users[i].user_id %>'><%= users[i].name || "Anon" %></li>
-      <% } %>
-  <% if (!ds.settings.hideLinks) { %>
-  div.box.invite
-    p
-    | Invite others using this URL:<br />
-    | <nobr><a href='<%= url %>'><%= url %></a></nobr>
-    | or with the handy barcode dohickey:
-    | <img src='http://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%| encodeURIComponent(url) %>' alt='QR code' style='float: left; margin-right: 1em'/>
-    div(style='clear: both')
-    p
-      | Embed or export this dotstorm:
-      | <a class="embed-dotstorm" href="/e/<%= embed_slug %>/" title="Embed read-only">Read-only version</a>
-  </div>
-  <% } %>
+    div.ideas
+
+  script#dotstormSmallIdeaGroupEditLabel(type='text/template')
+    form
+      | <input type='text' value='<%= label %>' placeholder='label' />
+      input(type='submit', value='OK')
+
+  script#dotstormBigIdea(type='text/template')
+    div.shadow
+      div.noteHolder
+        div.note
+          div.toolbar.image-boxed
+            a.edit(href='', title='edit')
+              img(src="/static/img/pencil.png", alt='edit')
+            span.vote-widget
+            a.close(title='close') &#10006;
+          div.canvasHolder
+            <img src='/static<%= drawingURLs.full %>' alt='<%= description %>' />
+            <% if (hasPrev) { %>
+            div.nav.prevHolder
+              div.navlink.prev(title='previous') &laquo;
+            <% } %>
+            <% if (hasNext) { %>
+            div.nav.nextHolder
+              div.navlink.next(title='next') &raquo;
+            <% } %>
+          div.tags
+            b tags:&nbsp;
+            span.clickToEdit
+              <%= tags.join(", ") || "[Click to add]"%>
+        div(style='clear: both;')
+
+  script#dotstormTagOverlay(type='text/template')
+    div.shadow
+
+  script#dotstormVoteWidget(type='text/template')
+    <% if (!readOnly) { %>
+    a.upvote(title='Vote up') Vote up
+    <% } %>
+    span.vote-count
+    <% if (!readOnly) { %>
+    a.downvote(title='Vote down') Vote down
+    <% } %>
+
+  script#usersWidget(type='text/template')
 
 
-script#intro(type='text/template')
-  div#intro
-    div.container
-      div.left-column
-        h1 Dotstorm
-        h2 Sticky-note brainstorming
-        iframe(width="340", height="400", src="http://dotstorm.byconsens.us/e/8771d8b6-a355-4ffc-90ff-49832b65ebde")
-      div.right-column
-        ul
-          li 
-            | Totally free. 
-            span.subtle (Fork me on <a href='http://github.com/yourcelf/dotstorm/'>github</a>!)
-          li 
-            | Rather beta.
-            span.subtle  (please don't use for sensitive or critical data).
-          li 
-            | Compatible with all modern web devices 
-            span.subtle (iPhone, Android, Firefox, Chrome, etc).
-          li Awesome
+  script#intro(type='text/template')
+    div#intro
+      div.container
+        div.left-column
+          h1 Dotstorm
+          h2 Sticky-note brainstorming
+          iframe(width="340", height="400", src="http://dotstorm.byconsens.us/e/8771d8b6-a355-4ffc-90ff-49832b65ebde")
+        div.right-column
+          ul
+            li 
+              | Totally free. 
+              span.subtle (Fork me on <a href='http://github.com/yourcelf/dotstorm/'>github</a>!)
+            li 
+              | Rather beta.
+              span.subtle  (please don't use for sensitive or critical data).
+            li 
+              | Compatible with all modern web devices 
+              span.subtle (iPhone, Android, Firefox, Chrome, etc).
+            li Awesome
 
-        form#random
-          input.cta.cta-blue(type='submit', value='New random dotstorm')
-        form#named
-          p
-            label(for='id_join')
-              | Or choose a name:
-            br
-            input(type='text', name='room', id='id_join', placeholder='name')
-            input.cta.cta-green(type='submit', value='OK')
+          form#random
+            input.cta.cta-blue(type='submit', value='New random dotstorm')
+          form#named
+            p
+              label(for='id_join')
+                | Or choose a name:
+              br
+              input(type='text', name='room', id='id_join', placeholder='name')
+              input.cta.cta-green(type='submit', value='OK')
 
