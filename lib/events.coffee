@@ -15,7 +15,9 @@ module.exports = (config) ->
           via_user: session.auth?.user_id
           anon_id: session.anon_id
           group: dotstorm.sharing?.group_id
-          data: opts.data
+          data: _.extend {
+            title: dotstorm.name or "Untitled"
+          }, opts.data or {}
         }, opts.overrides or {}
       intertwinkles.post_event(event, config, opts.callback or (->), opts.timeout)
 

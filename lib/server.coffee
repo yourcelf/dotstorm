@@ -113,7 +113,7 @@ start = (config) ->
               dotstorm: doc
               ideas: (idea.serialize() for idea in ideas)
             })
-            events.post_event(req.session, doc, "view", {timeout: 60 * 1000 * 5})
+            events.post_event(req.session, doc, "visit", {timeout: 60 * 1000 * 5})
 
   app.get '/i/:idea/json/', (req, res) ->
     schema.Idea.findOne {_id: req.params.idea}, (err, idea) ->
