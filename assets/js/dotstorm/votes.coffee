@@ -13,12 +13,21 @@ class ds.VoteWidget extends Backbone.View
     @hideOnZero = options.hideOnZero
     if @readOnly
       @undelegateEvents()
+    intertwinkles.user.on "change", @render
+    ds.model.on "change:sharing", @render
+
+  remove: =>
+    intertwinkles.user.off "change", @render
+    ds.model.off "change:sharing", @render
+    super()
 
   render: =>
     #console.debug "render votewidget", @idea.id
     @$el.addClass("vote-widget")
     @$el.html @template(readOnly: @readOnly)
     @update()
+    unless intertwinkles.can_edit(ds.model)
+      @$(".upvote, .downvote").hide()
     this
 
   update: =>

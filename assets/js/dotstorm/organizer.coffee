@@ -66,6 +66,16 @@ class ds.Organizer extends Backbone.View
     @ideas.on "change:tags", =>
       @renderTagCloud()
 
+    @dotstorm.on "change:sharing", @setAddVisibility
+    intertwinkles.user.on "change", @setAddVisibility
+
+  remove: (event) =>
+    intertwinkles.user.off "change", @setAddVisibility
+    super()
+
+  setAddVisibility: (event) =>
+    @$(".add-link-block").toggle(intertwinkles.can_edit(@dotstorm))
+
   softNav: (event) =>
     event.stopPropagation()
     event.preventDefault()
@@ -182,6 +192,7 @@ class ds.Organizer extends Backbone.View
     @renderTrash()
     @renderOverlay()
 
+    @setAddVisibility()
 
     $(".smallIdea").on "touchmove", (event) -> event.preventDefault()
     # iOS needs this.  Argh.
@@ -283,6 +294,8 @@ class ds.Organizer extends Backbone.View
       position: "absolute"
       left: pos.x + @dragState.mouseOffset.x + "px"
       top: pos.y + @dragState.mouseOffset.y + "px"
+
+    return unless intertwinkles.can_edit(@dotstorm)
 
     # Clear previous drop target and UI.
     @dragState.currentTarget = null
@@ -626,7 +639,8 @@ class ds.Organizer extends Backbone.View
       y: @dragState.offset.top - @dragState.startPos.y
 
     trash = @$(".trash")
-    trash.addClass("dragging")
+    if intertwinkles.can_edit(@dotstorm)
+      trash.addClass("dragging")
     # Re-calculate on drag start, because it might be "open" or "closed" since
     # last re-render.
     @dragState.trashDims = {

@@ -21,6 +21,11 @@ class ds.Topic extends Backbone.View
   initialize: (options) ->
     @model = options.model
     @model.on "change", @render
+    intertwinkles.user.on "change", @render
+
+  remove: =>
+    intertwinkles.user.off "change", @render
+    super()
 
   render: =>
     #console.debug "render topic"
@@ -29,6 +34,8 @@ class ds.Topic extends Backbone.View
       topic: @model.get("topic") or "Click to edit topic..."
       embed_slug: @model.get("embed_slug")
       url: window.location.href
+    unless intertwinkles.can_edit(@model)
+      @$(".clickToEdit").removeClass("clickToEdit")
     this
 
   editName: (event) =>

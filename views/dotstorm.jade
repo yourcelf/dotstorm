@@ -4,7 +4,7 @@ block body
     ul.sharing-online-group(style='float: right;')
       li.room-users
       li.sharing
-      li.embedding.dropdown.hide
+      li.embedding.dropdown(style='display: none;')
         a.btn.btn-inverse.dropdown-toggle(
           title='Embed and share',
           data-toggle='dropdown'
@@ -15,7 +15,7 @@ block body
             | Invite others using this URL:<br />
             | <nobr><a class='participation-link' href=''></a></nobr>
             | or with the handy barcode dohickey:
-            | <img class='qrcode' src='/static/img/loading.gif' alt='QR code' style='float: left; margin-right: 1em'/>
+            | <img class='qrcode' src='/static/img/spinner.gif' alt='QR code' style='float: left; margin-right: 1em'/>
             div(style='clear: both')
             p
             | Embed or export this dotstorm:
