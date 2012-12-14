@@ -73,10 +73,7 @@ start = (config) ->
         intertwinkles.get_initial_data(req?.session),
         initial_data or {}
       )
-      conf: {
-        api_url: config.intertwinkles.api_url
-        apps: config.intertwinkles.apps
-      }
+      conf: intertwinkles.clean_conf(api)
       flash: req.flash()
     }, obj)
 
