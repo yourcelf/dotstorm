@@ -116,6 +116,12 @@ class ds.ShowIdeaBig extends Backbone.View
     @model.on "change:background", @render
     @model.on "change:drawing", @render
     @model.on "change:photo", @render
+    @model.on "change:sharing", @render
+    intertwinkles.user.on "change", @render
+
+  remove: =>
+    intertwinkles.user.off "change", @render
+    super()
 
   render: =>
     #console.debug "render big", @model.get "imageVersion"
@@ -138,6 +144,9 @@ class ds.ShowIdeaBig extends Backbone.View
     resize()
     @renderVotes()
     $(window).on "resize", resize
+    unless intertwinkles.can_edit(ds.model)
+      @$(".clickToEdit").removeClass("clickToEdit")
+      @$(".toolbar .edit").hide()
     this
 
   renderVotes: =>
