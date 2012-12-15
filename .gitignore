@@ -4,6 +4,5 @@ node_modules
 *.pyc
 server.log
 bin
-config.coffee
 fabfile.py
 uploads

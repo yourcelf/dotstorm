@@ -14,6 +14,7 @@
     },
     "dependencies": {
         "coffee-script": "~1",
+        "socket.io": "~0.9",
         "underscore": "~1",
         "canvas": "~0.13",
         "connect-assets": "~2",
@@ -27,8 +28,9 @@
         "imagemagick": "~0",
         "jade": "~0",
         "markdown": "~0",
-        "mongoose": "~3",
+        "mongoose": "~3.4",
         "winston": "~0",
+        "node-uuid": "*",
         "node-iorooms": "git+https://github.com/yourcelf/node-iorooms.git",
         "node-intertwinkles": "git+https://github.com/yourcelf/node-intertwinkles.git",
         "async": "~0"
