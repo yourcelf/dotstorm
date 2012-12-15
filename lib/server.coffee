@@ -92,17 +92,18 @@ start = (config) ->
   app.get /\/d\/([^/]+)(\/.*)?/, (req, res) ->
     error_check = (err, doc) ->
       return res.send("Server errror", 500) if err?
-      return res.send("Permission denied", 403) unless intertwinkles.can_view(req.session, doc)
       return res.send("Not found", 404) unless doc?
+      return res.send("Permission denied", 403) unless intertwinkles.can_view(req.session, doc)
       return true
 
     if req.params[1] == "/json/"
       schema.Dotstorm.withLightIdeas {slug: req.params[0]}, (err, doc) ->
-        if error_check(err, doc)
+        if error_check(err, doc) == true
+          doc.sharing = intertwinkles.clean_sharing(req.session, doc)
           res.send(dotstorm: doc)
     else
       schema.Dotstorm.findOne {slug: req.params[0]}, (err, doc) ->
-        if error_check(err, doc)
+        if error_check(err, doc) == true
           ideas = schema.Idea.findLight {dotstorm_id: doc._id}, (err, ideas) ->
             return res.send("Server error", 500) if err?
             res.render 'dotstorm', context(req, {

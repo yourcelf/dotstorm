@@ -69,15 +69,9 @@ class ds.Router extends Backbone.Router
     return callback() if ds.model?.get("slug") == slug
 
     fixLinks = ->
-      url = window.location.protocol + "//" + window.location.host + "/d/#{slug}/"
       $("nav a.show-ideas").attr("href", "/d/#{slug}/")
       $("nav a.add").attr("href", "/d/#{slug}/add")
       $("a.dotstorm-read-only-link").attr("href", "/e/#{ds.model.get("embed_slug")}")
-      #$("a.participation-link").attr("href", url).html(url)
-      #$("img.qrcode").attr("src",
-      #  "http://api.qrserver.com/v1/create-qr-code/" +
-      #  "?size=150x150&data=#{encodeURIComponent(url)}")
-
 
     if (not ds.model?) and INITIAL_DATA.dotstorm?.slug == slug
       ds.ideas = new ds.IdeaList()

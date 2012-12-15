@@ -136,6 +136,7 @@ attach = (config, iorooms) ->
                 respond(docs or [])
               else
                 respond(docs?[0] or {})
-              events.post_event(session, docs[0], "view", {timeout: 60 * 1000 * 5})
+              if docs?.length > 0
+                events.post_event(session, docs[0], "view", {timeout: 60 * 1000 * 5})
 
 module.exports = { attach }
