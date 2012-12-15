@@ -70,6 +70,7 @@ start = (config) ->
   context = (req, obj, initial_data) ->
     return _.extend({
       initial_data: _.extend(
+        {application: "dotstorm"},
         intertwinkles.get_initial_data(req?.session),
         initial_data or {}
       )

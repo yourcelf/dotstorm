@@ -1,25 +1,10 @@
 extends layout
 block body
   div.pull-right(style='position: absolute; right: 1em; top: 0.5em;')
+    a.dotstorm-read-only-link(href='#', style='float: right; margin-left: 0.5em') read-only &#8734;
     ul.sharing-online-group(style='float: right;')
       li.room-users
       li.sharing
-      li.embedding.dropdown(style='display: none;')
-        a.btn.btn-inverse.dropdown-toggle(
-          title='Embed and share',
-          data-toggle='dropdown'
-          href='#') &lt;/&gt;
-        ul.dropdown-menu.participation-menu(role='menu')
-          li.linkless
-            p
-            | Invite others using this URL:<br />
-            | <nobr><a class='participation-link' href=''></a></nobr>
-            | or with the handy barcode dohickey:
-            | <img class='qrcode' src='/static/img/spinner.gif' alt='QR code' style='float: left; margin-right: 1em'/>
-            div(style='clear: both')
-            p
-            | Embed or export this dotstorm:
-            | <nobr><a class="embed-dotstorm" href="" title="Embed read-only">Read-only version</a></nobr>
   div(style='height: 2em;')
   div#app
     <img src='/static/img/spinner.gif' alt='loading' /> Loading...
