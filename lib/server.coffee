@@ -71,7 +71,7 @@ start = (config) ->
     return _.extend({
       initial_data: _.extend(
         {application: "dotstorm"},
-        intertwinkles.get_initial_data(req?.session),
+        intertwinkles.get_initial_data(req?.session, config),
         initial_data or {}
       )
       conf: intertwinkles.clean_conf(config)
